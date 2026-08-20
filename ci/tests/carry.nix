@@ -220,6 +220,76 @@ in
       };
     };
 
+    # ── THE LIMIT OF THE CONSTRUCTION, PINNED SO IT CANNOT DRIFT BACK INTO A SAFETY CLAIM ──
+    # The argument that made this arm look cheap was: partners only ADD stable models, SO a
+    # program with none does not acquire one, SO the coherence criterion still refuses what it
+    # would have refused. The premise is true and the inference is NOT — adding to zero gives more
+    # than zero. Van Gelder, Ross & Schlipf 1991's Example 5.3 is the witness, and the paper says
+    # what it is in as many words: "Hence P2 has no stable model."
+    #
+    # ★ BOTH READINGS ARE ASSERTED IN ONE CELL, because either alone is worthless. The `refused`
+    # arm without the `admitted` arm would read as the criterion working; the `admitted` arm
+    # without the `refused` arm would read as a program that simply has a stable model.
+    test-the-boundary-construction-does-not-preserve-the-refusal-direction = {
+      expr =
+        let
+          p2 = [
+            {
+              head = "p";
+              neg = [ "p" ];
+              relata = [ ];
+            }
+          ];
+          outcomeOf =
+            carried:
+            (modelOf {
+              declarations = p2;
+              inherit carried;
+            }).adjudication.outcome;
+        in
+        {
+          without = outcomeOf [ ];
+          with_ = outcomeOf [ "p" ];
+        };
+      expected = {
+        without = "refused";
+        with_ = "admitted";
+      };
+    };
+
+    # And the mechanism is visible in the rules rather than inferred from the outcome: the partner
+    # rule supplies a SECOND derivation for `p`, which is what `p :- not p` alone never had.
+    test-control-the-partner-rule-is-what-supplies-the-second-derivation = {
+      expr =
+        (buildOf {
+          declarations = [
+            {
+              head = "p";
+              neg = [ "p" ];
+              relata = [ ];
+            }
+          ];
+          carried = [ "p" ];
+        }).program.rules;
+      expected = [
+        {
+          head = "p";
+          pos = [ ];
+          neg = [ "p" ];
+        }
+        {
+          head = "p";
+          pos = [ ];
+          neg = [ "${genProgram.reservedPrefix}p" ];
+        }
+        {
+          head = "${genProgram.reservedPrefix}p";
+          pos = [ ];
+          neg = [ "p" ];
+        }
+      ];
+    };
+
     # ── COLLISION IS IMPOSSIBLE RATHER THAN UNLIKELY ──
     # An authored atom trespassing on the reserved namespace is refused at construction, so the
     # filter never has to distinguish an authored atom from one of this library's.

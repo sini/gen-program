@@ -182,9 +182,15 @@ name — the cheapest discharge available, and also asserted with a control.
 - **The pass-boundary construction is not stable-model-equivalent** to the program it stands in
   for: one partner per contested atom makes anti-correlated atoms independent, admitting
   combinations the original excluded. The well-founded verdicts agree ATOM BY ATOM, which is all
-  it claims. The direction of the error is the safe one — partners only ADD stable models, so a
-  program with none does not acquire one, and the criterion still refuses what it would have
-  refused.
+  it claims.
+- ★★★ **The refusal direction is NOT preserved across that re-encoding, and this is measured
+  rather than reasoned.** The argument that partners "only ADD stable models, so a program with
+  none does not acquire one" has a true premise and an invalid inference — adding to zero gives
+  more than zero. On VGRS Example 5.3's `P2 = p :- not p` ("Hence P2 has no stable model"),
+  `carried = [ ]` adjudicates **refused** and `carried = [ "p" ]` adjudicates **admitted**,
+  because `p :- not p′` supplies a derivation `p :- not p` alone never had. ⇒ the adjudication is
+  a statement about the program AS CONSTRUCTED; `admitted` must not be read as a statement about
+  the same declarations without the carry. `ci/tests/carry.nix` pins both readings.
 
 ## Running the suites
 

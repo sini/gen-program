@@ -92,9 +92,31 @@ Its limits are stated rather than left to be discovered:
   a reserved atom stays answerable and answers `"undefined"`.
 - The re-encoded program is **not stable-model-equivalent** to the one it stands in for. Two atoms
   left undefined because they were *anti-correlated* become independent under one partner each.
-  What is preserved is the well-founded verdict **atom by atom**, which is all it claims. The
-  direction of the error is the safe one: partners only *add* stable models, so a program with
-  none does not acquire one.
+  What is preserved is the well-founded verdict **atom by atom**, which is all it claims.
+
+★★★ **And the safety argument that made this arm look cheap does not hold — measured.** The
+argument ran: partners only *add* stable models, **so** a program with none does not acquire one,
+**so** the coherence criterion still refuses what it would have refused. The premise is true and
+the inference is not: adding stable models to a program that had **zero** gives it more than zero.
+On VGRS 1991's Example 5.3, `P2 = p :- not p`, of which the paper says *"Hence P2 has no stable
+model"*:
+
+|                     | `adjudication.outcome` |
+| ------------------- | ---------------------- |
+| `carried = [ ]`     | `refused`              |
+| `carried = [ "p" ]` | **`admitted`**         |
+
+`p :- not p′` supplies a derivation for `p` that `p :- not p` alone never had, and `{p}` is then
+stable in the re-encoded program. `ci/tests/carry.nix` pins both readings side by side.
+
+⇒ **The adjudication is a statement about the program as constructed, these rules included** —
+which is coherent, since that is the program whose model is computed and whose verdicts are
+reported. What a reader must not do is read `admitted` as a statement about the same declarations
+*without* the carry. **The refusal direction is not preserved across the re-encoding, and this
+library does not claim it is.** It is a measured argument for the alternative — `solve` growing a
+three-valued input-interpretation parameter, so prior verdicts enter as an *interpretation* rather
+than as rules and no re-encoding happens at all — which is a new requirement on gen-scope,
+promoted rather than taken here.
 
 ### The coherence criterion
 

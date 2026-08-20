@@ -58,9 +58,32 @@
 # `{b}` and never both or neither — become INDEPENDENT under one partner each, so the re-encoded
 # program admits combinations the original excluded. **The re-encoded program is NOT
 # stable-model-equivalent to the one it stands in for.** What is preserved is the well-founded
-# verdict ATOM BY ATOM, which is all this construction claims. The direction of the error is the
-# safe one and it is checked: partners only ADD stable models, so a program with none does not
-# acquire one, and the coherence criterion next door still refuses what it would have refused.
+# verdict ATOM BY ATOM, which is all this construction claims.
+#
+# ★★★ AND THE SAFETY ARGUMENT THAT MADE THIS ARM LOOK CHEAP DOES NOT HOLD. IT IS STATED HERE
+# BECAUSE SHIPPING THE REFUTED VERSION WOULD BE THE DEFECT.
+# The argument ran: partners only ADD stable models, SO a program with none does not acquire one,
+# SO the coherence criterion still refuses what it would have refused. **The premise is true and
+# the inference is not** — adding stable models to a program that had ZERO gives it more than
+# zero. Measured on this library, over Van Gelder, Ross & Schlipf 1991's Example 5.3
+# `P2 = p :- not p`, of which that paper says in as many words "Hence P2 has no stable model":
+#
+#     carried = [ ]      ⇒  adjudication.outcome = "refused"
+#     carried = [ "p" ]  ⇒  adjudication.outcome = "admitted"
+#
+# because `p :- not p′` supplies a derivation for `p` that `p :- not p` alone never had, and `{p}`
+# is then stable in the re-encoded program. `ci/tests/carry.nix` pins both readings side by side.
+#
+# ⇒ **WHAT THE ADJUDICATION IS A STATEMENT ABOUT: the program AS CONSTRUCTED, these rules
+# included.** That is coherent — it is the program whose model is computed and whose verdicts are
+# reported, and no other program is in play at this pass. What a reader must NOT do is read
+# `admitted` as a statement about the same declarations WITHOUT the carry. **The refusal direction
+# is not preserved across the re-encoding, and this file no longer claims it is.**
+#
+# ⇒ It is a measured argument for the alternative: `solve` growing a three-valued
+# input-interpretation parameter, so a prior pass's verdicts enter as an INTERPRETATION rather than
+# as rules and no re-encoding happens at all. That is a new requirement on gen-scope, and it is
+# promoted rather than taken here.
 #
 # ── THE FROZEN SET, AND WHY THE REFUSAL NAMES AN IDENTIFIER RATHER THAN A CYCLE ──
 # ADR-0016 ruling 7 with ADR-0033 clause 1: a pass resolves relata against what STRICTLY EARLIER
