@@ -73,6 +73,19 @@ let
     }
   ];
 
+  # The exhaustiveness ladder's subjects: k independent `p :- not p`, each contributing exactly
+  # one contested atom and none of them stable, so the walk runs to the end of a space of size
+  # `2^k` and `candidatesTested` witnesses that it did.
+  exhaustive =
+    k:
+    (modelOf (
+      prelude.genList (i: {
+        head = "e${toString i}";
+        neg = [ "e${toString i}" ];
+        relata = [ ];
+      }) k
+    )).adjudication;
+
   # PAST THE BUDGET: one contested atom more than the derived figure admits. The count is read
   # FROM the library, so this fixture tracks a re-derivation instead of going stale beside it.
   overBudget = modelOf (
@@ -226,6 +239,100 @@ in
       expected = {
         outcome = "refused";
         searched = true;
+      };
+    };
+
+    # ★★★ EXHAUSTIVENESS — THE PROPERTY THAT LICENSES `refused`, AND IT HAD NO CELL AT ALL.
+    # The cell above asserts that a program with no stable model comes back `refused`. That is a
+    # claim about the OUTCOME and it says nothing about how the walk reached it — and "no
+    # candidate was stable" only means "no stable model exists" if EVERY candidate in the space
+    # Corollary 5.7 bounds was actually tested. Without this, a construction that searched half
+    # the space would return the identical outcome on every fixture in this suite and the whole
+    # run would stay green: measured, a seeded halving of the candidate range passes 112/112.
+    #
+    # ★★ THE SUBJECT MUST BE A **REFUSED** PROGRAM, AND THAT IS NOT THE OBVIOUS CHOICE.
+    # An ADMITTED program SHORT-CIRCUITS at the first stable candidate, so its `candidatesTested`
+    # is a property of where that candidate happens to sit and is normally far below the size of
+    # the space — measured, the two-cycle `a :- not b` / `b :- not a` stops at 2 of its 4. Only
+    # the refused walk runs to the end, so only the refused walk can witness exhaustiveness.
+    #
+    # A LADDER RATHER THAN ONE READING, because a single number can be a coincidence: four
+    # programs of k independent `p :- not p`, each contributing exactly one contested atom, so
+    # `candidatesTested` must be `2^contested` at every rung and the RELATION is what is asserted.
+    test-a-refused-walk-tests-every-candidate-in-the-bounded-space = {
+      expr =
+        map
+          (k: {
+            inherit (exhaustive k) contested candidatesTested;
+          })
+          [
+            1
+            2
+            3
+            4
+          ];
+      expected = [
+        {
+          contested = 1;
+          candidatesTested = 2;
+        }
+        {
+          contested = 2;
+          candidatesTested = 4;
+        }
+        {
+          contested = 3;
+          candidatesTested = 8;
+        }
+        {
+          contested = 4;
+          candidatesTested = 16;
+        }
+      ];
+    };
+
+    # Every rung really is the refused path — otherwise the ladder above would be measuring
+    # short-circuits that happened to land on the last candidate.
+    test-control-every-rung-of-that-ladder-is-a-refused-search = {
+      expr =
+        map
+          (k: {
+            inherit (exhaustive k) outcome searched;
+          })
+          [
+            1
+            2
+            3
+            4
+          ];
+      expected =
+        map
+          (_: {
+            outcome = "refused";
+            searched = true;
+          })
+          [
+            1
+            2
+            3
+            4
+          ];
+    };
+
+    # ★ AND THE CONTROL THAT KEEPS THE LADDER FROM BEING TRIVIALLY TRUE: an ADMITTED program
+    # tests STRICTLY FEWER than the space holds. Without this, `candidatesTested == 2^contested`
+    # would be equally satisfied by a construction that never short-circuits at all — which is a
+    # different library, and a slower one.
+    test-control-an-admitted-search-stops-short-of-the-whole-space = {
+      expr = {
+        contested = hasStable.adjudication.contested;
+        tested = hasStable.adjudication.candidatesTested;
+        stoppedShort = hasStable.adjudication.candidatesTested < 4;
+      };
+      expected = {
+        contested = 2;
+        tested = 2;
+        stoppedShort = true;
       };
     };
 
