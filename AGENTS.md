@@ -20,12 +20,9 @@ boundary, and a library that re-declared the evaluator would pin it on its consu
   "declaration",
   "flagNames",
   "flags",
-  "isReserved",
   "mkModel",
   "model",
   "program",
-  "reservedCollisions",
-  "reservedPrefix",
   "rule",
   "stableModelBudget",
   "stableModelCriterion",
@@ -44,25 +41,27 @@ document's prose in one cell, so neither side can drift onto the other.
 - **`rule`** — one declaration's rule, through gen-scope's `mkRule`. The relata do not appear:
   they are IDENTIFIERS resolved against the frozen set, and a rule's atoms are MEMBERSHIP FACTS.
   Two universes; collapsing them would make an identifier derivable.
-- **`program`** — `{ declarations, frozen, carried }` → `{ program, authored, reserved }`. The
-  `program` field is gen-scope's own value, **unchanged**. It refuses two things by name: an
-  authored atom trespassing on the reserved namespace, and a relatum no strictly-earlier pass
-  settled.
-- **`unresolvedRelata`** / **`reservedCollisions`** — each refusal's CONTENT, as data. `tryEval`
-  discards message text, so a suite that could only assert THAT something refused would be equally
-  satisfied by a construction with one refusal in it. These are what the throws render.
+- **`program`** — `{ declarations, frozen }` → gen-scope's own program value, **unchanged and
+  unwrapped**. It refuses one thing by name: a relatum no strictly-earlier pass settled.
+- **`unresolvedRelata`** — the refusal's CONTENT, as data. `tryEval` discards message text, so a
+  suite that could only assert THAT something refused would be equally satisfied by a construction
+  with one refusal in it. This is what the throw renders.
 
 ### The call
 
-- **`model`** — `{ built, complete }` → the result record. It drives `engine.solve`. `complete`
-  carries **no default**: a defaulted `true` would silently claim the pass sequence had closed.
+- **`model`** — `{ program, interpretation, complete }` → the result record. It drives
+  `engine.solve`. `interpretation` is a prior pass's verdicts — a LIST of `{ atom, verdict }` —
+  and carries **no default**, because a defaulted empty carry is the silent collapse the parameter
+  exists to prevent; the first pass supplies `[ ]` and says so. `complete` carries none either: a
+  defaulted `true` would silently claim the pass sequence had closed.
 - **`mkModel`** — the result record's constructor, published so a consumer (and a cell) can READ
   which fields are required rather than discovering it from a crash. Every formal is required;
   `adjudication` in particular.
 
-The record carries `trueAtoms` / `undefinedAtoms` / `falseAtoms` (this library's own atoms
-subtracted), the total `verdict`, `resolve`, `adjudication`, `complete`, `converged`, and
-gen-scope's `provenance` and `condensationDepth` unchanged.
+The record carries `trueAtoms` / `undefinedAtoms` / `falseAtoms` **as gen-scope reports them, over
+`program.atoms ∪ dom(interpretation)`**, the total `verdict`, `resolve`, `adjudication`,
+`complete`, `converged`, and gen-scope's `provenance` and `condensationDepth` unchanged. Nothing is
+filtered here, because nothing in them was put there by this library.
 
 ### The resolved relation
 
@@ -98,11 +97,22 @@ The normal path is **polynomial**; the bounded search is the coherence gate only
 - past the budget the field carries **`not-evaluated`** — a named outcome stating an ABSENCE of
   adjudication, never an admission.
 
-### The reserved namespace
+### The boundary, and what retired with it
 
-- **`reservedPrefix`** / **`isReserved`** — the namespace this library owns inside the Herbrand
-  base. An authored atom carrying the prefix is **refused**, so collision is impossible rather
-  than improbable, and the same string makes an introduced atom recognisable for subtraction.
+A prior pass's verdicts cross as an **interpretation**, handed to `solve` beside the program. They
+used to be compiled into **rules** — two per contested atom, over one minted atom — and that made a
+carried atom freely supported in every candidate containing it, so a program with no stable model
+acquired one at the boundary.
+
+Retired, and each is a **deletion**: `carriedRules` · `partnerOf` and `reserved.nix` itself · the
+built record's `reserved` field and the wrapper around the program · the `onlyAuthored` subtraction
+· `mkModel`'s `authored` formal · and the published `reservedPrefix` / `isReserved` /
+`reservedCollisions`.
+
+★ **The vanishing surface is not fixed; it has no expression.** The subtraction that hid the minted
+atoms again was itself a place content could vanish; with no minted atoms there is nothing to
+subtract. And `den-hoag-h2yp` law 2's discharge is stronger than the prefix ever made it: not "the
+library's own names are fenced off" but **the library has none**.
 
 ## The names, and the per-primary check each one owes
 

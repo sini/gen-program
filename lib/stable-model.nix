@@ -30,19 +30,67 @@
 # ── WHY THE SEARCH IS BOUNDED AT ALL, STATED AS A COMPLEXITY FACT AND NOT AS A FEELING ──
 # The same primary, reporting Marek & Truszczyński: "even for propositional general logic programs
 # P, determining whether P has a stable model at all is NP-complete" (line 1849) — against the
-# well-founded model's polynomial data complexity, which that paper's Theorem 8.1 establishes.
+# well-founded model's polynomial data complexity, which **VGRS Theorem 8.1** establishes.
+# ★ THE PAPER TAG IS NOT TIDINESS. This library cites TWO Van Gelder papers and they share a
+# numbering space thirteen coordinates wide — including a Theorem at 8.1, present in both — so a
+# bare "Theorem 8.1" is a citation that reads correctly while pointing at the wrong paper. The
+# convention is total over that shared space: `VGRS` prefixes a 1991 coordinate and `VG93` a 1993
+# one. An inference from context fails SILENTLY; a missing tag fails loudly, because an audit
+# predicate returns it.
 # That asymmetry is the whole reason this is a bounded gate rather than an unconditional one.
 #
-# ── THE SEARCH SPACE IS RESTRICTED BY A PUBLISHED RESULT, NOT BY A HEURISTIC ──
-# Enumerating every total interpretation would be 2^|Herbrand base|. **Corollary 5.7**: "The
+# ── WHAT "A STABLE MODEL EXISTS" MEANS UNDER AN INTERPRETATION — A THEOREM, NOT A DEFINITION ──
+# There is no interpreted notion of stability to define, and that is the useful part. Let
+# `P′ = P ∪ { a. | a ∈ Pos(I) }`. A FACT HAS NO NEGATIVE BODY, so it survives every reduct —
+# `(P ∪ facts(A))/M = (P/M) ∪ facts(A)` for every `M` — and therefore
+#
+#   lfp T_{(P′)/M}  =  lfp_{⊇Pos(I)} T_{P/M}      exactly, for every M
+#
+# ⇒ for `M ⊆ H(P′)`, **`M` is a stable model of `P` under `I` if and only if `M` is a stable model
+# of `P′`**, an ORDINARY general logic program. ADR-0020's criterion applies to `P′` verbatim, and
+# no published result is transplanted onto a new object because there is no new object.
+#
+# ★★★ THE STABILITY PREDICATE MUST THEREFORE BE SEEDED, AND AN UNSEEDED ONE FALSELY REFUSES.
+# Computing `lfp` from `∅` where the criterion asks for `lfp_{⊇Pos(I)}` is not a weaker check, it
+# is a different one. Hand-derived on `P = { p :- not p, a :- not b, b :- not a }` with `p` carried
+# TRUE — whose interpreted model is PARTIAL, so the search actually runs: **unseeded, all four
+# candidates fail and the program is REFUSED; seeded, `M = {p, a}` is stable and it is ADMITTED.**
+# ★ Any oracle whose TRUE arm uses a fixture with a TOTAL interpreted model passes against an
+# unseeded build, because the short-circuit below returns before the predicate is ever reached.
+#
+# ── THE FREE SAFETY THEOREM ──
+# `P′` is a function of `P` and `Pos(I)` ALONE. Therefore **the adjudication's answer depends only
+# on the program and the interpretation's TRUE atoms; carrying atoms as UNDEFINED cannot change
+# whether a stable model exists, in either direction.** A zero-stable-model program cannot acquire
+# one at the boundary, because the carried-undefined atoms are not in the program the criterion is
+# evaluated on. ★ This is what the gadget's struck safety sentence should have said, and it is why
+# the same two fixtures now come out the same way: `P2` with `p` carried UNDEFINED is refused
+# (`P′ = P2`); `P2` with `p` carried TRUE is admitted (`P′ = P2 ∪ { p. }`, a genuinely different
+# program in which `p` is externally true and `p :- not p` is satisfied). **The distinction the
+# gadget could not draw is the distinction between those two `P′`s.**
+# ★★ THE CAVEAT, BECAUSE THE THEOREM IS ABOUT THE ANSWER AND NOT ABOUT REACHING IT: UNDEFINED
+# carries DO raise the contested count, so they can push the adjudication past the budget into
+# `not-evaluated`. **The verdict cannot be corrupted; it can be made unreachable** — a degradation
+# to a named absence rather than to an admission.
+#
+# ── THE SEARCH SPACE IS RESTRICTED BY A PUBLISHED RESULT PLUS AN ARGUMENT WRITTEN HERE ──
+# Enumerating every total interpretation would be 2^|Herbrand base|. **VGRS Corollary 5.7**: "The
 # well-founded partial model of P is a subset of every stable model of P" (line 1373), where a
 # partial interpretation is "a consistent SET OF LITERALS whose atoms are in the Herbrand base"
-# (Definition 2.4, line 667) — so the subset relation constrains BOTH signs: every stable model
-# contains every well-founded TRUE atom and excludes every well-founded FALSE one. The candidates
-# are therefore exactly `trueAtoms ∪ S` for `S ⊆ undefinedAtoms`, which is 2^u for u the CONTESTED
-# count, and the enumeration is EXHAUSTIVE over stable models rather than a sample of them.
-# ⇒ That exhaustiveness is what licenses the `refused` outcome: no candidate stable means no
-# stable model, and not merely none found.
+# (VGRS Definition 2.4, line 667) — so the subset relation constrains BOTH signs: every stable
+# model contains every well-founded TRUE atom and excludes every well-founded FALSE one.
+# ★★ IT APPLIES TO `P′`, NOT TO THE INTERPRETED MODEL, AND THE STEP BETWEEN THEM IS THIS LIBRARY'S
+# ARGUMENT RATHER THAN THE PAPER'S. Two steps: (1) the criterion's object is `P′`, so Corollary 5.7
+# applies to it verbatim; (2) the UNDEFINED exemption is DEFLATIONARY — `S^U_T(X) ⊇ S_T(X)` and `S`
+# is antitone, so the interpreted TRUE set shrinks and the interpreted FALSE set shrinks, i.e. the
+# interpreted model commits to strictly LESS in BOTH directions. ⇒ the candidate space the
+# interpreted model induces CONTAINS the one `P′` induces, so walking it is exhaustive over `P′`'s
+# stable models *a fortiori*, at a larger-space cost in the SAFE direction — more candidates
+# tested, never fewer.
+# ⇒ The candidates are `trueAtoms ∪ S` for `S ⊆ undefinedAtoms` of the interpreted model, which is
+# 2^u for u the CONTESTED count, and the enumeration is EXHAUSTIVE over stable models rather than a
+# sample of them. That exhaustiveness is what licenses the `refused` outcome: no candidate stable
+# means no stable model, and not merely none found.
 #
 # ★★ A SECOND WITNESS BESIDE THE PUBLISHED ONE: a differential against an enumerator applying NO
 # restriction at all — the full powerset of the Herbrand base, every total interpretation tested
@@ -113,11 +161,20 @@ let
   # Total: every branch returns a NAMED outcome with its ground. There is no path that returns
   # nothing, and none that returns an outcome without saying what decided it.
   adjudicate =
-    { program, model }:
+    {
+      program,
+      model,
+      interpretation,
+    }:
     let
       undefined = model.undefinedAtoms;
       contested = prelude.length undefined;
       trueSet = prelude.genAttrs model.trueAtoms (_: true);
+
+      # `Pos(I)` — the carried-TRUE atoms, read from gen-scope's published projection rather than
+      # re-derived here. It is what `P′` is a function of, and a second derivation is a second
+      # place the decision lives.
+      posSet = prelude.genAttrs (scope.Pos interpretation) (_: true);
 
       # Bit j of the candidate index selects undefined atom j. `bitAnd` against a precomputed
       # power table keeps the selection flat — Nix publishes no shift builtin, and a per-candidate
@@ -131,8 +188,17 @@ let
         ) positions;
       candidateAt = i: trueSet // prelude.genAttrs (selectedAt i) (_: true);
 
-      # Gelfond–Lifschitz stability, through gen-scope's own reduct and least-model door.
-      isStable = guess: (scope.leastModel (scope.reduct program guess)).derived == guess;
+      # Gelfond–Lifschitz stability ON `P′`, through gen-scope's own reduct and least-model door.
+      # ★★ THE SEED IS `Pos(I)` AND IT IS NOT OPTIONAL. By the equivalence above,
+      # `lfp T_{(P′)/M} = lfp_{⊇Pos(I)} T_{P/M}`, so seeding the door with the carried-true atoms
+      # IS evaluating the criterion on `P′`. An unseeded predicate computes `lfp T_{P/M}` and
+      # therefore FALSELY REFUSES a program whose stable model rests on an externally-true atom.
+      isStable =
+        guess:
+        (scope.leastModel {
+          program = scope.reduct program guess;
+          seed = posSet;
+        }).derived == guess;
 
       step =
         acc:

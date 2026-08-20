@@ -30,16 +30,23 @@ let
     "declaration"
     "flagNames"
     "flags"
-    "isReserved"
     "mkModel"
     "model"
     "program"
-    "reservedCollisions"
-    "reservedPrefix"
     "rule"
     "stableModelBudget"
     "stableModelCriterion"
     "unresolvedRelata"
+  ];
+
+  # ── THE RETIREMENTS, MEASURED AS ABSENCES ──
+  # Three published exports and one formal died with the boundary re-encoding. They are named here
+  # rather than merely missing from the list above, because an export that quietly stops existing
+  # and an export nobody ever wrote look identical in a roster.
+  retiredExports = [
+    "reservedPrefix"
+    "isReserved"
+    "reservedCollisions"
   ];
 
   agentsSheet = builtins.readFile ../../AGENTS.md;
@@ -59,6 +66,39 @@ in
     test-lib-exports-exactly-the-published-surface = {
       expr = builtins.attrNames genProgram;
       expected = publishedSurface;
+    };
+
+    # ── THE RETIREMENTS ──
+    # The reserved namespace existed to make the retired boundary's minted atoms collision-free and
+    # recognisable. With no minter both properties are about an empty set, and the refusal would be
+    # a live FALSE RED over caller-authored names — an over-applied hazard that nothing looks for.
+    test-the-retired-exports-are-gone = {
+      expr = prelude.filter (n: genProgram ? ${n}) retiredExports;
+      expected = [ ];
+    };
+
+    # ★ THE SWEEP'S OWN CONTROL: the same predicate over a RETAINED name returns it, in the same
+    # run. An absence claim over a predicate that could not have matched is this project's
+    # recurring false clean.
+    test-control-the-retirement-predicate-finds-a-retained-name = {
+      expr = prelude.filter (n: genProgram ? ${n}) (retiredExports ++ [ "model" ]);
+      expected = [ "model" ];
+    };
+
+    # And the result-record constructor no longer takes the formal whose only consumer was the
+    # subtraction of this library's own atoms.
+    test-mkModel-no-longer-takes-the-authored-formal = {
+      expr = builtins.functionArgs genProgram.mkModel ? authored;
+      expected = false;
+    };
+
+    test-control-it-still-takes-the-formals-it-should = {
+      expr = prelude.sort (a: b: a < b) (prelude.attrNames (builtins.functionArgs genProgram.mkModel));
+      expected = [
+        "adjudication"
+        "complete"
+        "solved"
+      ];
     };
 
     # ── THE SHEET AND THE LIBRARY, BOUND TOGETHER ──

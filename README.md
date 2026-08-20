@@ -13,17 +13,20 @@ genProgram = import gen-program/lib {
   scope = gen-scope.lib;
 };
 
-built = genProgram.program {
+program = genProgram.program {
   declarations = [
     { head = "guard:B"; relata = [ ]; }
     { head = "member:X"; pos = [ "guard:B" ]; relata = [ ]; }
     { head = "guard:A"; pos = [ "member:X" ]; neg = [ "excluded:X" ]; relata = [ ]; }
   ];
   frozen = [ ];   # what strictly earlier passes settled
-  carried = [ ];  # what the previous pass left contested
 };
 
-model = genProgram.model { inherit built; complete = true; };
+model = genProgram.model {
+  inherit program;
+  interpretation = [ ];   # a prior pass's verdicts; required, so the first pass says so
+  complete = true;
+};
 
 model.resolve "member:X"    # => { flag = "T"; included = true; }
 model.adjudication.outcome  # => "admitted"
@@ -69,83 +72,71 @@ it introduces are the reserved partners below, which name no kind and no relatio
 
 ### The pass boundary
 
-`engine.solve` takes one argument, a program, and a program is rules over atoms. A fact encodes
-**true** and omission encodes **false**; **UNDEFINED has no encoding at all**. Without a
-construction, a prior pass's contested atom silently collapses to one of the two values the
-channel can carry.
+`engine.solve` takes `{ program, interpretation }`, and a prior pass's verdicts cross as the
+**interpretation** — a list of `{ atom, verdict }`, travelling as themselves. The parameter carries
+no default: a defaulted empty carry is the silent collapse it exists to prevent, so the first pass
+supplies `[ ]` and says so.
 
-For each atom `x` contested at the previous pass, the next pass's program gets **two rules over
-one fresh atom** — `x :- not x′` and `x′ :- not x` — a cycle through a negative edge, which is
-exactly the shape Apt, Blair & Walker's stratified semantics leaves without a meaning (their
-Lemma 1: a program is stratified **iff** its dependency graph has no cycle containing a negative
-edge) and which the well-founded model gives UNDEFINED.
+The three values are three different kinds of thing, and gen-scope's engine is where that is
+stated. **TRUE** is an external fact and seeds both of the engine's operators. **FALSE** is inert —
+`verdict` is already total, so a FALSE carry asks for the answer the model gives anyway, and the
+only way to make it operative would be to let it suppress a derivation this pass justifies, which
+is pinning. **UNDEFINED** is a *suspension of falsity*: a carried-undefined atom is one whose
+support lies outside this program, and it enters by being exempt from the greatest unfounded set.
 
-It **composes rather than pins**: where the new pass independently derives `x` through a positive
-rule whose body holds, `x` becomes true and the construction does not prevent it.
+```nix
+model = genProgram.model {
+  program = genProgram.program { declarations = …; frozen = …; };
+  interpretation = [ { atom = "member:X"; verdict = "undefined"; } ];
+  complete = false;
+};
+```
 
-★ **That sentence is direction-asymmetric, and only the direction it names is claimed.** The
-construction composes with a *positive* derivation and **overrides a negative one**: an atom the
-next pass leaves underived would read `false` from the total verdict function, and carried it
-reads `undefined`, because the two rules give it a derivation it did not otherwise have. That is
-what re-injecting the third value is *for*, so it is not a defect — but it is not symmetry either.
-The asymmetry dissolves when the input-interpretation parameter replaces this construction
-(`den-hoag-1tu3`): a prior verdict arriving as an *interpretation* overrides nothing, because it
-is not a rule.
+#### What this replaced, and why the deletion is the point
 
-Its limits are stated rather than left to be discovered:
+The boundary used to be a **two-rule gadget** per contested atom — `x :- not x′` and `x′ :- not x`,
+a negative cycle whose well-founded verdict is UNDEFINED. It reproduced the third value per atom,
+and it was measured **wrong in the direction that matters**: the partner rule makes a carried atom
+freely supported in every candidate containing it, so a program with **no stable model acquired
+one** at the boundary. On a recurring declaration set the coherence adjudication flipped
+REFUSED → ADMITTED at the first pass and never returned.
 
-- The fresh atoms are **real atoms** — they enter the Herbrand base and every verdict list — so
-  they are subtracted from the reported enumerations. That subtraction is itself a place content
-  can vanish, so the suite arms it with a control rather than trusting the filter.
+Three constructions died with it, and each was a place content could vanish:
 
-- The subtraction hides them from **enumeration, never from observation**: `verdict` is total, so
-  a reserved atom stays answerable and answers `"undefined"`.
+- the **fresh atoms**, which entered the Herbrand base and every verdict list;
+- the **subtraction** that hid them again — itself a place content could vanish, which is why it
+  needed a leak control rather than trust;
+- the **reserved namespace** that made the collision impossible rather than improbable.
 
-- The re-encoded program is **not stable-model-equivalent** to the one it stands in for. Two atoms
-  left undefined because they were *anti-correlated* become independent under one partner each.
-  What is preserved is the well-founded verdict **atom by atom**, which is all it claims.
+⇒ **The vanishing surface is not fixed; it has no expression.** By construction, not repair.
 
-- ★★★ **The contract on `carried` is stated and NOT enforced.** `carried` is meant to be the atoms
-  whose verdict at the previous pass was `undefined`, and nothing checks it — nor can it be
-  checked here, since the previous pass's model is not an argument to the construction. **A caller
-  who carries an atom that was settled injects undefinedness silently, and it propagates to that
-  atom's readers.** Measured, on `s.` and `r :- f` where `f` is headed by no rule and so is
-  settled `false`:
+★ **And the unenforced contract died with it.** `carried` was documented as *the atoms whose
+verdict was UNDEFINED* and nothing checked it — carrying a settled atom injected undefinedness
+silently. It could not be checked, because the prior pass's model was not an argument to the
+construction. Under the parameter **it is the argument**: an interpretation carries each atom's
+verdict with it, so asserting undefinedness of an atom that did not have it has no expression
+either. No check was added, because there is nothing left to check.
 
-  |                     | `f`             | `r`             | `contested` |
-  | ------------------- | --------------- | --------------- | ----------- |
-  | `carried = [ ]`     | `false`         | `false`         | 0           |
-  | `carried = [ "f" ]` | **`undefined`** | **`undefined`** | 3           |
+★★ **The agnosticism discharge is stronger than the prefix ever made it.** `den-hoag-h2yp` law 2's
+exposure was a library minting atom names of its own. With the minter gone, every atom in an
+authored position is a string the caller wrote — not "the library's own names are fenced off" but
+**the library has none**.
 
-  It is a **precondition on the caller**, and it is the one shape of vanishing content this design
-  does not close by construction. No enforcement is built, deliberately: the construct retires
-  under the input-interpretation ruling (`den-hoag-1tu3`), where the hazard **dissolves** rather
-  than being guarded — an interpretation carries each atom's verdict with it, so there is no way
-  to assert undefinedness of an atom that did not have it.
+#### The claim, and its oracle
 
-★★★ **And the safety argument that made this arm look cheap does not hold — measured.** The
-argument ran: partners only *add* stable models, **so** a program with none does not acquire one,
-**so** the coherence criterion still refuses what it would have refused. The premise is true and
-the inference is not: adding stable models to a program that had **zero** gives it more than zero.
-On VGRS 1991's Example 5.3, `P2 = p :- not p`, of which the paper says *"Hence P2 has no stable
-model"*:
+The design is stated in two vocabularies — the unfounded-set account and the alternating-fixpoint
+account — and VG93's **Theorem 7.8** makes their un-interpreted forms an *identity*, with no slack.
+But with a non-empty undefined carry the engine's two seeded operators belong to two **different**
+augmented programs, while the alternating transformation composes one program's operator with
+itself. **So the construction is `A_Q` for no `Q`, Theorem 7.8 does not reach it, and the
+interpreted analogue is claimed and not proved.**
 
-|                     | `adjudication.outcome` |
-| ------------------- | ---------------------- |
-| `carried = [ ]`     | `refused`              |
-| `carried = [ "p" ]` | **`admitted`**         |
-
-`p :- not p′` supplies a derivation for `p` that `p :- not p` alone never had, and `{p}` is then
-stable in the re-encoded program. `ci/tests/carry.nix` pins both readings side by side.
-
-⇒ **The adjudication is a statement about the program as constructed, these rules included** —
-which is coherent, since that is the program whose model is computed and whose verdicts are
-reported. What a reader must not do is read `admitted` as a statement about the same declarations
-*without* the carry. **The refusal direction is not preserved across the re-encoding, and this
-library does not claim it is.** It is a measured argument for the alternative — `solve` growing a
-three-valued input-interpretation parameter, so prior verdicts enter as an *interpretation* rather
-than as rules and no re-encoding happens at all — which is a new requirement on gen-scope,
-promoted rather than taken here.
+`ci/tests/identity.nix` is what stands in for the proof: a test-only reference implementation of
+the unfounded-set account, run beside the shipped construction and asserted **identical atom by
+atom**. Its control is a measured disagreement — removing the exemption makes a positive reader of
+a carried atom read FALSE where the shipped construction says UNDEFINED, which is the exact defect
+that rejected the spec's first revision. **If that suite ever fails, the claim is refuted; that is
+a finding, not a bug.**
 
 ### The coherence criterion
 
@@ -200,44 +191,66 @@ other.
 ## The budget, and the curve it is derived from
 
 The figure is never a bare number. It is derived from this library's own measured cost curve and
-recorded with its derivation, and `reDerivationOwedOn` names the constructions whose editing owes
-a re-derivation.
+recorded with its derivation, and `reDerivationOwedOn` names the constructions whose editing owes a
+re-derivation. **This work changed two of the four it named** — the stability test is now seeded
+with `Pos(I)`, and gen-scope's least-model door now takes a starting set — so a re-derivation was
+owed by the budget's own trigger, not as a follow-up.
 
 ```bash
 nix eval --impure --json -f ci/bench/coherence-cost.nix at --apply 'f: f "unstable" 16'
 ```
 
-**The worst-case arm** — `unstable`, `u` independent `p :- not p`, no stable model anywhere, so
-the walk is exhaustive and nothing short-circuits. Three readings per rung, wall clock:
+**The worst-case arm** — `unstable`, `u` independent `p :- not p`, no stable model anywhere, so the
+walk is exhaustive and nothing short-circuits:
 
 | u      | candidates | wall clock                                                     |
 | ------ | ---------- | -------------------------------------------------------------- |
-| 15     | 32,768     | 0.81 – 1.43 s                                                  |
-| 16     | 65,536     | 1.29 – 1.59 s                                                  |
-| **17** | 131,072    | **2.61 – 5.65 s** ← exceeds the criterion on its worst reading |
-| 18     | 262,144    | 7.78 s                                                         |
+| 14     | 16,384     | 0.33 – 0.73 s                                                  |
+| 15     | 32,768     | 1.34 – 1.45 s                                                  |
+| 16     | 65,536     | 1.28 – 1.31 s (five readings)                                  |
+| **17** | 131,072    | **2.57 – 5.12 s** ← exceeds the criterion on its worst of five |
+| 18     | 262,144    | 6.64 – 9.27 s                                                  |
 
-⇒ **`contested = 16`**, read against the *worst* reading rather than the best: u=17's spread
-straddles the line, and a figure taken from its luckiest run is one nobody else can reproduce.
+⇒ **`contested = 16`, re-derived and unmoved.** That is a result rather than a non-event: the
+seeded fixpoint adds a *constant* per candidate, not an exponent, so the curve shifts without
+changing where it crosses the criterion. A re-derivation that reproduces its predecessor is still a
+re-derivation — what would have been dishonest is not running it. Read against the **worst**
+reading, per this file's own correction.
 
-★★ **Measuring refuted an assumption that looked safe.** The `anticorrelated` family was written
-as the *cheap* corner, on the reasoning that a program with stable models stops at the first one.
-It does — but where that one sits in the enumeration is a property of the program, and for this
-family it sits **exactly one third of the way through, at every rung** (86/256, 1366/4096,
-21846/65536 — 33.6%, 33.3%, 33.3%). Having stable models buys a **factor of three, never an
-exponent**. A budget derived from that family would price the same curve one rung lower and call
-it safety.
+### Where the parameter actually pays: the carried recovery
 
-Two further readings, which check the design rather than the figure:
+Under the retired boundary each carried atom brought a **partner** into the Herbrand base, so a
+pass carrying `n` contested atoms arrived at the next with roughly twice the contested count —
+measured `2n+1` — and the budget was effectively **halved** in carried terms: about 7 atoms could
+cross one boundary. The partners are gone.
 
-- **`mixed`** — four contested atoms beside a settled bulk of 10, 100 and 400 cost **6 candidates
-  and 0.04 s at all three sizes**. That is Corollary 5.7's restriction working: the budget prices
-  the contested corner and not the program.
-- **`carried`** — the boundary construction introduces one partner per carried atom, so a pass
-  carrying *n* contested atoms forward arrives at the next pass with roughly **twice** the
-  contested count. ⇒ **the budget is effectively halved in carried terms**: about 7 atoms may
-  cross one boundary before the next pass's adjudication goes `not-evaluated`. A real price of the
-  construction, recorded rather than discovered.
+★★ **What replaces the `2n` is not a constant.** The contested count at the next pass is the carried
+set **closed under reachability over both signs** — carried undefinedness propagates through a
+positive body exactly as it does through negation. Measured on the three-axis `carriedAt n p q`:
+
+| n   | positive readers | negative readers | contested                                                           |
+| --- | ---------------- | ---------------- | ------------------------------------------------------------------- |
+| 4   | 0                | 0                | **4** — the partners are gone: `n` carried costs `n`                |
+| 4   | 4                | 0                | 8                                                                   |
+| 4   | 0                | 4                | 8 — a family holding this axis fixed could not see half the closure |
+| 4   | 2                | 2                | 8                                                                   |
+| 2   | 1                | 1                | 4                                                                   |
+
+⇒ **The budget is no longer halved in carried terms**: about 16 atoms may cross one boundary where
+before about 7 could, less whatever this pass reads from them. ★★ And it is an **upper bound**, not
+an identity — a reader whose body cannot be satisfied does not become contested — so the real count
+is generally smaller. Safe in direction, and called a bound.
+
+★★ **Measuring refuted an assumption that looked safe, and the arm stays with its reason
+corrected.** `anticorrelated` was written up as the *cheap* corner because a program with stable
+models short-circuits. It does — but where the first stable model sits in the enumeration is a
+property of the program, and for that family it sits **exactly one third of the way through at
+every rung** (86/256, 1366/4096, 21846/65536). Having stable models buys a factor of three, never
+an exponent.
+
+A third reading, which checks the design rather than the figure: **`mixed`** — four contested atoms
+beside a settled bulk of 10, 100 and 400 cost 6 candidates and 0.04 s at all three sizes. That is
+Corollary 5.7's restriction working: the budget prices the contested corner, not the program.
 
 ## What it does not do, and does not claim
 

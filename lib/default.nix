@@ -93,10 +93,7 @@ in
   # discards a message — so a suite that could only assert THAT something refused would be equally
   # satisfied by a construction with one refusal in it. These are what the throws render, and a
   # consumer can read which declarations are unresolvable without provoking one.
-  inherit (rules)
-    unresolvedRelata
-    reservedCollisions
-    ;
+  inherit (rules) unresolvedRelata;
 
   # ── THE CALL ──
   inherit (modelling)
@@ -108,12 +105,6 @@ in
   inherit (modelling)
     flagNames
     flags
-    ;
-
-  # ── THE NAMESPACE THIS LIBRARY OWNS INSIDE THE HERBRAND BASE ──
-  inherit (modelling)
-    reservedPrefix
-    isReserved
     ;
 
   # ── THE COHERENCE CRITERION ──

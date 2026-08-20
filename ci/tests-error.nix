@@ -40,10 +40,7 @@ let
 
   build =
     { declarations, frozen }:
-    (genProgram.program {
-      inherit declarations frozen;
-      carried = [ ];
-    }).program;
+    genProgram.program { inherit declarations frozen; };
 
   declaring = relata: [
     {
@@ -56,17 +53,13 @@ let
     named:
     "gen-program: ${named} is not in the frozen set of relata that strictly earlier passes settled (ADR-0016 ruling 7), so it does not resolve — a same-pass reference and a root relatum both reach this refusal by that one path, and neither is named as a cycle because a stratum's in-flight output is not nameable from inside it (ADR-0033)";
 
-  reservedRefusal =
-    named:
-    "gen-program: ${named} occupies the namespace this library reserves for the atoms it introduces at a pass boundary ('${genProgram.reservedPrefix}…'), and an authored atom carrying it is refused rather than allowed to collide with one";
-
   # The two withheld answers on the resolved relation. Each is a FIELD that refuses rather than a
   # field that is absent, so what a consumer meets is a sentence naming the membership and the
   # reason — not a missing attribute naming nothing.
   resolved =
     complete:
     (genProgram.model {
-      built = genProgram.program {
+      program = genProgram.program {
         declarations = [
           {
             head = "in";
@@ -84,8 +77,8 @@ let
           }
         ];
         frozen = [ ];
-        carried = [ ];
       };
+      interpretation = [ ];
       inherit complete;
     });
 in
@@ -121,20 +114,6 @@ in
         frozen = [ "earlier:node" ];
       };
       expectedError.msg = exactly (unresolvedRefusal "'same-pass:node', 'root'");
-    };
-
-    # ── THE RESERVED NAMESPACE ──
-    test-an-authored-atom-in-the-reserved-namespace-is-refused-by-name = {
-      expr = build {
-        declarations = [
-          {
-            head = "${genProgram.reservedPrefix}a";
-            relata = [ ];
-          }
-        ];
-        frozen = [ ];
-      };
-      expectedError.msg = exactly (reservedRefusal "'${genProgram.reservedPrefix}a'");
     };
 
     # ── THE THIRD VALUE'S TWO WITHHELD ANSWERS ──

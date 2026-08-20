@@ -1,144 +1,276 @@
-# ORACLE O7 — UNDEFINED SURVIVES THE PASS BOUNDARY, AND THIS LIBRARY'S OWN ATOMS DO NOT LEAK.
+# THE PASS BOUNDARY — a prior pass's verdicts crossing as an INTERPRETATION.
 #
-# `engine.solve` takes ONE argument, a program, and a program is rules over atoms. So the only
-# channel by which a prior pass's result enters the next pass's program is AS RULES: a fact
-# encodes true and omission encodes false. UNDEFINED has no encoding at all, so without a
-# construction a prior pass's contested atom silently collapses to one of the two values the
-# channel can carry — the vanishing defect at the one boundary this design adds.
+# This suite is the reason the parameter exists. The boundary used to be a two-rule gadget per
+# contested atom, and the gadget made a carried atom FREELY SUPPORTED in every candidate containing
+# it — so a program with NO stable model acquired one at the boundary, and on a recurring
+# declaration set the coherence adjudication flipped REFUSED → ADMITTED at the first pass and never
+# returned. The channel is the repair: a prior pass's verdicts are not rules.
 #
-# ★★ THREE ARMS, AND TWO OF THEM GUARD THE TWO WAYS THIS CAN GO WRONG.
-#   (i)   THE COLLAPSE CONTROL. With the construction suppressed, the same atom comes back TRUE or
-#         FALSE. This is the defect the mechanism exists to prevent, and it must be DEMONSTRATED
-#         to occur — otherwise the fixture never had a subject and the main cell passes against a
-#         program that was never at risk.
-#   (ii)  THE OVER-PINNING CONTROL. Where the next pass carries a positive rule deriving the atom
-#         from a settled body, it comes back TRUE. The construction supplies undefinedness only in
-#         the ABSENCE of other information; one that pinned would be a fourth value wearing the
-#         third one's name.
-#   (iii) THE LEAK CONTROL. The reported verdict lists are compared against the AUTHORED atom set,
-#         and a deliberately broken filter is shown to fail the same comparison. The subtraction
-#         is itself a place content can vanish, so it is armed rather than trusted.
-#
-# ★ SCOPED, PER THE SPEC, BECAUSE IT IS EASY TO OVERCLAIM: THIS MEASURES ENUMERATION, NOT
-# OBSERVABILITY. `verdict` is a TOTAL function, so a reserved atom stays answerable by direct
-# query and comes back `"undefined"` rather than the `"false"` an unmentioned string would get.
-# The cells below assert exactly that, so the difference between the two surfaces is on the record
-# rather than papered over. What makes a collision IMPOSSIBLE is the namespace's refusal, not this
-# filter.
+# ★★ WHAT IS ARMED HERE AND WHAT IS ARMED NEXT DOOR, STATED SO THE COVERAGE IS READABLE.
+# The two operator defects — `U` reaching the UNDERESTIMATE (the mirror), and `U` subtracted from
+# it (pinning) — are defects of gen-scope's construction, and gen-scope arrives here as a LOCKED
+# FLAKE INPUT: a defective engine is not constructible from this repository. They are armed in
+# `gen-scope/ci/tests/interpretation.nix`, on the four-subject table that shows each is INVISIBLE
+# on the other's subject. What this suite arms is the BOUNDARY: the outcomes a consumer sees, and
+# the collapse control that demonstrates the defect the parameter prevents actually occurring.
 {
   genProgram,
   prelude,
-  scope,
   ...
 }:
 let
-  buildOf =
-    { declarations, carried }:
-    genProgram.program {
-      inherit declarations carried;
-      frozen = [ ];
-    };
+  d = r: r // { relata = [ ]; };
+
+  carry = verdict: atoms: map (atom: { inherit atom verdict; }) atoms;
+  undef = carry "undefined";
+  true' = carry "true";
 
   modelOf =
-    args:
+    declarations: interpretation:
     genProgram.model {
-      built = buildOf args;
+      program = genProgram.program {
+        inherit declarations;
+        frozen = [ ];
+      };
+      inherit interpretation;
       complete = true;
     };
 
-  # ── PASS N: the negative cycle leaves `a` and `b` contested ──
-  passN = modelOf {
-    declarations = [
-      {
-        head = "a";
-        neg = [ "b" ];
-        relata = [ ];
-      }
-      {
-        head = "b";
-        neg = [ "a" ];
-        relata = [ ];
-      }
-    ];
-    carried = [ ];
-  };
-
-  # ── PASS N+1: nothing here determines `a`; it is merely read ──
-  nextDeclarations = [
-    {
-      head = "z";
-      pos = [ "a" ];
-      relata = [ ];
-    }
+  # ── VGRS EXAMPLE 5.3's `P2` — the paper says in as many words "Hence P2 has no stable model" ──
+  p2 = [
+    (d {
+      head = "p";
+      neg = [ "p" ];
+    })
   ];
 
-  carriedForward = modelOf {
-    declarations = nextDeclarations;
-    carried = [ "a" ];
-  };
+  # `P2` beside an even loop. With `p` carried TRUE the interpreted model is still PARTIAL, so the
+  # stability search actually RUNS — which is what makes this fixture able to tell a seeded
+  # predicate from an unseeded one. On `P2` alone a TRUE carry gives a TOTAL model, the
+  # short-circuit answers before the predicate is reached, and the arm discriminates nothing.
+  p2partial = p2 ++ [
+    (d {
+      head = "a";
+      neg = [ "b" ];
+    })
+    (d {
+      head = "b";
+      neg = [ "a" ];
+    })
+  ];
 
-  # ARM (i): the identical pass with the construction SUPPRESSED.
-  suppressed = modelOf {
-    declarations = nextDeclarations;
-    carried = [ ];
-  };
+  # ── THE RECURRING DECLARATION SET: identical declarations at every pass, each carrying the
+  # previous pass's undefined atoms. This is the fixture the gate measured FLIPPING.
+  recurring = p2 ++ [
+    (d {
+      head = "reader";
+      pos = [ "p" ];
+    })
+  ];
 
-  # ARM (ii): the same carry, beside a positive rule that DOES determine `a`.
-  determined = modelOf {
-    declarations = nextDeclarations ++ [
-      {
-        head = "settled";
-        relata = [ ];
-      }
-      {
+  passes =
+    n:
+    let
+      step =
+        acc: _:
+        let
+          m = modelOf recurring (undef acc.contested);
+        in
+        {
+          contested = m.undefinedAtoms;
+          outcomes = acc.outcomes ++ [ m.adjudication.outcome ];
+          models = acc.models ++ [ m ];
+        };
+    in
+    prelude.foldl' step {
+      contested = [ ];
+      outcomes = [ ];
+      models = [ ];
+    } (prelude.genList (i: i) n);
+
+  threePasses = passes 3;
+
+  # ── O3's SUBJECTS ──
+  pureCarry = modelOf [ ] (undef [ "x" ]);
+  pureCarryEmpty = modelOf [ ] [ ];
+
+  reader = [
+    (d {
+      head = "z";
+      pos = [ "a" ];
+    })
+  ];
+  carriedForward = modelOf reader (undef [ "a" ]);
+  suppressed = modelOf reader [ ];
+
+  # ── O8's SUBJECT: the next pass DERIVES the carried atom from a settled body ──
+  determined = modelOf (
+    reader
+    ++ [
+      (d { head = "settled"; })
+      (d {
         head = "a";
         pos = [ "settled" ];
-        relata = [ ];
-      }
-    ];
-    carried = [ "a" ];
-  };
-
-  # ARM (iii): the same result assembled with a BROKEN filter — the authored set widened to admit
-  # this library's own atoms, which is what a filter that failed to subtract them would produce.
-  carriedBuilt = buildOf {
-    declarations = nextDeclarations;
-    carried = [ "a" ];
-  };
-  brokenFilter = genProgram.mkModel {
-    # The engine's own result, which is what the real entry hands the constructor. Everything
-    # about this arm is the real path except the authored set.
-    solved = scope.solve carriedBuilt.program;
-    authored = carriedBuilt.authored ++ carriedBuilt.reserved;
-    adjudication = carriedForward.adjudication;
-    complete = true;
-  };
-
-  reservedPartner = genProgram.reservedPrefix + "a";
-
-  reportedAtoms = m: m.trueAtoms ++ m.undefinedAtoms ++ m.falseAtoms;
+      })
+    ]
+  ) (undef [ "a" ]);
 in
 {
   flake.tests.carry = {
-    # ── THE SUBJECT EXISTS: pass N really left `a` contested ──
-    test-control-the-prior-pass-leaves-the-atom-contested = {
-      expr = passN.undefinedAtoms;
+    # ══ THE COMMISSIONED ORACLE ══
+    # The recurring set holds REFUSED at pass 1 and at every pass after. Under the retired boundary
+    # this read [ "refused", "admitted", "admitted" ].
+    test-the-recurring-declaration-set-holds-refused-at-every-pass = {
+      expr = threePasses.outcomes;
       expected = [
-        "a"
-        "b"
+        "refused"
+        "refused"
+        "refused"
       ];
     };
 
-    # ── (i) THE THIRD VALUE CROSSES THE BOUNDARY ──
-    test-an-atom-undefined-at-the-prior-pass-is-undefined-at-the-next = {
-      expr = carriedForward.verdict "a";
-      expected = "undefined";
+    # ★ THE SUBJECT CONTROL: pass 1's model is genuinely PARTIAL and the search actually ran.
+    # Without it the cell above could be reading a fixture that never reached the criterion.
+    test-control-the-first-pass-is-partial-and-searched = {
+      expr =
+        let
+          m = prelude.head threePasses.models;
+        in
+        {
+          inherit (m) undefinedAtoms;
+          searched = m.adjudication.searched;
+          contested = m.adjudication.contested;
+        };
+      expected = {
+        undefinedAtoms = [
+          "p"
+          "reader"
+        ];
+        searched = true;
+        contested = 2;
+      };
     };
 
-    # And it propagates as a value rather than sitting inert: a rule whose body is undefined is
-    # itself undefined, which is what "the third value every consumer handles" has to mean one
-    # step downstream.
-    test-a-rule-reading-the-carried-atom-is-undefined-too = {
+    # ★ AND THE BOUNDARY REALLY CARRIES SOMETHING, so the later passes are not pass 1 repeated with
+    # an empty interpretation.
+    test-control-the-boundary-actually-carries-something = {
+      expr = threePasses.contested;
+      expected = [
+        "p"
+        "reader"
+      ];
+    };
+
+    # ★ THE MECHANISM CONTROL, on a PARTIAL-model fixture: the same shape with a carried atom
+    # supplied as TRUE comes back ADMITTED. Without an arm that reads `admitted`, every cell above
+    # would pass against an adjudication that refuses everything.
+    test-control-a-true-carry-on-a-partial-fixture-is-admitted = {
+      expr =
+        let
+          a = (modelOf p2partial (true' [ "p" ])).adjudication;
+        in
+        {
+          inherit (a) outcome searched;
+        };
+      expected = {
+        outcome = "admitted";
+        searched = true;
+      };
+    };
+
+    # ★★ AND THAT ARM IS WHAT SEPARATES A SEEDED STABILITY PREDICATE FROM AN UNSEEDED ONE, which
+    # is why `searched` is asserted beside the outcome: a fixture whose interpreted model is TOTAL
+    # short-circuits through Corollary 5.6 and never reaches the predicate, so such an arm passes
+    # identically against a build that never seeds.
+    test-control-the-true-arms-fixture-is-partial-rather-than-short-circuited = {
+      expr = (modelOf p2partial (true' [ "p" ])).adjudication.contested > 0;
+      expected = true;
+    };
+
+    # ★ THE FREE SAFETY THEOREM, MADE RUNNABLE. The criterion is evaluated on
+    # `P′ = P ∪ facts(Pos(I))`, which is a function of the program and the interpretation's TRUE
+    # atoms ALONE — so adding further UNDEFINED carries cannot move the answer in either direction.
+    test-adding-undefined-carries-does-not-move-the-outcome = {
+      expr = map (extra: (modelOf recurring (undef extra)).adjudication.outcome) [
+        [ ]
+        [ "p" ]
+        [
+          "p"
+          "reader"
+        ]
+        [
+          "p"
+          "reader"
+          "an-atom-no-rule-mentions"
+        ]
+      ];
+      expected = [
+        "refused"
+        "refused"
+        "refused"
+        "refused"
+      ];
+    };
+
+    # ══ THE PINNED BOUNDARY CELL'S TWO READINGS COLLAPSE TO ONE ══
+    # This cell used to pin `carried = [ ]` ⇒ refused BESIDE `carried = [ "p" ]` ⇒ admitted, and
+    # that difference WAS the measured defect. Under the parameter both are REFUSED, and the
+    # collapse is what is asserted.
+    test-the-two-boundary-readings-of-P2-collapse-to-refused = {
+      expr = {
+        without = (modelOf p2 [ ]).adjudication.outcome;
+        withUndefinedCarry = (modelOf p2 (undef [ "p" ])).adjudication.outcome;
+      };
+      expected = {
+        without = "refused";
+        withUndefinedCarry = "refused";
+      };
+    };
+
+    # ★ THE THIRD READING, WHICH KEEPS THE COLLAPSE FROM BEING "IT REFUSES EVERYTHING": the same
+    # atom carried TRUE on the PARTIAL fixture is ADMITTED, because `P′ = P2 ∪ { p. }` is a
+    # genuinely different program in which `p` is externally true and `p :- not p` is satisfied.
+    # **That is exactly the distinction the retired boundary could not draw.**
+    test-the-true-carry-reading-is-admitted-and-that-is-the-distinction = {
+      expr = (modelOf p2partial (true' [ "p" ])).adjudication.outcome;
+      expected = "admitted";
+    };
+
+    # ══ UNDEFINED SURVIVES THE BOUNDARY ══
+    # Including the PURE-CARRY case, where this pass's program does not mention the atom at all.
+    # That needs the engine's extended base: without it the atom is absent from the enumerations
+    # and only `verdict`'s totality would answer.
+    test-a-pure-carry-is-undefined-and-is-reported = {
+      expr = {
+        verdict = pureCarry.verdict "x";
+        enumerated = pureCarry.undefinedAtoms;
+      };
+      expected = {
+        verdict = "undefined";
+        enumerated = [ "x" ];
+      };
+    };
+
+    # ★ THE COLLAPSE CONTROL, AND IT MUST BE DEMONSTRATED TO OCCUR: the identical pass with the
+    # EMPTY interpretation returns that atom FALSE. This is the defect the parameter prevents, and
+    # a fixture where it does not occur has no subject.
+    test-control-with-an-empty-interpretation-the-same-atom-collapses-to-false = {
+      expr = {
+        verdict = pureCarryEmpty.verdict "x";
+        enumerated = pureCarryEmpty.undefinedAtoms;
+      };
+      expected = {
+        verdict = "false";
+        enumerated = [ ];
+      };
+    };
+
+    # And it propagates: a rule whose POSITIVE body reads a carried-undefined atom is itself
+    # undefined. ★ The retired boundary reached this answer only because its manufactured atom was
+    # a real atom; the parameter reaches it through the overestimate's SEEDED fixpoint, which is
+    # what makes carried undefinedness propagate through a positive body rather than through
+    # negation alone.
+    test-a-positive-reader-of-a-carried-atom-is-undefined-too = {
       expr = carriedForward.undefinedAtoms;
       expected = [
         "z"
@@ -146,19 +278,24 @@ in
       ];
     };
 
-    # ── (i) THE COLLAPSE CONTROL: the defect, demonstrated ──
-    test-control-with-the-construction-suppressed-the-atom-collapses-to-false = {
-      expr = suppressed.verdict "a";
-      expected = "false";
+    test-control-the-same-reader-with-no-carry-is-false = {
+      expr = {
+        inherit (suppressed) undefinedAtoms falseAtoms;
+      };
+      expected = {
+        undefinedAtoms = [ ];
+        falseAtoms = [
+          "z"
+          "a"
+        ];
+      };
     };
 
-    test-control-the-suppressed-arm-carries-no-third-value-at-all = {
-      expr = suppressed.undefinedAtoms;
-      expected = [ ];
-    };
-
-    # ── (ii) THE OVER-PINNING CONTROL ──
-    test-control-a-positive-derivation-at-the-next-pass-settles-the-carried-atom = {
+    # ══ THE OVER-PINNING ARM ══
+    # Where this pass carries a positive rule deriving the atom from a settled body, it comes back
+    # TRUE. The carry supplies undefinedness only in the ABSENCE of other information; one that
+    # froze an atom new information settles would be a fourth value wearing the third one's name.
+    test-a-carry-does-not-pin-an-atom-this-pass-derives = {
       expr = determined.verdict "a";
       expected = "true";
     };
@@ -177,167 +314,38 @@ in
       };
     };
 
-    # ── (iii) THE LEAK CONTROL ──
-    test-no-atom-this-library-introduced-appears-in-any-reported-list = {
-      expr = prelude.filter genProgram.isReserved (reportedAtoms carriedForward);
-      expected = [ ];
-    };
-
-    # The subject of that cell exists: the construction DID introduce an atom, so the filter had
-    # something to subtract. Without this, the cell above passes against a construction that never
-    # ran.
-    test-control-the-construction-really-did-introduce-an-atom = {
-      expr = carriedBuilt.reserved;
-      expected = [ reservedPartner ];
-    };
-
-    test-control-and-that-atom-is-in-the-programs-herbrand-base = {
-      expr = prelude.elem reservedPartner carriedBuilt.program.atoms;
-      expected = true;
-    };
-
-    # THE BROKEN FILTER FAILS THE SAME COMPARISON. Without this the leak cell would pass against a
-    # comparison that could not detect a leak.
-    test-control-a-broken-filter-does-leak-under-the-same-comparison = {
-      expr = prelude.filter genProgram.isReserved (reportedAtoms brokenFilter);
-      expected = [ reservedPartner ];
-    };
-
-    # ── THE SCOPE OF THE CLAIM ──
-    # Hidden from ENUMERATION, reachable by QUERY. `verdict` is total and answers on the reserved
-    # atom — and answers `"undefined"`, not the `"false"` an unmentioned string gets, which is the
-    # real difference between the two surfaces.
-    test-the-reserved-atom-is-unreported-but-still-answerable = {
-      expr = {
-        enumerated = prelude.elem reservedPartner (reportedAtoms carriedForward);
-        queried = carriedForward.verdict reservedPartner;
-        unmentioned = carriedForward.verdict "a-string-no-rule-mentions";
-      };
-      expected = {
-        enumerated = false;
-        queried = "undefined";
-        unmentioned = "false";
-      };
-    };
-
-    # ── THE LIMIT OF THE CONSTRUCTION, PINNED SO IT CANNOT DRIFT BACK INTO A SAFETY CLAIM ──
-    # The argument that made this arm look cheap was: partners only ADD stable models, SO a
-    # program with none does not acquire one, SO the coherence criterion still refuses what it
-    # would have refused. The premise is true and the inference is NOT — adding to zero gives more
-    # than zero. Van Gelder, Ross & Schlipf 1991's Example 5.3 is the witness, and the paper says
-    # what it is in as many words: "Hence P2 has no stable model."
-    #
-    # ★ BOTH READINGS ARE ASSERTED IN ONE CELL, because either alone is worthless. The `refused`
-    # arm without the `admitted` arm would read as the criterion working; the `admitted` arm
-    # without the `refused` arm would read as a program that simply has a stable model.
-    test-the-boundary-construction-does-not-preserve-the-refusal-direction = {
+    # ══ THE RETIREMENT, MEASURED AT THE BOUNDARY AND NOT ONLY ON THE ROSTER ══
+    # No atom in any reported list is one this library introduced — and that is now true because
+    # there is no minter, not because a filter removed them.
+    test-every-reported-atom-is-one-the-caller-wrote = {
       expr =
         let
-          p2 = [
-            {
-              head = "p";
-              neg = [ "p" ];
-              relata = [ ];
-            }
-          ];
-          outcomeOf =
-            carried:
-            (modelOf {
-              declarations = p2;
-              inherit carried;
-            }).adjudication.outcome;
+          reported = carriedForward.trueAtoms ++ carriedForward.undefinedAtoms ++ carriedForward.falseAtoms;
         in
-        {
-          without = outcomeOf [ ];
-          with_ = outcomeOf [ "p" ];
-        };
-      expected = {
-        without = "refused";
-        with_ = "admitted";
-      };
-    };
-
-    # And the mechanism is visible in the rules rather than inferred from the outcome: the partner
-    # rule supplies a SECOND derivation for `p`, which is what `p :- not p` alone never had.
-    test-control-the-partner-rule-is-what-supplies-the-second-derivation = {
-      expr =
-        (buildOf {
-          declarations = [
-            {
-              head = "p";
-              neg = [ "p" ];
-              relata = [ ];
-            }
-          ];
-          carried = [ "p" ];
-        }).program.rules;
+        prelude.sort (a: b: a < b) reported;
       expected = [
-        {
-          head = "p";
-          pos = [ ];
-          neg = [ "p" ];
-        }
-        {
-          head = "p";
-          pos = [ ];
-          neg = [ "${genProgram.reservedPrefix}p" ];
-        }
-        {
-          head = "${genProgram.reservedPrefix}p";
-          pos = [ ];
-          neg = [ "p" ];
-        }
+        "a"
+        "z"
       ];
     };
 
-    # ── COLLISION IS IMPOSSIBLE RATHER THAN UNLIKELY ──
-    # An authored atom trespassing on the reserved namespace is refused at construction, so the
-    # filter never has to distinguish an authored atom from one of this library's.
-    test-an-authored-atom-in-the-reserved-namespace-is-refused = {
+    # ★ The control for that absence: the same predicate over a set that DOES contain a foreign
+    # atom returns it. An absence over a predicate that could not have matched is not an absence.
+    test-control-the-same-predicate-finds-a-foreign-atom-when-there-is-one = {
       expr =
         let
-          trespass = buildOf {
-            declarations = [
-              {
-                head = reservedPartner;
-                relata = [ ];
-              }
-            ];
-            carried = [ ];
-          };
+          authored = [
+            "a"
+            "z"
+          ];
+          reported =
+            carriedForward.trueAtoms
+            ++ carriedForward.undefinedAtoms
+            ++ carriedForward.falseAtoms
+            ++ [ "gen-program::a" ];
         in
-        !(builtins.tryEval (builtins.deepSeq trespass.program trespass.program)).success;
-      expected = true;
-    };
-
-    test-the-refusal-names-the-trespassing-atom = {
-      expr = genProgram.reservedCollisions {
-        declarations = [
-          {
-            head = reservedPartner;
-            pos = [ ];
-            neg = [ ];
-            relata = [ ];
-          }
-        ];
-        carried = [ ];
-      };
-      expected = [ reservedPartner ];
-    };
-
-    test-control-an-ordinary-atom-is-not-a-trespasser = {
-      expr = genProgram.reservedCollisions {
-        declarations = [
-          {
-            head = "a";
-            pos = [ ];
-            neg = [ ];
-            relata = [ ];
-          }
-        ];
-        carried = [ ];
-      };
-      expected = [ ];
+        prelude.filter (x: !(prelude.elem x authored)) reported;
+      expected = [ "gen-program::a" ];
     };
   };
 }

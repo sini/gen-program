@@ -30,7 +30,7 @@ let
   modelOf =
     complete:
     genProgram.model {
-      built = genProgram.program {
+      program = genProgram.program {
         declarations = [
           {
             head = "settled:in";
@@ -53,8 +53,8 @@ let
           }
         ];
         frozen = [ ];
-        carried = [ ];
       };
+      interpretation = [ ];
       inherit complete;
     };
 
@@ -188,8 +188,9 @@ in
     test-completeness-is-a-required-argument-of-the-entry = {
       expr = builtins.functionArgs genProgram.model;
       expected = {
-        built = false;
         complete = false;
+        interpretation = false;
+        program = false;
       };
     };
 

@@ -77,6 +77,8 @@ let
     stableModel = measuringStableModel;
   };
 
+  carryOf = verdict: atoms: map (atom: { inherit atom verdict; }) atoms;
+
   declare =
     d:
     d
@@ -128,14 +130,15 @@ let
   # `carried` is the same shape reached through the pass-boundary construction rather than
   # written as declarations, so what it prices is the construction's own contribution.
   row =
-    { declarations, carried }:
+    { declarations, interpretation }:
     let
       built = genProgram.program {
-        inherit declarations carried;
+        inherit declarations;
         frozen = [ ];
       };
       m = measuring.model {
-        inherit built;
+        program = built;
+        inherit interpretation;
         complete = true;
       };
       cell = {
@@ -145,7 +148,7 @@ let
           searched
           candidatesTested
           ;
-        atoms = prelude.length built.program.atoms;
+        atoms = prelude.length built.atoms;
         converged = m.converged;
       };
     in
@@ -190,36 +193,74 @@ in
           unstable u
         else
           mixed u;
-      carried = [ ];
+      interpretation = [ ];
     };
 
-  # The boundary construction's arm: `n` carried atoms produce `2n` contested ones.
+  # ── THE BOUNDARY ARM, REWRITTEN ONTO THE PARAMETER AND VARYING THREE AXES ──
+  # Under the retired construction each carried atom brought a PARTNER, so `n` carried atoms
+  # arrived as roughly `2n` contested and the budget was effectively halved in carried terms. The
+  # partners are gone — but the multiplier that remains is NOT a constant, and pricing it as one
+  # would miss the axis that actually moves.
+  #
+  # ★★ THE CONTESTED COUNT AT THE NEXT PASS IS THE CARRIED SET CLOSED UNDER REACHABILITY IN THIS
+  # PASS'S PROGRAM, OVER **BOTH SIGNS**. Carried undefinedness propagates through a POSITIVE body
+  # (through the overestimate's seeded fixpoint) and through NEGATION alike, so a family that held
+  # the negative-reader axis fixed could not see half the closure at all.
+  # ★★ AND IT IS AN UPPER BOUND, NOT AN IDENTITY: a reader whose body cannot be satisfied does not
+  # become contested. So the measured figure is bounded by the sign-blind closure and is generally
+  # smaller — safe in direction, and called a bound rather than an identity.
+  #
+  # `carriedAt n p q` — `n` carried atoms, `p` POSITIVE readers of them, `q` NEGATIVE readers.
   carriedAt =
-    n:
+    n: p: q:
+    let
+      atoms = prelude.genList (i: "x${toString i}") n;
+      readerOf =
+        tag: mk:
+        prelude.genList (
+          i:
+          mk {
+            head = "${tag}${toString i}";
+            atom = prelude.elemAt atoms (i - n * (i / n));
+          }
+        );
+    in
     row {
-      declarations = [
-        (declare {
-          head = "reader";
-          pos = [ "x0" ];
-        })
-      ];
-      carried = prelude.genList (i: "x${toString i}") n;
+      declarations =
+        readerOf "pos" (
+          r:
+          declare {
+            inherit (r) head;
+            pos = [ r.atom ];
+          }
+        ) p
+        ++ readerOf "neg" (
+          r:
+          declare {
+            inherit (r) head;
+            neg = [ r.atom ];
+          }
+        ) q;
+      interpretation = carryOf "undefined" atoms;
     };
 
+  # ★ THE DOCUMENTED RECIPE'S OWN SUBJECT. `nix eval --impure --json -f … report` is what this
+  # file's header tells a reader to run, so it is the one entry that MUST evaluate — a derivation
+  # recipe that errors is a budget nobody can re-derive, which is what ADR-0032 ruling 5 asks for.
   report = {
     anticorrelated = ladder (
       u:
-      (row {
+      row {
         declarations = anticorrelated u;
-        carried = [ ];
-      })
+        interpretation = [ ];
+      }
     );
     unstable = ladder (
       u:
-      (row {
+      row {
         declarations = unstable u;
-        carried = [ ];
-      })
+        interpretation = [ ];
+      }
     );
   };
 }

@@ -37,11 +37,13 @@ let
   modelOf =
     declarations:
     genProgram.model {
-      built = genProgram.program {
+      program = genProgram.program {
         inherit declarations;
         frozen = [ ];
-        carried = [ ];
       };
+      # These cells are about the un-interpreted case; the interpreted boundary is
+      # ci/tests/carry.nix, where the interpretation is the subject rather than a constant.
+      interpretation = [ ];
       complete = true;
     };
 

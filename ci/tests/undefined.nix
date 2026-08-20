@@ -28,11 +28,11 @@ let
   solveOf =
     declarations:
     genProgram.model {
-      built = genProgram.program {
+      program = genProgram.program {
         inherit declarations;
         frozen = [ ];
-        carried = [ ];
       };
+      interpretation = [ ];
       complete = true;
     };
 

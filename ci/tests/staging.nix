@@ -34,7 +34,6 @@ let
         }
       ];
       inherit frozen;
-      carried = [ ];
     };
 
   refused = expr: !(builtins.tryEval (builtins.deepSeq expr expr)).success;
@@ -59,7 +58,7 @@ in
   flake.tests.staging = {
     # ── THE SUBJECT: a relatum this pass would mint ──
     test-a-same-pass-relatum-does-not-resolve = {
-      expr = refused (build [ "same-pass:node" ]).program;
+      expr = refused (build [ "same-pass:node" ]);
       expected = true;
     };
 
@@ -71,7 +70,7 @@ in
 
     # ── THE SECOND WITNESS: the root, through the identical path ──
     test-a-root-relatum-refuses-by-the-same-path = {
-      expr = refused (build [ "root" ]).program;
+      expr = refused (build [ "root" ]);
       expected = true;
     };
 
@@ -98,7 +97,7 @@ in
     # The identical relation ACROSS passes constructs and resolves. Without this arm every cell
     # above passes against a construction that refuses everything.
     test-control-a-relatum-a-strictly-earlier-pass-settled-does-resolve = {
-      expr = refused (build [ "earlier:node" ]).program;
+      expr = refused (build [ "earlier:node" ]);
       expected = false;
     };
 
@@ -109,7 +108,7 @@ in
 
     # And the resolved form really produces a program, rather than merely failing to throw.
     test-control-the-cross-pass-form-yields-a-program-with-its-rule = {
-      expr = (build [ "earlier:node" ]).program.rules;
+      expr = (build [ "earlier:node" ]).rules;
       expected = [
         {
           head = "promotes:earlier:node";
@@ -124,7 +123,7 @@ in
     # A relatum must not become derivable just by being mentioned, or an identifier would acquire
     # a truth value.
     test-a-relatum-does-not-enter-the-herbrand-base = {
-      expr = (build [ "earlier:node" ]).program.atoms;
+      expr = (build [ "earlier:node" ]).atoms;
       expected = [ "promotes:earlier:node" ];
     };
 

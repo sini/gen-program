@@ -4,43 +4,35 @@
 # It computes no semantics: the model is gen-scope's, the partition behind the provenance stamp is
 # gen-graph's through gen-scope's door, and the coherence criterion is the module next door.
 #
-# ★ IT DRIVES RATHER THAN MERELY CONSTRUCTS, AND THAT IS THE RULED ACCEPTANCE (spec R§4.7, R§1.6).
-# ADR-0022's recorded exit is armed by benchmark acceptance failure; with nothing turning a policy
-# into a program and reaching the solve, the benchmark never runs and that exit can never fire. A
-# pure constructor with no caller would rebuild the wiring gap one layer up — which is the finding
-# this whole commission exists to close.
+# ★ IT DRIVES RATHER THAN MERELY CONSTRUCTS, AND THAT IS THE RULED ACCEPTANCE. ADR-0022's recorded
+# exit is armed by benchmark acceptance failure; with nothing turning a policy into a program and
+# reaching the solve, the benchmark never runs and that exit can never fire. A pure constructor
+# with no caller would rebuild the wiring gap one layer up — which is the finding this whole
+# commission exists to close.
 #
-# ── THE THIRD VALUE IS CARRIED OUT, NEVER COLLAPSED ──
-# ADR-0020 rules contested atoms UNDEFINED — a named third value, never silence. `verdict` is
-# gen-scope's own total function and it returns `"undefined"` under its own name; `undefinedAtoms`
-# is the enumeration. Both reach this record. What the include surface then does with an undefined
-# gate was the open fork, and it is RULED: arm (a), the resolved relation acquires a third value
-# every consumer handles. `relation` below is that construction.
+# ── THE PRIOR PASS ARRIVES AS AN INTERPRETATION, AND THAT IS THE WHOLE BOUNDARY NOW ──
+# `solve` takes `{ program, interpretation }`. The interpretation is a LIST of `{ atom, verdict }`
+# — a prior pass's verdicts, travelling as themselves. It carries NO default here for the same
+# reason it carries none there: a defaulted empty carry is the silent collapse the parameter
+# exists to prevent, and the first pass supplies `[ ]` and says so.
 #
-# ── WHAT IS SUBTRACTED FROM THE REPORTED LISTS, AND WHAT IS NOT ──
-# The pass-boundary construction introduces reserved atoms (see `rules.nix`). They are REAL atoms:
-# they enter the Herbrand base and would otherwise appear in every verdict list this record
-# carries. So they are subtracted from the ENUMERATIONS.
+# ★★ WHAT THIS REPLACED, BECAUSE THE DELETION IS THE HEADLINE. The boundary used to be a two-rule
+# gadget per contested atom, and the gadget's fresh atoms had to be SUBTRACTED from every verdict
+# list this record reports. That subtraction was *itself a place content could vanish*, which is
+# why it was armed with a leak control rather than trusted. **With no library-introduced atoms
+# there is nothing to subtract**, the filter is deleted rather than fixed, and the leak control
+# loses its subject rather than passing. By construction, not repair.
 #
-# ★★ AND THE LIMIT OF THAT SUBTRACTION IS STATED HERE RATHER THAN LEFT TO BE ASSUMED, BECAUSE IT
-# IS EASY TO OVERCLAIM (spec R§2.4). `verdict` is a TOTAL FUNCTION on every string. Filtering the
-# reserved atoms out of the lists makes them UNREPORTED, never UNOBSERVABLE: a caller who invokes
-# `verdict` on a reserved atom's name still receives an answer, and receives `"undefined"` rather
-# than the `"false"` an unmentioned string would get. The subtraction hides them from ENUMERATION
-# and that is the whole of the claim. What makes the collision impossible is the reserved
-# namespace's REFUSAL, not this filter.
-#
-# ★ THE SUBTRACTION IS ITSELF A PLACE CONTENT CAN VANISH, which is why the suite arms it with a
-# control that compares the reported lists against the AUTHORED atom set and shows a deliberately
-# broken filter failing, rather than trusting the filter because it was written.
+# ★ AND THE ENUMERATIONS COME BACK FROM THE ENGINE UNTOUCHED. gen-scope reports over
+# `program.atoms ∪ dom(interpretation)` — program atoms first in declaration order, then carried
+# atoms not already present. This file does not re-order, re-filter or re-derive them; a second
+# derivation is a second place the decision lives.
 {
   prelude,
   scope,
   stableModel,
 }:
 let
-  reserved = import ./reserved.nix { inherit prelude; };
-
   # ── THE FLAGS, AND THEY ARE VAN ANTWERPEN'S, CITED AT THEIR OWN PRIMARY ──
   # van Antwerpen et al. 2016 §4.1 puts a flag on a resolution result and gives it three values,
   # verbatim from the archived transcription: "a result flag, **T (total)** if all declarations
@@ -79,41 +71,26 @@ let
   };
 
   # ── THE RESULT RECORD'S CONSTRUCTOR ──
-  # A STRICT PATTERN WITH `adjudication` CARRYING NO DEFAULT, and that is the armed form of
-  # R§2.14 rather than a sentence about what results should look like. A construction that does
-  # not attach the field does not construct: the evaluator refuses the application by name, and
-  # that refusal is UNCATCHABLE — `tryEval` does not contain it — so there is no path on which a
-  # result exists without the statement.
+  # A STRICT PATTERN WITH `adjudication` CARRYING NO DEFAULT. A construction that does not attach
+  # the field does not construct: the evaluator refuses the application by name, and that refusal
+  # is UNCATCHABLE — `tryEval` does not contain it — so there is no path on which a result exists
+  # without the statement.
   #
   # ★ THE REQUIREDNESS IS READABLE IN-LANGUAGE, WHICH IS WHY THIS CONSTRUCTOR IS PUBLISHED.
   # `builtins.functionArgs mkModel` reports each formal against whether it has a default, so a
   # consumer — and a cell — can assert that `adjudication` is required rather than discovering it
-  # from a crash. The same reason gen-assemble publishes its substrate preconditions: a property a
-  # consumer depends on should be readable, not inferable from a throw.
+  # from a crash.
   #
-  # ★ AND THE FIELD IS PRESENT ON EVERY RESULT, DELIBERATELY. It is a property of the LIBRARY, not
-  # of the program, so gen-scope's rule about `provenance` — that a field always populated says
-  # nothing about the input that produced it — does NOT transfer here. Two fields, two
-  # disciplines: `provenance` means something BY being conditional; this one means something by
-  # being unconditional, because what it reports is whether the ruled criterion was applied at all.
-  # Reading the first's rule onto the second is the transplant defect at its smallest scale.
+  # ★★ `authored` IS GONE, AND IT DIED WITH THE FILTER RATHER THAN BEING TIDIED AWAY. Its only
+  # consumer was the subtraction of the gadget's own atoms; with no minted atoms there is nothing
+  # to distinguish an authored atom from any other, so the formal has no question left to answer.
   mkModel =
     {
       solved,
-      authored,
       adjudication,
       complete,
     }:
     let
-      authoredSet = prelude.genAttrs authored (_: true);
-      # The enumerations, with this library's own atoms subtracted. Order is preserved: the lists
-      # arrive in the program's declaration order and a filter does not disturb it.
-      onlyAuthored = prelude.filter (atom: authoredSet ? ${atom});
-
-      trueAtoms = onlyAuthored solved.trueAtoms;
-      undefinedAtoms = onlyAuthored solved.undefinedAtoms;
-      falseAtoms = onlyAuthored solved.falseAtoms;
-
       # ── THE RESOLVED RELATION, WITH THE THIRD VALUE EVERY CONSUMER HANDLES ──
       # Total on every string, and every answer carries its flag. There is no shape of this record
       # from which a consumer can take a bare boolean.
@@ -127,15 +104,13 @@ let
       # on an intermediate, incomplete graph may yield a different result than invoking it on the
       # final graph. This is potentially unsound" (archived transcription, file lines 1861–1863);
       # its answer is that "resolution is aborted, and the query constraint delayed" (lines
-      # 1925–1926 — the quote is split across the two).
-      # So under `P` this record delays the negative answer by NAME rather than serving one that
-      # a later pass can falsify.
+      # 1925–1926 — the quote is split across the two). So under `P` this record delays the
+      # negative answer by NAME rather than serving one that a later pass can falsify.
       #
       # ★ THE WITHHELD ANSWERS ARE FIELDS THAT REFUSE, NOT FIELDS THAT ARE ABSENT. An absent
       # field is a missing-attribute error naming nothing a consumer can act on, and `null` would
       # be worse — every `if r.included` in the world reads `null` as false, which is the silent
-      # collapse this fork was ruled to end. A field whose forcing is a named refusal is loud in
-      # exactly the place a consumer would otherwise have decided the question without seeing it.
+      # collapse this fork was ruled to end.
       resolve =
         atom:
         let
@@ -163,13 +138,11 @@ let
           };
     in
     {
-      inherit
-        trueAtoms
-        undefinedAtoms
-        falseAtoms
-        resolve
-        complete
-        ;
+      inherit resolve complete;
+
+      # gen-scope's own enumerations, over its own extended base, unchanged. Nothing is filtered
+      # here because nothing in them was put there by this library.
+      inherit (solved) trueAtoms undefinedAtoms falseAtoms;
 
       # THE REQUIRED FIELD. It names ADR-0020's criterion, records the criterion's outcome on this
       # program, and names what decided it. It is plain data and crosses an evaluation boundary as
@@ -177,32 +150,34 @@ let
       # drop is a channel on which silence reads as admission.
       inherit adjudication;
 
-      # gen-scope's own, unchanged and cited apart. `verdict` is TOTAL and stays total: it answers
-      # on a reserved atom too, which the enumerations above do not report. The two surfaces are
-      # different and the difference is real.
+      # gen-scope's own, cited apart. `verdict` is TOTAL and stays total.
       inherit (solved) verdict converged;
 
       # The engine's stamp, carried as the engine emits it: empty inside the benchmark-verified
       # condensation depth and populated past it, which is what makes a stamped result say
-      # something about the input that produced it.
+      # something about the input that produced it. ★ Carried atoms contribute no edges, so the
+      # stamp reads the same quantity it read before the parameter existed.
       inherit (solved) provenance condensationDepth;
     };
 
   # ── THE ENTRY ──
   # `complete` carries NO DEFAULT. A defaulted `true` would silently claim the pass sequence had
-  # closed, which is the one claim this record cannot make on its caller's behalf — and a
-  # defaulted `false` would withhold every negative answer forever. Absence is a decision, so the
-  # caller makes it.
+  # closed, which is the one claim this record cannot make on its caller's behalf — and a defaulted
+  # `false` would withhold every negative answer forever. `interpretation` carries none either, for
+  # the reason gen-scope states at its own parameter. Absence is a decision, so the caller makes it.
   model =
-    { built, complete }:
+    {
+      program,
+      interpretation,
+      complete,
+    }:
     let
-      solved = scope.solve built.program;
+      solved = scope.solve { inherit program interpretation; };
     in
     mkModel {
       inherit solved complete;
-      inherit (built) authored;
       adjudication = stableModel.adjudicate {
-        inherit (built) program;
+        inherit program interpretation;
         model = solved;
       };
     };
@@ -214,6 +189,4 @@ in
     flagNames
     flags
     ;
-
-  inherit (reserved) reservedPrefix isReserved;
 }

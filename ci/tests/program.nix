@@ -16,6 +16,7 @@
 {
   genProgram,
   prelude,
+  scope,
   ...
 }:
 let
@@ -24,13 +25,11 @@ let
   built = genProgram.program {
     declarations = fixtures.growingInclude;
     frozen = [ ];
-    carried = [ ];
   };
 
   mutant = genProgram.program {
     declarations = fixtures.growingIncludeWithoutNegation;
     frozen = [ ];
-    carried = [ ];
   };
 
   # The encoding the spec states, written out rather than computed from the thing under test: a
@@ -72,19 +71,19 @@ in
   flake.tests.program = {
     # ── THE ENCODING, TERM BY TERM ──
     test-the-declarations-become-exactly-these-rules = {
-      expr = built.program.rules;
+      expr = built.rules;
       expected = expectedRules;
     };
 
     test-the-herbrand-base-is-closed-over-every-atom-any-rule-mentions = {
-      expr = built.program.atoms;
+      expr = built.atoms;
       expected = expectedAtoms;
     };
 
     # An atom no rule can derive is IN the base and FALSE by the model, rather than absent from it
     # — which is what makes `verdict` total and an unmentioned membership a decided one.
     test-a-negated-atom-no-rule-heads-is-in-the-base = {
-      expr = prelude.elem "excluded:X" built.program.atoms;
+      expr = prelude.elem "excluded:X" built.atoms;
       expected = true;
     };
 
@@ -92,8 +91,8 @@ in
     # would build a program whose model is a different question.
     test-the-negated-literal-lands-in-neg-and-not-in-pos = {
       expr = {
-        neg = (prelude.elemAt built.program.rules 2).neg;
-        pos = (prelude.elemAt built.program.rules 2).pos;
+        neg = (prelude.elemAt built.rules 2).neg;
+        pos = (prelude.elemAt built.rules 2).pos;
       };
       expected = {
         neg = [ "excluded:X" ];
@@ -103,7 +102,7 @@ in
 
     # A declaration with neither body is a FACT — `mkRule`'s own base case, not an omission.
     test-a-declaration-with-neither-body-is-a-fact = {
-      expr = prelude.elemAt built.program.rules 0;
+      expr = prelude.elemAt built.rules 0;
       expected = {
         head = "guard:B";
         pos = [ ];
@@ -113,7 +112,7 @@ in
 
     # ── THE MUTANT ARM, WHICH MUST FAIL THE SAME ASSERTION ──
     test-control-the-mutant-without-the-negation-is-rejected-by-the-same-assertion = {
-      expr = mutant.program.rules == expectedRules;
+      expr = mutant.rules == expectedRules;
       expected = false;
     };
 
@@ -121,7 +120,7 @@ in
     # exactly the negative body. Without this the cell above would also pass against a mutant that
     # failed to construct at all.
     test-control-the-mutant-differs-from-the-clean-arm-only-in-the-negative-body = {
-      expr = map (r: r.neg) mutant.program.rules;
+      expr = map (r: r.neg) mutant.rules;
       expected = [
         [ ]
         [ ]
@@ -133,25 +132,29 @@ in
     test-control-the-mutants-heads-and-positive-bodies-are-unchanged = {
       expr = map (r: {
         inherit (r) head pos;
-      }) mutant.program.rules;
+      }) mutant.rules;
       expected = map (r: {
         inherit (r) head pos;
       }) expectedRules;
     };
 
-    # ── WHAT THE LIBRARY ADDS BESIDE THE PROGRAM ──
-    # The authored atom set is what the reported verdict lists are filtered against, so it is
-    # asserted rather than assumed.
-    test-the-authored-atom-set-is-every-atom-the-declarations-mention = {
-      expr = built.authored;
-      expected = expectedAtoms;
+    # ── THE PROGRAM IS gen-scope's OWN VALUE, UNWRAPPED ──
+    # Under the retired boundary construction this had to be a record: the library's minted atoms
+    # travelled beside the program so the reporting filter could subtract them again. With no
+    # minted atoms there is nothing to carry, so the wrapper is gone and what comes back is the
+    # substrate's value itself — asserted here as an exact field set, because a wrapper creeping
+    # back is a second shape in front of a consumer.
+    test-the-construction-returns-the-substrates-own-program-value = {
+      expr = prelude.sort (a: b: a < b) (prelude.attrNames built);
+      expected = prelude.sort (a: b: a < b) (
+        prelude.attrNames (scope.mkProgram { rules = [ { head = "x"; } ]; })
+      );
     };
 
-    # With nothing carried across a pass boundary this library introduces no atom of its own, and
-    # the Herbrand base is exactly the authored set.
-    test-with-nothing-carried-the-library-introduces-no-atom = {
-      expr = built.reserved;
-      expected = [ ];
+    # And every atom in it is a string the caller wrote. There is no minter left to exempt.
+    test-every-atom-in-the-base-is-one-the-declarations-wrote = {
+      expr = built.atoms;
+      expected = expectedAtoms;
     };
   };
 }
