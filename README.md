@@ -83,16 +83,45 @@ edge) and which the well-founded model gives UNDEFINED.
 It **composes rather than pins**: where the new pass independently derives `x` through a positive
 rule whose body holds, `x` becomes true and the construction does not prevent it.
 
+★ **That sentence is direction-asymmetric, and only the direction it names is claimed.** The
+construction composes with a *positive* derivation and **overrides a negative one**: an atom the
+next pass leaves underived would read `false` from the total verdict function, and carried it
+reads `undefined`, because the two rules give it a derivation it did not otherwise have. That is
+what re-injecting the third value is *for*, so it is not a defect — but it is not symmetry either.
+The asymmetry dissolves when the input-interpretation parameter replaces this construction
+(`den-hoag-1tu3`): a prior verdict arriving as an *interpretation* overrides nothing, because it
+is not a rule.
+
 Its limits are stated rather than left to be discovered:
 
 - The fresh atoms are **real atoms** — they enter the Herbrand base and every verdict list — so
   they are subtracted from the reported enumerations. That subtraction is itself a place content
   can vanish, so the suite arms it with a control rather than trusting the filter.
+
 - The subtraction hides them from **enumeration, never from observation**: `verdict` is total, so
   a reserved atom stays answerable and answers `"undefined"`.
+
 - The re-encoded program is **not stable-model-equivalent** to the one it stands in for. Two atoms
   left undefined because they were *anti-correlated* become independent under one partner each.
   What is preserved is the well-founded verdict **atom by atom**, which is all it claims.
+
+- ★★★ **The contract on `carried` is stated and NOT enforced.** `carried` is meant to be the atoms
+  whose verdict at the previous pass was `undefined`, and nothing checks it — nor can it be
+  checked here, since the previous pass's model is not an argument to the construction. **A caller
+  who carries an atom that was settled injects undefinedness silently, and it propagates to that
+  atom's readers.** Measured, on `s.` and `r :- f` where `f` is headed by no rule and so is
+  settled `false`:
+
+  |                     | `f`             | `r`             | `contested` |
+  | ------------------- | --------------- | --------------- | ----------- |
+  | `carried = [ ]`     | `false`         | `false`         | 0           |
+  | `carried = [ "f" ]` | **`undefined`** | **`undefined`** | 3           |
+
+  It is a **precondition on the caller**, and it is the one shape of vanishing content this design
+  does not close by construction. No enforcement is built, deliberately: the construct retires
+  under the input-interpretation ruling (`den-hoag-1tu3`), where the hazard **dissolves** rather
+  than being guarded — an interpretation carries each atom's verdict with it, so there is no way
+  to assert undefinedness of an atom that did not have it.
 
 ★★★ **And the safety argument that made this arm look cheap does not hold — measured.** The
 argument ran: partners only *add* stable models, **so** a program with none does not acquire one,

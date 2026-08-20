@@ -52,6 +52,32 @@
 # information, which is what re-injecting a third value has to mean. A construction that pinned
 # would be a fourth value wearing the third one's name.
 #
+# ★★ AND THAT SENTENCE IS DIRECTION-ASYMMETRIC, WHICH IS STATED HERE BECAUSE A READER WILL
+# OTHERWISE TAKE IT FOR BOTH DIRECTIONS. It composes with a POSITIVE derivation and OVERRIDES a
+# NEGATIVE one. An atom the next pass leaves underived would read FALSE from the total verdict
+# function; carried, it reads UNDEFINED — the two rules give it a derivation it did not otherwise
+# have. That is exactly what re-injecting the third value is FOR, so it is not a defect; but
+# "composes rather than pins" is true only of the direction it names, and this file claims no
+# more. ⇒ The asymmetry dissolves when the input-interpretation parameter replaces this
+# construction (`den-hoag-1tu3`): a prior verdict arriving as an INTERPRETATION overrides nothing,
+# because it is not a rule.
+#
+# ★★★ THE CONTRACT ON `carried` IS STATED AND NOT ENFORCED, AND SAYING SO IS THE POINT.
+# `carried` is meant to be the atoms whose verdict at the previous pass was UNDEFINED. Nothing
+# below checks that, and it cannot be checked here: the previous pass's model is not an argument
+# to this construction. **A caller who carries an atom that was settled injects undefinedness
+# SILENTLY, and it propagates to that atom's readers.** Measured on this library — `s.` and
+# `r :- f`, where `f` is headed by no rule and so is settled FALSE:
+#
+#     carried = [ ]      ⇒  f = "false",     r = "false",     contested = 0
+#     carried = [ "f" ]  ⇒  f = "undefined", r = "undefined", contested = 3
+#
+# ⇒ It is a PRECONDITION on the caller, and it is the one shape of vanishing-content this design
+# does not close by construction. No enforcement is built, deliberately: the construct retires
+# under the input-interpretation ruling (`den-hoag-1tu3`), where the hazard dissolves rather than
+# being guarded — an interpretation carries each atom's verdict WITH it, so there is no way to
+# assert undefinedness of an atom that did not have it.
+#
 # ★★ AND ITS LIMIT IS SEMANTIC, NOT COSMETIC, SO IT IS STATED HERE RATHER THAN LEFT TO BE
 # DISCOVERED (spec R§4.10). Two atoms left undefined at the previous pass BECAUSE THEY WERE
 # ANTI-CORRELATED — the `a :- not b` / `b :- not a` shape, whose two stable models are `{a}` and

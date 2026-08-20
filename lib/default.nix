@@ -25,8 +25,18 @@
 # ── THE NAMES, AND EACH ONE OWES A PER-PRIMARY CHECK RATHER THAN A CORPUS TOTAL ──
 # ADR-0011's theory-terminology rider asks whether a term resolves at the primary the construct
 # CITES, not whether it exists somewhere in the corpus, and for this library's family those come
-# apart completely. Measured on the archived transcriptions with live in-file controls and a
-# negative control at 0 in the same runs:
+# apart completely.
+#
+# ★ THE PREDICATE IS PART OF THE MEASUREMENT AND IS NAMED WITH IT: `grep -aoE "\b<term>\b"`,
+# CASE-SENSITIVE, over the paper transcription only (both archived files open with an archivist
+# note explicitly marked NOT PART OF THE SOURCE TEXT, so a whole-file sweep mixes typed commentary
+# with extracted text), counting OCCURRENCES rather than lines. A figure whose predicate is not
+# stated is not a measurement — a reader cannot tell what it counted.
+# ⇒ The spec's own R§0.4 figures are the CASE-INSENSITIVE reading of the same corpus and differ
+# where a term opens a sentence: `program` reads 101 / 154 there against 100 / 152 here, `rule`
+# 12 / 78 against 11 / 78. Both reproduce; **the conclusion is identical under either predicate**,
+# because the disjointness below is 20/0 and 0/20 with or without `-i`, and the negative control
+# is 0 under both.
 #
 #   program              ABW 100 · VGRS 152   → resolves at BOTH; the library's own name
 #   rule                 ABW  11 · VGRS  78   → resolves at BOTH

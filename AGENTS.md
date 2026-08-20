@@ -108,10 +108,21 @@ The normal path is **polynomial**; the bounded search is the coherence gate only
 
 ADR-0011's theory-terminology rider asks whether a term resolves at the primary the construct
 CITES — not whether it exists somewhere in the corpus. For this library's family those come apart
-completely. Measured on the archived transcriptions (paper text only; both files open with an
-archivist note explicitly marked NOT PART OF THE SOURCE TEXT, so a whole-file sweep mixes typed
-commentary with extracted text), word-bounded, occurrences, with a live in-file control and a
-negative control at 0 in the same runs:
+completely.
+
+★ **The predicate is part of the measurement, so it is named with it.** `grep -aoE "\b<term>\b"`,
+**case-sensitive**, over the paper transcription only (both archived files open with an archivist
+note explicitly marked NOT PART OF THE SOURCE TEXT, so a whole-file sweep mixes typed commentary
+with extracted text), counting **occurrences** rather than lines, with a live in-file control and
+a negative control at 0 in the same runs. A figure whose predicate is unstated is not a
+measurement — a reader cannot tell what it counted.
+
+⇒ **The spec's own R§0.4 figures are the case-INSENSITIVE reading of the same corpus**, and they
+differ from these wherever a term opens a sentence: `program` reads **101 / 154** there against
+100 / 152 here, and `rule` **12 / 78** against 11 / 78. Both reproduce. **The conclusion is
+identical under either predicate** — the disjointness below is 20/0 and 0/20 with or without `-i`,
+and the negative control is 0 under both — so the difference is one of instrument labelling, not
+of finding.
 
 | term                     | Apt, Blair & Walker 1988 | Van Gelder, Ross & Schlipf 1991 | verdict                                   |
 | ------------------------ | ------------------------ | ------------------------------- | ----------------------------------------- |
@@ -170,6 +181,21 @@ name — the cheapest discharge available, and also asserted with a control.
   arbitrary user-supplied function inside a declaration is what makes the translation's TOTALITY a
   question. This library states the precondition and supplies no missing conjunct; the debt is
   `den-hoag-xin3`'s.
+- ★★★ **The contract on `carried` — STATED, NOT ENFORCED.** `carried` is meant to be the atoms
+  whose verdict at the previous pass was `undefined`, and nothing checks it — nor can it be checked
+  here, since the previous pass's model is not an argument to the construction. **A caller who
+  carries a SETTLED atom injects undefinedness silently, and it propagates to that atom's
+  readers.** Measured on `s.` + `r :- f` with `f` headed by no rule: `carried = [ ]` gives
+  `f = "false"`, `r = "false"`, contested 0; `carried = [ "f" ]` gives `f = "undefined"`,
+  `r = "undefined"`, contested 3. It is a precondition on the caller and the one shape of
+  vanishing content this design does not close by construction. No enforcement is built,
+  deliberately — the construct retires under the input-interpretation ruling (`den-hoag-1tu3`),
+  where the hazard **dissolves**: an interpretation carries each atom's verdict with it, so
+  undefinedness cannot be asserted of an atom that did not have it.
+- **The "composes rather than pins" claim is direction-asymmetric.** It composes with a positive
+  derivation and OVERRIDES a negative one — a carried atom the next pass leaves underived comes
+  back `undefined` rather than `false`. That is what re-injecting the third value is for, and only
+  the direction named is claimed. Dissolves at `den-hoag-1tu3` for the same reason.
 - **The compositional result is NOT established.** ABW's theorem is about a stratified program and
   a pass here carries negative cycles by premise, so the pass sequence is not an instance of their
   iteration. What replaces it is a CONSTRUCTION — ADR-0016 ruling 7's frozen set with ADR-0033

@@ -126,7 +126,8 @@ let
       # may derive it. vA2018's own statement of the problem: "Invoking the resolution algorithm
       # on an intermediate, incomplete graph may yield a different result than invoking it on the
       # final graph. This is potentially unsound" (archived transcription, file lines 1861–1863);
-      # its answer is that "resolution is aborted, and the query constraint delayed" (line 1900).
+      # its answer is that "resolution is aborted, and the query constraint delayed" (lines
+      # 1925–1926 — the quote is split across the two).
       # So under `P` this record delays the negative answer by NAME rather than serving one that
       # a later pass can falsify.
       #
