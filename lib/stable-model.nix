@@ -44,6 +44,21 @@
 # ⇒ That exhaustiveness is what licenses the `refused` outcome: no candidate stable means no
 # stable model, and not merely none found.
 #
+# ★★ A SECOND WITNESS BESIDE THE PUBLISHED ONE: a differential against an enumerator applying NO
+# restriction at all — the full powerset of the Herbrand base, every total interpretation tested
+# for stability. Over 17 programs built from anticorrelated pairs, settled chains and unstable
+# atoms, the search ran on 16 and **10 of those genuinely HAVE stable models**; the restricted
+# search agreed with the unrestricted enumerator on every one, and the seeded defect — narrowing
+# the restriction to `S = ∅` — was caught on exactly those 10.
+# ★★★ THE POPULATION IS WHAT MAKES THAT EVIDENCE, AND IT WAS EARNED THE HARD WAY. A first attempt
+# ran 120 RANDOMLY GENERATED programs and also found zero disagreements — and its control was
+# DEAD: in that population every admitted program had a TOTAL well-founded model, so the search
+# path never once ran on a program that HAS a stable model, and narrowing a space containing
+# nothing still contains nothing. The tell is an identity worth checking on any such run:
+# `admitted` == the count of programs with ZERO contested atoms. ⇒ A zero-disagreement
+# differential over this restriction means NOTHING until its population is shown to contain
+# partial-model programs that have stable models.
+#
 # ── STABILITY IS TESTED WITH gen-scope's OWN CONSTRUCTIONS, NEVER A SECOND COPY ──
 # Gelfond & Lifschitz: `M` is stable iff `M = lfp T_{P/M}`. The reduct is `scope.reduct` and the
 # least fixpoint is `scope.leastModel`, both consumed through that library's published surface.
