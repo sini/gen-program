@@ -46,16 +46,21 @@
 #
 # ★★ A SECOND WITNESS BESIDE THE PUBLISHED ONE: a differential against an enumerator applying NO
 # restriction at all — the full powerset of the Herbrand base, every total interpretation tested
-# for stability. Over 17 programs built from anticorrelated pairs, settled chains and unstable
-# atoms, the search ran on 16 and **10 of those genuinely HAVE stable models**; the restricted
-# search agreed with the unrestricted enumerator on every one, and the seeded defect — narrowing
-# the restriction to `S = ∅` — was caught on exactly those 10.
-# ★★★ THE POPULATION IS WHAT MAKES THAT EVIDENCE, AND IT WAS EARNED THE HARD WAY. A first attempt
-# ran 120 RANDOMLY GENERATED programs and also found zero disagreements — and its control was
-# DEAD: in that population every admitted program had a TOTAL well-founded model, so the search
-# path never once ran on a program that HAS a stable model, and narrowing a space containing
-# nothing still contains nothing. The tell is an identity worth checking on any such run:
-# `admitted` == the count of programs with ZERO contested atoms. ⇒ A zero-disagreement
+# for stability.
+#   · The gate's run (`den-hoag-mpb7`, gate contact), which is the stronger instrument and the one
+#     to cite: a negation-biased generator FILTERED to partial well-founded models, giving **188
+#     live programs, all of them having stable models** under full-powerset enumeration. Clean
+#     **0/188** disagreements against a seeded restriction caught **126/188**.
+#   · This library's own, kept beside it because it is the one run here: 17 programs from
+#     anticorrelated pairs, settled chains and unstable atoms; the search ran on 16 and 10 of
+#     those genuinely have stable models; agreement on every one, with the seeded `S = ∅` defect
+#     caught on exactly those 10.
+# ★★★ THE POPULATION IS WHAT MAKES EITHER OF THOSE EVIDENCE, AND IT WAS EARNED THE HARD WAY. A
+# first attempt here ran 120 RANDOMLY GENERATED programs and also found zero disagreements — and
+# its control was DEAD: **in that reproduction** every admitted program had a TOTAL well-founded
+# model, so the search path never once ran on a program that HAS a stable model, and narrowing a
+# space containing nothing still contains nothing. The tell is an identity worth checking on any
+# such run: `admitted` == the count of programs with ZERO contested atoms. ⇒ A zero-disagreement
 # differential over this restriction means NOTHING until its population is shown to contain
 # partial-model programs that have stable models.
 #
