@@ -188,6 +188,28 @@ makes a *model* total when it is two-valued over the Herbrand base, while van An
 about whether an answer **set** is complete. A field named `total` would read as one and mean the
 other.
 
+### The policy-body algebra
+
+The registration-time authoring surface, and it **evaluates nothing** — the sole-evaluator charter
+is untouched. A normal-form policy body is a list of emission clauses: a single skeleton (`emit`)
+or an iteration over a computed list (`forEach { over, emit }`, the item joining the scope). Four
+slots are registration data — the constructor (closed enum `member` · `deliver` · `edge` ·
+`suppress` · `realize`, published as `ctorNames`), the emitted kind, the payload attrset's
+**spine**, and the suppress target — and the firing context is **unreachable from them by
+construction**: the context enters only through slots typed as functions, and the walk's signature
+takes no context. Everything else — guards, `over`, payload values, free targets — is arbitrary
+Nix the algebra never interprets.
+
+`deriveCodomain` reads `{ emits; binds; suppresses }` off the structure with no context parameter,
+so the recovered-empty-head failure class (fire a value-conditional body at a sentinel, read back
+the empty codomain) has no expression: **a term is read, not fired**. A malformed body is refused
+at construction as a **tagged value** naming the violated slot, the author as the blamed party,
+and the sanctioned alternative: the declared `escape`, whose `{ emits, binds, suppresses }` are
+required and total at the site, and whose firing path (`fireEscape`) checks the declaration at
+**every firing** — a breach refuses with the site, field and delta. `admit` is the registration
+door: hand-rolled records fail the same walk the formers run, and a bare lambda without the
+`opaque` marker is refused with the signpost to the escape.
+
 ## The budget, and the curve it is derived from
 
 The figure is never a bare number. It is derived from this library's own measured cost curve and

@@ -17,9 +17,17 @@ boundary, and a library that re-declared the evaluator would pin it on its consu
 [
   "adjudicate",
   "adjudicationOutcomes",
+  "admit",
+  "body",
+  "ctorNames",
   "declaration",
+  "deriveCodomain",
+  "emit",
+  "escape",
+  "fireEscape",
   "flagNames",
   "flags",
+  "forEach",
   "mkModel",
   "model",
   "program",
@@ -96,6 +104,34 @@ The normal path is **polynomial**; the bounded search is the coherence gate only
   `S ⊆ undefinedAtoms`), which makes the walk EXHAUSTIVE and licenses the `refused` outcome;
 - past the budget the field carries **`not-evaluated`** — a named outcome stating an ABSENCE of
   adjudication, never an admission.
+
+### The policy-body algebra (registration-time; evaluates nothing)
+
+The normal form a policy body is authored in, from `lib/policy-body.nix` (spec of record:
+den-ag-design `specs/2026-08-26-gen-policy-body-algebra-spec.md`). A body's three codomain facts —
+`emits`, `binds`, `suppresses` — are READ off its structure at registration, never recovered by
+firing; the sole-evaluator charter above is untouched.
+
+- **`body`** — `{ name, clauses }` → the admitted normal form, or a tagged refusal
+  `{ refused = true; code; blamed = "author"; witness; message; }`. Refusals are VALUES, never
+  throws.
+- **`emit`** / **`forEach`** — the two structural formers (a single emission skeleton; an
+  iteration `{ over, emit }` whose items join the scope). Each runs the structural walk at call
+  time: constructor in the closed enum, field presence exactly per the constructor row, payload
+  keys forced at construction, suppress target literal. An out-of-row field is refused, never
+  ignored.
+- **`ctorNames`** — the closed constructor enum as data: `member` · `deliver` · `edge` ·
+  `suppress` · `realize` (the ruled mechanism column's names; extended by owner ruling only).
+- **`deriveCodomain`** — body → `{ emits; binds; suppresses }`. Its signature takes **no
+  context**, which is its own by-construction proof that no derived fact depends on the firing
+  context. On an escape it reads the declared contract, so every policy has a codomain at
+  registration (ADR-0008 §3's precondition).
+- **`escape`** — the declared v1-lambda channel: `{ name, fn, emits, binds, suppresses }`, the
+  three codomain fields REQUIRED and total (`[ ]` is written, not defaulted).
+- **`fireEscape`** — the escape's firing path, with the codomain contract checked at EVERY
+  firing; a breach refuses by name with the site, field and delta.
+- **`admit`** — the registration door: re-runs the walk on hand-rolled records, checks a marked
+  escape's contract for totality, and refuses a bare lambda with the signpost to the escape.
 
 ### The boundary, and what retired with it
 

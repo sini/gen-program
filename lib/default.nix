@@ -72,6 +72,9 @@
 { prelude, scope }:
 let
   rules = import ./rules.nix { inherit prelude scope; };
+  # The registration-time authoring surface. It evaluates nothing and touches no substrate, so it
+  # takes the prelude alone.
+  bodyAlgebra = import ./policy-body.nix { inherit prelude; };
   # The ONE recorded budget, wired here. The coherence module takes it as a parameter so a
   # derivation run can reach the construction past the figure — but this is the only wiring the
   # published surface has, so a consumer can read the budget and cannot select one.
@@ -105,6 +108,24 @@ in
   inherit (modelling)
     flagNames
     flags
+    ;
+
+  # ── THE POLICY-BODY ALGEBRA (registration-time; evaluates nothing) ──
+  # The normal form a policy body is authored in, the structural walk that admits or refuses it
+  # at construction, the derived codomain the gate's precondition consumes (ADR-0008 §3 — edge
+  # set complete at registration), and the declared escape with its per-firing contract. The
+  # word `policy` stays out of these identifiers for the measured reason above: the surface a
+  # framework maps onto is `body` and its formers, and the framework's own vocabulary names the
+  # rest.
+  inherit (bodyAlgebra)
+    ctorNames
+    emit
+    forEach
+    body
+    escape
+    admit
+    deriveCodomain
+    fireEscape
     ;
 
   # ── THE COHERENCE CRITERION ──
