@@ -30,10 +30,12 @@
 # ── REFUSALS ARE TAGGED VALUES, NEVER THROWS ──
 # Every refusal is `{ refused = true; code; blamed = "author"; witness; message; }` — the
 # crossing's refusal discipline, with the blamed party the policy AUTHOR, who owns the fix at
-# every refusal here. The guarantee covers every failure that forces finitely: whatever the walk
-# encounters short of divergence — `tryEval`-catchable throws included — surfaces as the tagged
-# value. A diverging user spine (infinite recursion, a black hole) is an uncatchable Nix abort,
-# convertible by no walk; that margin is owned here, once, as the spec owns it at §2.4.
+# every refusal here. The guarantee covers the throw/assert failure class, which is all
+# `builtins.tryEval` can catch: whatever the walk encounters in that class surfaces as the tagged
+# value. The owned margin — convertible by no walk, and always LOUD — is divergence (infinite
+# recursion, a black hole) PLUS the non-throw/assert evaluation errors tryEval cannot contain (a
+# missing attribute, a type error, a missing function argument); that margin is owned here, once,
+# as the spec owns it at §2.4 (P-1 re-scope, exec gate 2026-08-26).
 #
 # ── THE NAMES ARE THE RULED MECHANISM COLUMN'S ──
 # The five constructors take substrate names from den-hoag-12xc's owner-approved two-column
@@ -371,17 +373,49 @@ let
           "suppresses"
         ];
         missing = filter (f: !(v ? ${f})) required;
+        extra = filter (
+          f:
+          !elem f (
+            required
+            ++ [
+              "__isPolicy"
+              "opaque"
+              "refused"
+            ]
+          )
+        ) (attrNames v);
       in
       if missing != [ ] then
         refuse "policy-body/skeleton-malformed" missing
           "an escape declares its whole codomain at the site — ${toString required} are REQUIRED and total (`[ ]` is written, not defaulted), and this one is missing ${toString missing}"
+      else if extra != [ ] then
+        refuse "policy-body/skeleton-malformed" extra
+          "an escape record carries exactly its declared form and this one also carries ${toString extra} — an out-of-row field is refused, never ignored"
       else
         v // { refused = false; }
     else if v ? clauses then
-      body {
-        name = v.name or "(unnamed)";
-        inherit (v) clauses;
-      }
+      let
+        extra = filter (
+          f:
+          !elem f [
+            "name"
+            "clauses"
+            "refused"
+            "opaque"
+          ]
+        ) (attrNames v);
+      in
+      # The out-of-row principle at record level: a declared-codomain field (`binds`, `emits`,
+      # `suppresses`) beside normal-form clauses is the migration half-step whose stale
+      # declaration the derivation would silently contradict — refused, never dropped.
+      if extra != [ ] then
+        refuse "policy-body/skeleton-malformed" extra
+          "a normal-form body carries exactly `name` and `clauses`, and this record also carries ${toString extra} — the codomain is DERIVED from the clauses here, so a declared field beside them is refused rather than silently dropped"
+      else
+        body {
+          name = v.name or "(unnamed)";
+          inherit (v) clauses;
+        }
     else
       refuse "policy-body/skeleton-malformed" (attrNames v)
         "a policy body is `{ name; clauses; }` in the normal form or an `opaque = true` escape; ${escapePointer}";
@@ -431,20 +465,36 @@ let
       declarations = e.fn ctx;
       breaches = concatMap (
         d:
-        map (k: {
-          field = "emits";
-          delta = k;
-        }) (filter (k: !elem k e.emits) (rows.${d.ctor}.emitted d))
-        ++ map (k: {
-          field = "binds";
-          delta = k;
-        }) (if d.ctor == "member" then filter (k: !elem k e.binds) (attrNames d.payload) else [ ])
-        ++ map (n: {
-          field = "suppresses";
-          delta = n;
-        }) (if d.ctor == "suppress" && !elem d.target e.suppresses then [ d.target ] else [ ])
+        # The shape arm (P-2, exec gate): a declaration outside the skeleton shape — no `ctor`,
+        # or a ctor no row knows (what a raw unwrapped v1 lambda returns) — is a contract breach
+        # at the author's door, not an internal crash blaming this module.
+        if !(isAttrs d && d ? ctor && isString d.ctor && rows ? ${d.ctor}) then
+          [
+            {
+              field = "shape";
+              delta =
+                if isAttrs d && d ? ctor then
+                  "a declaration whose ctor is not a known constructor"
+                else
+                  "a declaration without a ctor";
+            }
+          ]
+        else
+          map (k: {
+            field = "emits";
+            delta = k;
+          }) (filter (k: !elem k e.emits) (rows.${d.ctor}.emitted d))
+          ++ map (k: {
+            field = "binds";
+            delta = k;
+          }) (if d.ctor == "member" then filter (k: !elem k e.binds) (attrNames d.payload) else [ ])
+          ++ map (n: {
+            field = "suppresses";
+            delta = n;
+          }) (if d.ctor == "suppress" && !elem d.target e.suppresses then [ d.target ] else [ ])
       ) declarations;
-      renderBreach = br: "${br.field} is missing '${br.delta}'";
+      renderBreach =
+        br: if br.field == "shape" then "shape: ${br.delta}" else "${br.field} is missing '${br.delta}'";
     in
     if breaches != [ ] then
       refuse "policy-body/codomain-breach"

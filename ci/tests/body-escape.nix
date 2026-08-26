@@ -221,5 +221,110 @@ in
         }).refused;
       expected = false;
     };
+
+    # ── P-2 (exec gate): THE SHAPE ARM ──
+    # A declaration outside the skeleton shape — an unknown ctor, or no ctor at all (what a raw
+    # unwrapped v1 lambda returns) — is a TAGGED shape breach naming the site, never an internal
+    # crash blaming this module. The green twin is the honest control above: the same firing
+    # path, skeleton-shaped declarations, clean.
+    test-p2-a-declaration-outside-the-skeleton-shape-is-a-tagged-shape-breach = {
+      expr =
+        map
+          (
+            fn:
+            let
+              r = genProgram.fireEscape (genProgram.escape {
+                name = "p2";
+                emits = [ ];
+                binds = [ ];
+                suppresses = [ ];
+                inherit fn;
+              }) ctx;
+            in
+            {
+              inherit (r) code;
+              breaches = r.witness.breaches;
+            }
+          )
+          [
+            (_: [ { ctor = "frobnicate"; } ])
+            (_: [ { modules = [ ]; } ])
+          ];
+      expected = [
+        {
+          code = "policy-body/codomain-breach";
+          breaches = [
+            {
+              field = "shape";
+              delta = "a declaration whose ctor is not a known constructor";
+            }
+          ];
+        }
+        {
+          code = "policy-body/codomain-breach";
+          breaches = [
+            {
+              field = "shape";
+              delta = "a declaration without a ctor";
+            }
+          ];
+        }
+      ];
+    };
+
+    # ── P-3 (exec gate): FIELD TOTALITY AT RECORD LEVEL ──
+    # The migration half-step: normal-form clauses beside a stale v1-style declared codomain.
+    # The stale field is refused, never silently dropped — the derivation would otherwise read a
+    # different answer than the author's declaration with nothing saying so.
+    test-p3-a-declared-codomain-field-beside-normal-form-clauses-is-refused = {
+      expr = {
+        inherit
+          (genProgram.admit {
+            name = "half-migrated";
+            clauses = [ ];
+            binds = [ "accessGroups" ];
+          })
+          refused
+          code
+          witness
+          ;
+      };
+      expected = {
+        refused = true;
+        code = "policy-body/skeleton-malformed";
+        witness = [ "binds" ];
+      };
+    };
+    test-control-p3-the-same-record-without-the-stale-field-is-admitted = {
+      expr =
+        (genProgram.admit {
+          name = "half-migrated";
+          clauses = [ ];
+        }).refused;
+      expected = false;
+    };
+    test-p3-a-hand-rolled-escape-carrying-an-out-of-row-field-is-refused = {
+      expr = {
+        inherit
+          (genProgram.admit {
+            opaque = true;
+            name = "hand-rolled";
+            fn = _: [ ];
+            emits = [ ];
+            binds = [ ];
+            suppresses = [ ];
+            adaptArgs = _: { };
+          })
+          refused
+          code
+          witness
+          ;
+      };
+      expected = {
+        refused = true;
+        code = "policy-body/skeleton-malformed";
+        witness = [ "adaptArgs" ];
+      };
+    };
   };
 }

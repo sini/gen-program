@@ -10,11 +10,7 @@
 # O5 is ADR-0022's alignment as a mechanical check: the folds are unions, so the derived codomain
 # is byte-identical under permutation of the clause list and under an `over` yielding nothing,
 # one item, or many — `over` is never read, which is why it may be fully free.
-{
-  genProgram,
-  prelude,
-  ...
-}:
+{ genProgram, ... }:
 let
   armed = genProgram.body {
     name = "armed";
