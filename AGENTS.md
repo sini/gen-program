@@ -135,12 +135,14 @@ firing; the sole-evaluator charter above is untouched.
 
 ### The boundary, and what retired with it
 
+<!-- gen-citations:begin -->
+
 A prior pass's verdicts cross as an **interpretation**, handed to `solve` beside the program. They
 used to be compiled into **rules** — two per contested atom, over one minted atom — and that made a
 carried atom freely supported in every candidate containing it, so a program with no stable model
 acquired one at the boundary.
 
-Retired, and each is a **deletion**: `carriedRules` · `partnerOf` and `reserved.nix` itself · the
+Retired, and each is a **deletion**: `carriedRules` · `partnerOf` and reserved.nix itself · the
 built record's `reserved` field and the wrapper around the program · the `onlyAuthored` subtraction
 · `mkModel`'s `authored` formal · and the published `reservedPrefix` / `isReserved` /
 `reservedCollisions`.
@@ -149,6 +151,8 @@ built record's `reserved` field and the wrapper around the program · the `onlyA
 atoms again was itself a place content could vanish; with no minted atoms there is nothing to
 subtract. And `den-hoag-h2yp` law 2's discharge is stronger than the prefix ever made it: not "the
 library's own names are fenced off" but **the library has none**.
+
+<!-- gen-citations:end -->
 
 ## The names, and the per-primary check each one owes
 
