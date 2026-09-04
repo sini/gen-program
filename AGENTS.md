@@ -285,3 +285,22 @@ passed.
 `nix fmt -- --ci` REWRITES the tree, so a second run is green regardless of what the first found.
 `git add` new files **before** formatting — untracked files are invisible to treefmt and a
 `0 changed` report does not cover them — and `git add` again **after**.
+
+## Drift check
+
+`nix eval --json .#lib --apply builtins.attrNames` — the form 23 sibling sheets publish —
+**aborts here**. The library is a function of its injected substrate, so the flake's `lib` output is
+a lambda and the apply reads *"expected a set but found a function"*. The check goes through
+`ci/repl.nix`, which resolves the acceptance run's own substrate — this repository's
+`ci/flake.lock` pin of `gen-scope` and the prelude beneath it — rather than a second,
+differently-pinned one. That is what `--impure` costs. From the repository root:
+
+```sh
+nix eval --json --impure --file ci/repl.nix --apply 'r: builtins.attrNames r.genProgram'
+```
+
+Current output (verbatim):
+
+```json
+["adjudicate","adjudicationOutcomes","admit","body","ctorNames","declaration","deriveCodomain","emit","escape","fireEscape","flagNames","flags","forEach","mkModel","model","program","rule","stableModelBudget","stableModelCriterion","unresolvedRelata"]
+```
