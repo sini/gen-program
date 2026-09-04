@@ -135,8 +135,6 @@ firing; the sole-evaluator charter above is untouched.
 
 ### The boundary, and what retired with it
 
-<!-- gen-citations:begin -->
-
 A prior pass's verdicts cross as an **interpretation**, handed to `solve` beside the program. They
 used to be compiled into **rules** — two per contested atom, over one minted atom — and that made a
 carried atom freely supported in every candidate containing it, so a program with no stable model
@@ -151,8 +149,6 @@ built record's `reserved` field and the wrapper around the program · the `onlyA
 atoms again was itself a place content could vanish; with no minted atoms there is nothing to
 subtract. And `den-hoag-h2yp` law 2's discharge is stronger than the prefix ever made it: not "the
 library's own names are fenced off" but **the library has none**.
-
-<!-- gen-citations:end -->
 
 ## The names, and the per-primary check each one owes
 
@@ -206,6 +202,8 @@ name — the cheapest discharge available, and also asserted with a control.
 
 ## What this library does NOT do
 
+<!-- gen-citations:begin -->
+
 - **It owns no driver.** `stratify` is the ABW completeness driver and it is already instantiated;
   `engine.solve` is the meaning of one pass's rules. This library owns the program handed to the
   second, once per pass. A library that built its own stratum schedule would be a second copy of a
@@ -220,6 +218,8 @@ name — the cheapest discharge available, and also asserted with a control.
 - **It reproduces no shape it retires.** No keyset-equality convergence test, no
   union-accumulation without retraction, no in-flight membership predicate handed to a caller's
   guard. The program is closed before it is solved; the model is a function of the rules.
+
+<!-- gen-citations:end -->
 
 ## What it rests on and does not control
 
