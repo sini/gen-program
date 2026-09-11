@@ -34,22 +34,23 @@ model.adjudication.outcome  # => "admitted"
 
 ## Why it exists
 
-**A ruled, built, tested semantics was called by nothing.** ADR-0020 and ADR-0022 rule the meaning
-of a policy stratum; gen-scope computes it; nothing turned a declaration into a program. That gap
-had a second cost beyond the obvious one: **ADR-0022's recorded exit is armed by benchmark
-acceptance failure**, and with nothing reaching the solve the benchmark never ran, so the exit
-could never fire. A consumer makes the confluence commitment testable rather than merely stated.
+**A ruled, built, tested semantics was called by nothing.** The substrate settles the meaning of a
+policy stratum — well-founded semantics (Van Gelder, Ross & Schlipf 1991) under a confluence
+commitment; gen-scope computes it; nothing turned a declaration into a program. That gap
+had a second cost beyond the obvious one: **the confluence commitment's recorded exit is armed by
+benchmark acceptance failure**, and with nothing reaching the solve the benchmark never ran, so
+the exit could never fire. A consumer makes the confluence commitment testable rather than merely stated.
 
 **One construction, not one per framework.** With each framework building its own
-declarations→program step, ADR-0022's guarantee would hold only for the programs each framework
+declarations→program step, the confluence guarantee would hold only for the programs each framework
 happened to construct correctly.
 
 **The workload is measured, not anticipated.** den v1 at `ecaefcb` composes a negation over the
 **in-flight** include set and runs two named fixpoint loops, capping at `maxPolicyIterations = 10`
 and failing at the bound. The report states the standard in v1's own terms: it *"does not
 establish convergence statically — it **bounds** it and fails at the bound."* A budget standing in
-for a convergence condition is the defect. ADR-0020 rules the meaning of that shape; this library
-computes it.
+for a convergence condition is the defect. Well-founded semantics gives that shape a meaning; this
+library computes it.
 
 ## What it does
 
@@ -60,12 +61,12 @@ literals of its guard; `neg` is its negated literals. A declaration with neither
 — gen-scope's `mkRule`'s own base case.
 
 An **atom is one fact** — one ⟨scope, member⟩ membership, one promotion — never a relation symbol.
-That granularity is ADR-0020's ruling, and it is what lets one contested pair be contested while
+That granularity is deliberate, and it is what lets one contested pair be contested while
 its neighbours in the same relation settle. A translation that atomised per relation would contest
 a whole relation on one contested pair.
 
-**Atom names are the caller's.** `den-hoag-h2yp` law 2 forbids encoding topology or kind
-relationships, and a topology-free program datatype removes only one channel for that: an atom
+**Atom names are the caller's.** A library may not encode topology or kind relationships into the
+names it mints, and a topology-free program datatype removes only one channel for that: an atom
 scheme keyed `host:…→user:…` encodes the forbidden relationship just as effectively, and the
 datatype cannot tell. So this library mints no atom name from a scheme of its own. The only names
 it introduces are the reserved partners below, which name no kind and no relationship.
@@ -117,8 +118,8 @@ construction. Under the parameter **it is the argument**: an interpretation carr
 verdict with it, so asserting undefinedness of an atom that did not have it has no expression
 either. No check was added, because there is nothing left to check.
 
-★★ **The agnosticism discharge is stronger than the prefix ever made it.** `den-hoag-h2yp` law 2's
-exposure was a library minting atom names of its own. With the minter gone, every atom in an
+★★ **The agnosticism discharge is stronger than the prefix ever made it.** The whole exposure was a
+library minting atom names of its own. With the minter gone, every atom in an
 authored position is a string the caller wrote — not "the library's own names are fenced off" but
 **the library has none**.
 
@@ -140,8 +141,8 @@ a finding, not a bug.**
 
 ### The coherence criterion
 
-ADR-0020 makes **stable-model existence** the refusal oracle. gen-scope states in its own README
-that the oracle *"is NOT built here"*. It is built here, and it runs under a derived budget.
+**Stable-model existence** (Gelfond & Lifschitz 1988) is the refusal oracle. gen-scope states in
+its own README that the oracle *"is NOT built here"*. It is built here, and it runs under a derived budget.
 
 **The normal path is polynomial.** The well-founded computation is the sole value path and runs on
 every program. The search below decides admissibility only.
@@ -165,8 +166,8 @@ reduct or a fixpoint.
 
 ### The resolved relation
 
-ADR-0020 gives the atom a named third value; den's include surface has two. The fork over what an
-undefined gate means there was **ruled**: the relation acquires a third value every consumer
+The semantics gives the atom a named third value; den's include surface has two. The fork over what
+an undefined gate means there was **settled**: the relation acquires a third value every consumer
 handles, in van Antwerpen et al. 2016 §4.1–4.2's published `T` / `P` / `U` shape with vA2018
 §4.3's delayed queries.
 
@@ -177,7 +178,7 @@ There is no shape of the result record from which a consumer can take a bare boo
 | `T`  | the relation is closed, the atom has a two-valued verdict  | answers both ways                                             |
 | `P`  | the relation is still growing, the atom **is** derived     | answers `true` — growth is monotone in the positive direction |
 | `P`  | the relation is still growing, the atom is **not** derived | **refuses by name** — a later pass may derive it              |
-| `U`  | the atom has no two-valued verdict                         | **refuses by name** — ADR-0020's third value                  |
+| `U`  | the atom has no two-valued verdict                         | **refuses by name** — the semantics' third value              |
 
 The two withheld answers are **fields that throw**, never absent fields and never `null`. Every
 `if r.included` in the world reads `null` as false, which is the silent collapse the ruling ended.
@@ -286,20 +287,20 @@ Corollary 5.7's restriction working: the budget prices the contested corner, not
   guard. The program is closed before it is solved; the model is a function of the rules.
 - **It claims the construction and not the theorem.** ABW's theorem is about a *stratified*
   program, and a pass here carries negative cycles by premise, so the pass sequence is not an
-  instance of their iteration. What replaces it is ADR-0016 ruling 7's frozen set with ADR-0033
-  clause 1, which makes each pass's input closed. **No archived primary states that a sequence of
+  instance of their iteration. What replaces it is a frozen set per pass, which makes
+  each pass's input closed. **No archived primary states that a sequence of
   well-founded models over successively frozen inputs inherits what a single one has.**
 - **An acquisition gap is recorded as one.** VGRS 1991 is archived; Van Gelder 1993, which gives
   the alternating-fixpoint construction gen-scope actually iterates, is cited-not-held.
 
 ### Two standing conditions it rests on and does not control
 
-- **ADR-0019's input-type discipline.** A consumed query cannot observe a conditional edge, so the
+- **The input-type discipline.** A consumed query cannot observe a conditional edge, so the
   `includes → ¬holds → includes` cycle cannot be written. If that is ever relaxed the cycle becomes
   writable and **the failure is silent**.
-- **ADR-0008 §3's `bounded well-defined`**, which takes two of Vogt's three conjuncts. An
+- **`bounded well-defined`**, which takes two of Vogt's three conjuncts. An
   arbitrary user-supplied function inside a declaration is what makes the translation's totality a
-  question; the debt is `den-hoag-xin3`'s.
+  question, and that debt is open.
 
 ## Running it
 
