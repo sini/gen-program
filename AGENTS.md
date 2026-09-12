@@ -1,5 +1,7 @@
 # gen-program — agent sheet
 
+> **Library class: reference-grade.** Deletion requires a domain argument — wrong abstraction, subsumption by another construct, or theory-unsoundness; a usage count is inadmissible as a deletion ground (P7, 2026-08-17).
+
 The consumer that turns a framework's declarations into a **logic program**, drives gen-scope's
 well-founded engine over it, and carries the third value out under its own name.
 
