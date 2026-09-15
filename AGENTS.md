@@ -15,6 +15,10 @@ The library is a function of its injected substrate: `import ./lib { prelude, sc
 `scope` is `gen-scope.lib`. It declares no flake inputs — only plain data crosses a gen↔gen
 boundary, and a library that re-declared the evaluator would pin it on its consumer's behalf.
 
+Root `default.nix`'s `wire ? args: import ./lib args` formal is the seam that hands this exact
+substrate attrset to `./lib`; overriding it is how a cell reads the shim's own formal-to-path map
+instead of restating one by hand.
+
 ```json
 [
   "adjudicate",
