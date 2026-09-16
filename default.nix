@@ -5,15 +5,18 @@
 # ITSELF rather than falling back; the default is resolved from `./ci/flake.lock`, read as local
 # data. There is NO `...`: an argument this root does not declare is a loud error, not a silent drop.
 #
-# THE PIN SOURCE IS `ci/flake.lock`, WHICH IS WHY THIS ENTRY CAN EXIST AT ALL. gen-program declares
-# no flake inputs, so it has no root lock to defer to — the one lock in this repository is the ci
-# one, and deferring to it is what turns `import ./. { }` from an abort into a value.
+# THE PIN SOURCE IS THE ROOT `flake.lock`, NOT `ci/flake.lock` (owner-ruled Arm A, 2026-09-16:
+# `den-hoag-4dfsv` §4.2). gen-program now declares both dependencies as flake inputs, so a root lock
+# exists and is what `import ./. { }` resolves through — the ci lock is the test graph's own pin
+# source and is no longer read by this file.
 #
-# AND IT IS STATED OVER PATHS, NOT NAMES. `gen-prelude` is not a root input of that lock; the
-# acceptance run reaches it THROUGH gen-scope (`ci/flake.nix`: `gen-scope.inputs.gen-prelude.lib`),
-# so the default transcribes the wiring that is already there rather than adding a second pin of it.
-# Under a name the resolution would abort `attribute 'gen-prelude' missing`, deferred to first force
-# rather than loud at the boundary.
+# AND THE DEFAULT BELOW STILL WALKS PATHS, NOT NAMES. `gen-scope` is a direct root input; `prelude`
+# is ALSO now a direct root input (declared above), but its default segment is left as the
+# multi-hop path THROUGH gen-scope (`gen-scope>gen-prelude`) rather than repointed at the new
+# direct edge — repointing would pin the same dependency twice under two different resolution rules
+# for no discharge. The directly-declared `gen-prelude` root input exists for a flake consumer
+# applying this output by name (or an O4-shaped probe simulating one); this file's own standalone
+# resolution never reads it.
 #
 # `src` AND `dep` ARE FORMALS, NOT `let` BINDINGS, AND THAT IS THE INJECTABLE RESOLVER SEAM. `src`
 # is the only expression here that fetches; everything else reads the lock as data. A caller
@@ -24,7 +27,7 @@
 # The `let` is OUTSIDE the lambda because a formal's default is evaluated in the FORMAL scope, which
 # does not see a `let` in the body.
 let
-  lock = builtins.fromJSON (builtins.readFile ./ci/flake.lock);
+  lock = builtins.fromJSON (builtins.readFile ./flake.lock);
   # A direct edge IS the node key; a `follows` value is a PATH resolved segment by segment from this
   # lock's own root. Never by indexing `lock.nodes.<label>` — a last-segment shortcut reads a
   # different node. IT TAKES ITS LOCK AS AN ARGUMENT SO THAT THE ENTRY CELL CAN DRIVE THIS EXACT

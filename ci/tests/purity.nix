@@ -127,12 +127,12 @@ let
 
   # The live counterpart to `forbidden`: the name this library reaches for where a tether would reach
   # for nixpkgs. Every gen-program source but TWO carries it — `lib/budget.nix` is a bare attrset of
-  # tuning constants that takes no argument at all and so names no substrate, and the root
-  # `flake.nix` declares no inputs, the substrate arriving injected, so it names no dependency and
-  # cannot name this one. Those exclusions are what give the assertion its teeth: the expected list
-  # is a PROPER SUBSET of the manifest, so a read returning one fixed text for every file lands
-  # outside it either way — without the token the list collapses toward empty, with it the list
-  # swells to every source.
+  # tuning constants that takes no argument at all and so names no substrate. Before Arm A the root
+  # `flake.nix` was the other exclusion, declaring no inputs and so naming no dependency; Arm A
+  # (owner-ruled 2026-09-16: `den-hoag-4dfsv` §4.2) declares `gen-prelude` as a flake input, so
+  # `flake.nix` now names the same substrate the standalone entry does and carries the token too.
+  # `lib/budget.nix` remains the sole exclusion, so the expected list stays a proper subset of the
+  # manifest, one entry narrower than before.
   liveToken = "prelude";
   liveReads = map (src: src.name) (lib.filter (src: genPrelude.hasInfix liveToken src.code) sources);
 
@@ -200,6 +200,7 @@ in
         "lib/policy-body.nix"
         "lib/rules.nix"
         "lib/stable-model.nix"
+        "flake.nix"
         "default.nix"
       ];
     };
