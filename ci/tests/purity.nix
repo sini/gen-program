@@ -147,13 +147,6 @@ let
     ) srcs;
 
   violations = scan sources;
-
-  # Positive control for the scan itself: the same predicate, in the same run, over a string that
-  # DOES contain a forbidden token. An empty `violations` above is evidence only if this is
-  # non-empty — otherwise a broken `hasInfix` or an empty `sources` would report clean.
-  controlViolations = lib.filter (
-    tok: genPrelude.hasInfix tok "let x = evalModules { }; in x"
-  ) forbidden;
 in
 {
   flake.tests.purity = {
@@ -214,9 +207,22 @@ in
       expected = true;
     };
 
-    test-control-forbidden-token-scan-is-live = {
-      expr = controlViolations;
-      expected = [ "evalModules" ];
+    # Positive control for the scan itself: the same `scan` call, in the same run, over `sources`
+    # with one entry appended that carries a real, unstripped forbidden token. A green
+    # `test-library-source-is-nixpkgs-lib-free` above is evidence only if this fires — otherwise a
+    # broken `hasInfix`, a scan disconnected from `sources`, or a dead strip would report clean by
+    # construction rather than because the library is actually free of these tokens.
+    test-detector-catches-injected-violation = {
+      expr = scan (
+        sources
+        ++ [
+          {
+            name = "<injected>";
+            code = stripComments "  foo = lib.types.str; # comment mentioning nixpkgs is stripped";
+          }
+        ]
+      );
+      expected = [ "<injected>: 'lib.'" ];
     };
 
     # ★ THE PREMISE HOLDS OF THE TEXT THAT WAS ACTUALLY SCANNED. This is an absence claim over text
