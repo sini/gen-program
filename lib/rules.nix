@@ -77,6 +77,24 @@
 let
   quoteAll = names: prelude.concatMapStringsSep ", " (n: "'${n}'") names;
 
+  # ── THE NAMES ARE STRINGS, AND A DOOR SAYS SO BY ITS OWN NAME (den-hoag-bkdkg) ──
+  # Heads and body atoms become attribute names in the program's index and relata are looked up in
+  # the frozen set by name, so nothing but a string survives either. A record handed in their place
+  # — the node VALUE where its identifier goes — used to be admitted here and abort past `tryEval`
+  # one layer down, naming nothing the caller wrote. The refusal names the TYPE and never the value,
+  # because rendering a value that is not a string is the very abort it replaces. Each is forced
+  # whole at the door, so a caller reading one field still meets it.
+  identifier =
+    who: what: v:
+    builtins.isString v
+    || throw "gen-program.${who}: ${what} is a ${builtins.typeOf v}, expected a node identifier (a string)";
+  identifiers =
+    who: what: vs:
+    if builtins.isList vs then
+      builtins.all (identifier who "an entry of ${what}") vs
+    else
+      throw "gen-program.${who}: ${what} is a ${builtins.typeOf vs}, expected a list of node identifiers (strings)";
+
   # ── THE REFUSAL'S CONTENT, PUBLISHED AS DATA ──
   # The refusal below throws, and `tryEval` discards a message. A suite that could only assert THAT
   # something refused would be equally satisfied by a construction with one refusal in it, so the
@@ -85,7 +103,9 @@ let
   unresolvedRelata =
     { declarations, frozen }:
     let
-      settled = prelude.genAttrs frozen (_: true);
+      settled = builtins.seq (identifiers "unresolvedRelata" "the frozen set" frozen) (
+        prelude.genAttrs frozen (_: true)
+      );
     in
     prelude.unique (
       prelude.filter (id: !(settled ? ${id})) (
@@ -107,14 +127,21 @@ let
       neg ? [ ],
       relata,
     }:
-    {
-      inherit
-        head
-        pos
-        neg
-        relata
-        ;
-    };
+    builtins.seq
+      (
+        identifier "declaration" "the head" head
+        && identifiers "declaration" "pos" pos
+        && identifiers "declaration" "neg" neg
+        && identifiers "declaration" "relata" relata
+      )
+      {
+        inherit
+          head
+          pos
+          neg
+          relata
+          ;
+      };
 
   # One declaration's rule. The relata do not appear: they are IDENTIFIERS resolved against the
   # frozen set, and the rule's atoms are MEMBERSHIP FACTS.

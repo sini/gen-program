@@ -84,6 +84,72 @@ let
 in
 {
   flake.testsError = {
+    # ── THE IDENTIFIER DOORS (den-hoag-bkdkg) ──
+    # A record where a name goes — the node VALUE in place of its identifier — used to be admitted by
+    # `declaration` and abort past `tryEval` in `program`/`unresolvedRelata`. It is now refused at the
+    # one door all three normalise through, by that door's name, and the frozen set's own entries at
+    # `unresolvedRelata`. A declaration is read through `.head` so the refusal must reach a caller
+    # forcing one field.
+    test-declaration-refuses-a-record-head = {
+      expr =
+        (genProgram.declaration {
+          head = {
+            name = "a";
+          };
+          relata = [ ];
+        }).head;
+      expectedError.msg = exactly "gen-program.declaration: the head is a set, expected a node identifier (a string)";
+    };
+    test-declaration-refuses-a-record-relatum = {
+      expr =
+        (genProgram.declaration {
+          head = "h";
+          relata = [ { name = "a"; } ];
+        }).head;
+      expectedError.msg = exactly "gen-program.declaration: an entry of relata is a set, expected a node identifier (a string)";
+    };
+    test-declaration-refuses-a-record-body-atom = {
+      expr =
+        (genProgram.declaration {
+          head = "h";
+          neg = [ { name = "a"; } ];
+          relata = [ ];
+        }).head;
+      expectedError.msg = exactly "gen-program.declaration: an entry of neg is a set, expected a node identifier (a string)";
+    };
+    test-declaration-refuses-relata-that-are-not-a-list = {
+      expr =
+        (genProgram.declaration {
+          head = "h";
+          relata = "x";
+        }).head;
+      expectedError.msg = exactly "gen-program.declaration: relata is a string, expected a list of node identifiers (strings)";
+    };
+    test-program-refuses-a-record-relatum-at-the-declaration = {
+      expr = genProgram.program {
+        declarations = [
+          {
+            head = "h";
+            relata = [ { name = "a"; } ];
+          }
+        ];
+        frozen = [ "x" ];
+      };
+      expectedError.msg = exactly "gen-program.declaration: an entry of relata is a set, expected a node identifier (a string)";
+    };
+    test-unresolvedRelata-refuses-a-record-in-the-frozen-set = {
+      expr = genProgram.unresolvedRelata {
+        declarations = [
+          {
+            head = "h";
+            relata = [ "x" ];
+          }
+        ];
+        frozen = [ { name = "a"; } ];
+      };
+      expectedError.msg = exactly "gen-program.unresolvedRelata: an entry of the frozen set is a set, expected a node identifier (a string)";
+    };
+
     # ── O4: THE REFUSAL NAMES THE IDENTIFIER, AND NOT A CYCLE ──
     test-a-same-pass-relatum-refuses-by-naming-the-identifier = {
       expr = build {
