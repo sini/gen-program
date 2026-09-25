@@ -305,8 +305,13 @@ Corollary 5.7's restriction working: the budget prices the contested corner, not
 ## Running it
 
 ```bash
-nix-unit --flake ./ci#tests       # the suites
-nix-unit --flake ./ci#testsError  # cells whose subject is an error MESSAGE
+nix develop ./ci --command ci                # the suites, guarded
+nix develop ./ci --command ci --tests-error  # cells whose subject is an error MESSAGE, guarded
+nix-unit --flake ./ci#tests                  # the suites, unguarded
+nix-unit --flake ./ci#testsError             # the error cells, unguarded
+# `ci` refuses when anything under a declared read root is unknown to git (any extension or
+# name, `_`-prefixed included); `git add` it or move it. The unguarded forms read a git-filtered
+# copy of the tree, so an untracked cell is silently absent and the run stays green.
 
 # The requiredness the language refuses uncatchably, exhibited as an exit status.
 # Read it UNPIPED — under zsh a pipeline's per-stage status is `$pipestatus`, lowercase.
