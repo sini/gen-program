@@ -142,6 +142,14 @@ firing; the sole-evaluator charter above is untouched.
 - **`admit`** — the registration door: re-runs the walk on hand-rolled records, checks a marked
   escape's contract for totality, and refuses a bare lambda with the signpost to the escape.
 
+**`__` keys crossing the boundary** (R12 stated contracts; the census that reads these lines takes the
+first line of each):
+
+- `__isPolicy` — writer `escape` (`lib/policy-body.nix`), reader `admit`'s shape check (same file); read by gen-aspects (`lib/types.nix`, its deferred-include recognizer):
+  marks a defunctionalised policy record, the escape's `{ refused; __isPolicy; opaque; name; fn; … }`.
+  gen-aspects reads it off plain data, declaring no input on this library, to pass such a record
+  through its includes type unforced.
+
 ### The boundary, and what retired with it
 
 A prior pass's verdicts cross as an **interpretation**, handed to `solve` beside the program. They
