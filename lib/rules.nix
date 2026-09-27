@@ -103,9 +103,11 @@ let
   # RECORD class (den-hoag-7gp66 P1, R5): `declarations`/`frozen` were a native closed formal, so a
   # missing one aborted uncatchably past `tryEval` (ADR-0025 item 1). `checkRequired` (gate C3)
   # makes that refusal NAMED and CATCHABLE; R5's stated price is that the door is now OPEN — an
-  # extra field is admitted, never refused. `declaration` keeps its native formal: den-hoag-bkdkg
-  # rules that a wrapper here would erase what `builtins.functionArgs` reads, and ORACLE-tested
-  # doors (`declaration`, `model`, `mkModel`, `escape`) are STOP-AND-PROMOTE, out of this landing.
+  # extra field is admitted, never refused. `declaration` keeps its native formal, unlike this
+  # door, because den-hoag-bkdkg rules that a WRAPPER here would erase what `builtins.functionArgs`
+  # reads — but the owner's arm (C) ruling (den-hoag-7gp66, 2026-09-27) is not a wrapper: an
+  # ellipsis formal (`{ …, ... }@args:`) keeps `functionArgs` exact while the body runs
+  # `prelude.checkOptions` over the raw `args`, so `declaration` takes it below.
   unresolvedRelata =
     args:
     let
@@ -124,34 +126,46 @@ let
     );
 
   # ── THE DECLARATION ──
-  # A STRICT PATTERN, so a field this library does not know is refused BY NAME at application by
-  # the evaluator itself and a missing one is refused the same way. `pos` and `neg` default because
-  # ADR-0020's own base case says a declaration with neither body is a fact; `relata` does NOT,
-  # because a defaulted empty relatum list is a decision nobody made and nobody can see — it would
-  # silently assert "this declaration relates nothing" and skip the frozen-set check for exactly
-  # the declarations that forgot to state it.
+  # AN ELLIPSIS PATTERN (den-hoag-7gp66 P1, arm (C)): `relata` and `head` still refuse a MISSING
+  # value the evaluator's own way — uncatchable past `tryEval`, which is O6's stated requirement —
+  # because neither carries a default. An UNKNOWN field used to refuse the identical uncatchable
+  # way (a native closed formal draws no distinction between the two failure modes); the `...` opens
+  # that formal and `prelude.checkOptions`, run over the raw `args` at application, now names and
+  # catches it instead. The accepted set is read off the pattern itself
+  # (`builtins.functionArgs declaration`) rather than hand-copied, so the two cannot drift.
+  # `pos` and `neg` default because ADR-0020's own base case says a declaration with neither body is
+  # a fact; `relata` does NOT, because a defaulted empty relatum list is a decision nobody made and
+  # nobody can see — it would silently assert "this declaration relates nothing" and skip the
+  # frozen-set check for exactly the declarations that forgot to state it.
   declaration =
     {
       head,
       pos ? [ ],
       neg ? [ ],
       relata,
-    }:
+      ...
+    }@args:
     builtins.seq
+      (prelude.checkOptions "gen-program.declaration" (builtins.attrNames (
+        builtins.functionArgs declaration
+      )) args)
       (
-        identifier "declaration" "the head" head
-        && identifiers "declaration" "pos" pos
-        && identifiers "declaration" "neg" neg
-        && identifiers "declaration" "relata" relata
-      )
-      {
-        inherit
-          head
-          pos
-          neg
-          relata
-          ;
-      };
+        builtins.seq
+          (
+            identifier "declaration" "the head" head
+            && identifiers "declaration" "pos" pos
+            && identifiers "declaration" "neg" neg
+            && identifiers "declaration" "relata" relata
+          )
+          {
+            inherit
+              head
+              pos
+              neg
+              relata
+              ;
+          }
+      );
 
   # One declaration's rule. The relata do not appear: they are IDENTIFIERS resolved against the
   # frozen set, and the rule's atoms are MEMBERSHIP FACTS.

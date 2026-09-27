@@ -218,5 +218,50 @@ in
       };
       expectedError.msg = exactly "gen-program.adjudicate: required field 'interpretation' is missing (required: 'program', 'model', 'interpretation') (in prelude.checkRequired)";
     };
+
+    # ── THE NATIVE-ELLIPSIS DOOR-CHECK BYTES (den-hoag-7gp66 P1, arm (C)) ──
+    # `declaration`, `model`, `mkModel` and `escape` keep their native required formals — a missing
+    # one still aborts the evaluator's own uncatchable way, untested here — and gain `...` plus
+    # `prelude.checkOptions` over the raw `args`, so an UNKNOWN field is what is named below.
+    test-declaration-unknown-field-message = {
+      expr = genProgram.declaration {
+        head = "h";
+        relata = [ ];
+        zzqran7f = 1;
+      };
+      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'head', 'neg', 'pos', 'relata') (in prelude.checkOptions)";
+    };
+    test-model-unknown-field-message = {
+      expr = genProgram.model {
+        program = genProgram.program {
+          declarations = [ ];
+          frozen = [ ];
+        };
+        interpretation = [ ];
+        complete = true;
+        zzqran7f = 1;
+      };
+      expectedError.msg = exactly "gen-program.model: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'complete', 'interpretation', 'program') (in prelude.checkOptions)";
+    };
+    test-mkModel-unknown-field-message = {
+      expr = genProgram.mkModel {
+        solved = null;
+        adjudication = null;
+        complete = true;
+        zzqran7f = 1;
+      };
+      expectedError.msg = exactly "gen-program.mkModel: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'adjudication', 'complete', 'solved') (in prelude.checkOptions)";
+    };
+    test-escape-unknown-field-message = {
+      expr = genProgram.escape {
+        name = "x";
+        fn = _: { };
+        emits = [ ];
+        binds = [ ];
+        suppresses = [ ];
+        zzqran7f = 1;
+      };
+      expectedError.msg = exactly "gen-program.escape: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'binds', 'emits', 'fn', 'name', 'suppresses') (in prelude.checkOptions)";
+    };
   };
 }

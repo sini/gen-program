@@ -71,15 +71,20 @@ let
   };
 
   # ── THE RESULT RECORD'S CONSTRUCTOR ──
-  # A STRICT PATTERN WITH `adjudication` CARRYING NO DEFAULT. A construction that does not attach
-  # the field does not construct: the evaluator refuses the application by name, and that refusal
-  # is UNCATCHABLE — `tryEval` does not contain it — so there is no path on which a result exists
-  # without the statement.
+  # `adjudication` STILL CARRIES NO DEFAULT. A construction that does not attach the field does not
+  # construct: the evaluator refuses the application by name, and that refusal is UNCATCHABLE —
+  # `tryEval` does not contain it — so there is no path on which a result exists without the
+  # statement. That is O6's stated requirement and an ELLIPSIS formal does not touch it.
   #
   # ★ THE REQUIREDNESS IS READABLE IN-LANGUAGE, WHICH IS WHY THIS CONSTRUCTOR IS PUBLISHED.
   # `builtins.functionArgs mkModel` reports each formal against whether it has a default, so a
   # consumer — and a cell — can assert that `adjudication` is required rather than discovering it
-  # from a crash.
+  # from a crash. AN ELLIPSIS FORMAL DOES NOT CHANGE THAT READING (den-hoag-7gp66 P1, arm (C)):
+  # `functionArgs` reports the same three named formals whether or not `...` is present, so the
+  # ORACLE-tested contract (`ci/tests/adjudication.nix`) stays exact while an unknown field — which
+  # a native closed formal used to refuse the same uncatchable way as a missing one — is now named
+  # and caught by `prelude.checkOptions`, run over the raw `args` at application. The accepted set
+  # is read off the pattern itself (`builtins.functionArgs mkModel`) rather than hand-copied.
   #
   # ★★ `authored` IS GONE, AND IT DIED WITH THE FILTER RATHER THAN BEING TIDIED AWAY. Its only
   # consumer was the subtraction of the gadget's own atoms; with no minted atoms there is nothing
@@ -89,98 +94,115 @@ let
       solved,
       adjudication,
       complete,
-    }:
-    let
-      # ── THE RESOLVED RELATION, WITH THE THIRD VALUE EVERY CONSUMER HANDLES ──
-      # Total on every string, and every answer carries its flag. There is no shape of this record
-      # from which a consumer can take a bare boolean.
-      #
-      # ★ THE NEGATIVE ANSWER IS WITHHELD UNDER `P`, AND THAT IS van Antwerpen 2018 §4.3's
-      # DISCIPLINE RATHER THAN CAUTION. Growth across the pass sequence is monotone in the
-      # positive direction — the frozen-set construction means no pass retracts an earlier pass's
-      # derivation — so `included = true` is sound at any pass. `included = false` is NOT: an
-      # atom no pass has yet derived reads false from a total verdict function, and a later pass
-      # may derive it. vA2018's own statement of the problem: "Invoking the resolution algorithm
-      # on an intermediate, incomplete graph may yield a different result than invoking it on the
-      # final graph. This is potentially unsound" (archived transcription, file lines 1861–1863);
-      # its answer is that "resolution is aborted, and the query constraint delayed" (lines
-      # 1925–1926 — the quote is split across the two). So under `P` this record delays the
-      # negative answer by NAME rather than serving one that a later pass can falsify.
-      #
-      # ★ THE WITHHELD ANSWERS ARE FIELDS THAT REFUSE, NOT FIELDS THAT ARE ABSENT. An absent
-      # field is a missing-attribute error naming nothing a consumer can act on, and `null` would
-      # be worse — every `if r.included` in the world reads `null` as false, which is the silent
-      # collapse this fork was ruled to end.
-      resolve =
-        atom:
+      ...
+    }@args:
+    builtins.seq
+      (prelude.checkOptions "gen-program.mkModel" (builtins.attrNames (
+        builtins.functionArgs mkModel
+      )) args)
+      (
         let
-          v = solved.verdict atom;
+          # ── THE RESOLVED RELATION, WITH THE THIRD VALUE EVERY CONSUMER HANDLES ──
+          # Total on every string, and every answer carries its flag. There is no shape of this record
+          # from which a consumer can take a bare boolean.
+          #
+          # ★ THE NEGATIVE ANSWER IS WITHHELD UNDER `P`, AND THAT IS van Antwerpen 2018 §4.3's
+          # DISCIPLINE RATHER THAN CAUTION. Growth across the pass sequence is monotone in the
+          # positive direction — the frozen-set construction means no pass retracts an earlier pass's
+          # derivation — so `included = true` is sound at any pass. `included = false` is NOT: an
+          # atom no pass has yet derived reads false from a total verdict function, and a later pass
+          # may derive it. vA2018's own statement of the problem: "Invoking the resolution algorithm
+          # on an intermediate, incomplete graph may yield a different result than invoking it on the
+          # final graph. This is potentially unsound" (archived transcription, file lines 1861–1863);
+          # its answer is that "resolution is aborted, and the query constraint delayed" (lines
+          # 1925–1926 — the quote is split across the two). So under `P` this record delays the
+          # negative answer by NAME rather than serving one that a later pass can falsify.
+          #
+          # ★ THE WITHHELD ANSWERS ARE FIELDS THAT REFUSE, NOT FIELDS THAT ARE ABSENT. An absent
+          # field is a missing-attribute error naming nothing a consumer can act on, and `null` would
+          # be worse — every `if r.included` in the world reads `null` as false, which is the silent
+          # collapse this fork was ruled to end.
+          resolve =
+            atom:
+            let
+              v = solved.verdict atom;
+            in
+            if v == "undefined" then
+              {
+                flag = "U";
+                included = throw "gen-program: the membership '${atom}' is UNDEFINED — ADR-0020's third value, which this relation carries rather than collapsing. Read `flag` and handle 'U'; `included` has no answer to give here";
+              }
+            else if v == "true" then
+              {
+                flag = if complete then "T" else "P";
+                included = true;
+              }
+            else if complete then
+              {
+                flag = "T";
+                included = false;
+              }
+            else
+              {
+                flag = "P";
+                included = throw "gen-program: the membership '${atom}' is not derived at this pass, but the relation is still growing (complete = false), so a NEGATIVE answer is not yet sound — a later pass may derive it. van Antwerpen et al. 2018 §4.3 delays such a query rather than answering it; read `flag` and handle 'P'";
+              };
         in
-        if v == "undefined" then
-          {
-            flag = "U";
-            included = throw "gen-program: the membership '${atom}' is UNDEFINED — ADR-0020's third value, which this relation carries rather than collapsing. Read `flag` and handle 'U'; `included` has no answer to give here";
-          }
-        else if v == "true" then
-          {
-            flag = if complete then "T" else "P";
-            included = true;
-          }
-        else if complete then
-          {
-            flag = "T";
-            included = false;
-          }
-        else
-          {
-            flag = "P";
-            included = throw "gen-program: the membership '${atom}' is not derived at this pass, but the relation is still growing (complete = false), so a NEGATIVE answer is not yet sound — a later pass may derive it. van Antwerpen et al. 2018 §4.3 delays such a query rather than answering it; read `flag` and handle 'P'";
-          };
-    in
-    {
-      inherit resolve complete;
+        {
+          inherit resolve complete;
 
-      # gen-scope's own enumerations, over its own extended base, unchanged. Nothing is filtered
-      # here because nothing in them was put there by this library.
-      inherit (solved) trueAtoms undefinedAtoms falseAtoms;
+          # gen-scope's own enumerations, over its own extended base, unchanged. Nothing is filtered
+          # here because nothing in them was put there by this library.
+          inherit (solved) trueAtoms undefinedAtoms falseAtoms;
 
-      # THE REQUIRED FIELD. It names ADR-0020's criterion, records the criterion's outcome on this
-      # program, and names what decided it. It is plain data and crosses an evaluation boundary as
-      # itself — never a `builtins.trace`, never a warn emission, because a channel a consumer can
-      # drop is a channel on which silence reads as admission.
-      inherit adjudication;
+          # THE REQUIRED FIELD. It names ADR-0020's criterion, records the criterion's outcome on this
+          # program, and names what decided it. It is plain data and crosses an evaluation boundary as
+          # itself — never a `builtins.trace`, never a warn emission, because a channel a consumer can
+          # drop is a channel on which silence reads as admission.
+          inherit adjudication;
 
-      # gen-scope's own, cited apart. `verdict` is TOTAL and stays total.
-      inherit (solved) verdict converged;
+          # gen-scope's own, cited apart. `verdict` is TOTAL and stays total.
+          inherit (solved) verdict converged;
 
-      # The engine's stamp, carried as the engine emits it: empty inside the benchmark-verified
-      # condensation depth and populated past it, which is what makes a stamped result say
-      # something about the input that produced it. ★ Carried atoms contribute no edges, so the
-      # stamp reads the same quantity it read before the parameter existed.
-      inherit (solved) provenance condensationDepth;
-    };
+          # The engine's stamp, carried as the engine emits it: empty inside the benchmark-verified
+          # condensation depth and populated past it, which is what makes a stamped result say
+          # something about the input that produced it. ★ Carried atoms contribute no edges, so the
+          # stamp reads the same quantity it read before the parameter existed.
+          inherit (solved) provenance condensationDepth;
+        }
+      );
 
   # ── THE ENTRY ──
   # `complete` carries NO DEFAULT. A defaulted `true` would silently claim the pass sequence had
   # closed, which is the one claim this record cannot make on its caller's behalf — and a defaulted
   # `false` would withhold every negative answer forever. `interpretation` carries none either, for
   # the reason gen-scope states at its own parameter. Absence is a decision, so the caller makes it.
+  #
+  # AN ELLIPSIS PATTERN (den-hoag-7gp66 P1, arm (C)), same as `mkModel` above: the three named
+  # formals still refuse a MISSING value the evaluator's own uncatchable way, and `...` +
+  # `prelude.checkOptions` over the raw `args` now names and catches an UNKNOWN one instead of the
+  # native closed formal's identical uncatchable abort.
   model =
     {
       program,
       interpretation,
       complete,
-    }:
-    let
-      solved = scope.solve { inherit program interpretation; };
-    in
-    mkModel {
-      inherit solved complete;
-      adjudication = stableModel.adjudicate {
-        inherit program interpretation;
-        model = solved;
-      };
-    };
+      ...
+    }@args:
+    builtins.seq
+      (prelude.checkOptions "gen-program.model" (builtins.attrNames (builtins.functionArgs model)) args)
+      (
+        let
+          solved = scope.solve { inherit program interpretation; };
+        in
+        mkModel {
+          inherit solved complete;
+          adjudication = stableModel.adjudicate {
+            inherit program interpretation;
+            model = solved;
+          };
+        }
+      );
 in
 {
   inherit

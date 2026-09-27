@@ -6,17 +6,24 @@
 # apply gen-prelude's shared `checkRequired` (0ac7b66) instead, so the same violation is NAMED and
 # CATCHABLE.
 #
-# ★ ALL FOUR ARE RECORD-CLASS DOORS: every field is required, so `checkRequired` runs alone and
-# R5's stated price applies uniformly — the door is OPEN, an extra field is admitted, never
-# refused. `declaration`, `model`, `mkModel` and `escape` are NOT converted here: each is read by
-# `builtins.functionArgs` from an ORACLE this repository already ships (O4/O6, `identifier-
-# doors.nix`, `relation.nix`, `staging.nix`, `surface.nix`, `adjudication.nix`, `body-escape.nix`),
-# and den-hoag-bkdkg rules that a wrapper is detectable — it erases the formals a caller reads.
-# That is a whole-class conflict with P1's own mechanism and is reported STOP-AND-PROMOTE rather
-# than resolved here.
+# ★ THE FIRST FOUR ARE RECORD-CLASS DOORS: every field is required, so `checkRequired` runs alone
+# and R5's stated price applies uniformly — the door is OPEN, an extra field is admitted, never
+# refused.
+#
+# ★★ `declaration`, `model`, `mkModel` and `escape` ARE NATIVE-ELLIPSIS CLASS DOORS instead
+# (den-hoag-7gp66 P1, owner-ruled arm (C)): each is read by `builtins.functionArgs` from an ORACLE
+# this repository already ships (O4/O6, `identifier-doors.nix`, `relation.nix`, `staging.nix`,
+# `surface.nix`, `adjudication.nix`, `body-escape.nix`), and den-hoag-bkdkg rules that a WRAPPER
+# around the door is detectable — it erases the formals a caller reads. The ruled resolution is not
+# a wrapper: the pattern stays native (so a MISSING required field still aborts the evaluator's own
+# uncatchable way, undisturbed and untested here — that is O6's requirement, not this suite's
+# subject) and gains an `...` formal, and the body runs `prelude.checkOptions` over the raw `args`
+# so an UNKNOWN field is what moves — named and caught instead of aborting the identical uncatchable
+# way a missing one still does. `builtins.functionArgs` reads the same named formals either way,
+# which is what keeps the nine oracle assertions above unmoved.
 #
 # WHICH refusal fired is a claim about the message and `tryEval` yields only `success`; the byte
-# goldens naming each door (R6) live in `ci/tests-error.nix`'s `flake.testsError.door-checks`.
+# goldens naming each door (R6) live in `ci/tests-error.nix`'s `flake.testsError`.
 {
   genProgram,
   scope,
@@ -28,6 +35,10 @@ let
     program
     body
     adjudicate
+    declaration
+    model
+    mkModel
+    escape
     ;
 
   # `success == false` pins catchability, not the message — the byte goldens are the message's own
@@ -151,6 +162,49 @@ in
           interpretation = validInterpretation;
         }).outcome;
       expected = "admitted";
+    };
+
+    # declaration/model/mkModel/escape — NATIVE-ELLIPSIS class (arm (C)). A MISSING required field
+    # is not tested here: it is still the evaluator's own uncatchable abort, untouched by this
+    # landing (O6's requirement) — `ci/tests/staging.nix` and its siblings already pin that the
+    # formal stays required. What is new is that an UNKNOWN field, which used to abort the
+    # identical uncatchable way, is now named and caught by `prelude.checkOptions`.
+    test-declaration-unknown-field-refused-catchably = {
+      expr = refusesCatchably (declaration {
+        head = "h";
+        relata = [ ];
+        zzqran7f = 1;
+      });
+      expected = true;
+    };
+    test-model-unknown-field-refused-catchably = {
+      expr = refusesCatchably (model {
+        program = validProgram;
+        interpretation = validInterpretation;
+        complete = true;
+        zzqran7f = 1;
+      });
+      expected = true;
+    };
+    test-mkModel-unknown-field-refused-catchably = {
+      expr = refusesCatchably (mkModel {
+        solved = validSolved;
+        adjudication = null;
+        complete = true;
+        zzqran7f = 1;
+      });
+      expected = true;
+    };
+    test-escape-unknown-field-refused-catchably = {
+      expr = refusesCatchably (escape {
+        name = "x";
+        fn = _: { };
+        emits = [ ];
+        binds = [ ];
+        suppresses = [ ];
+        zzqran7f = 1;
+      });
+      expected = true;
     };
   };
 }

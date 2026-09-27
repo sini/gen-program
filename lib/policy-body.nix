@@ -328,15 +328,22 @@ let
         };
 
   # ── THE DECLARED ESCAPE — THE v1-LAMBDA COMPAT CHANNEL, PRICED ──
-  # A STRICT PATTERN with NO defaults on the three codomain fields: an absent field does not
-  # construct (`builtins.functionArgs` makes the requiredness readable in-language — the mkModel
-  # precedent), and `[ ]` is written, not defaulted — absence is a decision the author makes
-  # visibly. ADR-0013's impossibility burden is discharged by the FORM, once: what a closure will
-  # read when forced is sealed inside a value the substrate cannot inspect — not derivable at
-  # all, declaring is the only honest option; what would have to change is a rewrite as a
-  # normal-form body. The four prices, all by construction: three required total fields against
-  # the normal form's zero; the per-firing contract below; `opaque = true` queryable (the escapes
-  # are enumerable at any time); and no silent entry — the only path in is writing the marker.
+  # NO DEFAULTS on the five fields: an absent one still does not construct
+  # (`builtins.functionArgs` makes the requiredness readable in-language — the mkModel precedent,
+  # and O6's stated requirement, which an ELLIPSIS formal leaves untouched), and `[ ]` is written,
+  # not defaulted — absence is a decision the author makes visibly. ADR-0013's impossibility burden
+  # is discharged by the FORM, once: what a closure will read when forced is sealed inside a value
+  # the substrate cannot inspect — not derivable at all, declaring is the only honest option; what
+  # would have to change is a rewrite as a normal-form body. The four prices, all by construction:
+  # five required total fields against the normal form's zero; the per-firing contract below;
+  # `opaque = true` queryable (the escapes are enumerable at any time); and no silent entry — the
+  # only path in is writing the marker.
+  #
+  # ★ THE FIFTH PRICE IS GONE (den-hoag-7gp66 P1, arm (C)): a native closed formal used to refuse an
+  # UNKNOWN field the same uncatchable way it refuses a missing one. The `...` opens that formal
+  # for `prelude.checkOptions`, run over the raw `args` at application, to name and catch it
+  # instead — `builtins.functionArgs escape` reads the identical five formals either way, so the
+  # ORACLE-tested contract (`ci/tests/body-escape.nix`) is unmoved.
   escape =
     {
       name,
@@ -344,19 +351,22 @@ let
       emits,
       binds,
       suppresses,
-    }:
-    {
-      refused = false;
-      __isPolicy = true;
-      opaque = true;
-      inherit
-        name
-        fn
-        emits
-        binds
-        suppresses
-        ;
-    };
+      ...
+    }@args:
+    builtins.seq
+      (prelude.checkOptions "gen-program.escape" (builtins.attrNames (builtins.functionArgs escape)) args)
+      {
+        refused = false;
+        __isPolicy = true;
+        opaque = true;
+        inherit
+          name
+          fn
+          emits
+          binds
+          suppresses
+          ;
+      };
 
   # ── THE REGISTRATION DOOR ──
   # The substrate re-runs the walk here when a policy is registered: hand-rolled records pass or
