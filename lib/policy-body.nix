@@ -300,32 +300,44 @@ let
   # missing one aborted uncatchably past `tryEval` — the exact defect class this module's own
   # refusal discipline (line 30 above) exists to retire, and it sat unconverted at this one door.
   # `checkRequired` (gate C3) makes it NAMED and CATCHABLE; the price is that an extra field is
-  # admitted rather than refused (R5). `escape` (below) keeps its native formal: den-hoag-bkdkg
-  # rules that a wrapper would erase what `builtins.functionArgs` reads there (line 324's own
-  # citation of that precedent), so `escape` is STOP-AND-PROMOTE, out of this landing.
+  # admitted rather than refused (R5). `escape` (below) is NATIVE-ELLIPSIS class instead (arm (C)),
+  # not STOP-AND-PROMOTE: den-hoag-bkdkg's wrapper objection stands, but an ellipsis formal is not a
+  # wrapper — see `escape`'s own comment.
+  #
+  # ★ `checked` IS A LAZY BINDING (den-hoag-7gp66 P1 strictness fix, 2026-09-27): without forcing it
+  # here, the check ran only when `clauses` was later read inside `lst`'s own `tryEval` — which
+  # SWALLOWED `checkRequired`'s throw rather than letting it surface, so a missing field never threw
+  # past a bare `builtins.seq` on the door's own return; only a `deepSeq` reaching `culprit` in the
+  # resulting refusal happened to re-trigger the cached exception. `builtins.seq checked (…)` at the
+  # return forces the requiredness check unconditionally at application, the `mkSchema` /
+  # `applyCoreFixed` idiom, so the door's own catchable throw now fires at the same point every other
+  # RECORD-class door's does.
   body =
     args:
     let
-      inherit (prelude.checkRequired "gen-program.body" [ "name" "clauses" ] args) name clauses;
+      checked = prelude.checkRequired "gen-program.body" [ "name" "clauses" ] args;
+      inherit (checked) name clauses;
       lst = tryEval (seq clauses (isList clauses));
     in
-    if !lst.success || !lst.value then
-      refuse "policy-body/skeleton-malformed" name
-        "a body is `{ name; clauses = [ ... ]; }` and `clauses` must force to a list at construction"
-    else
-      let
-        walked = map walkClause clauses;
-        bad = filter isRefusal walked;
-      in
-      if bad != [ ] then
-        head bad
+    builtins.seq checked (
+      if !lst.success || !lst.value then
+        refuse "policy-body/skeleton-malformed" name
+          "a body is `{ name; clauses = [ ... ]; }` and `clauses` must force to a list at construction"
       else
-        {
-          refused = false;
-          opaque = false;
-          inherit name;
-          clauses = walked;
-        };
+        let
+          walked = map walkClause clauses;
+          bad = filter isRefusal walked;
+        in
+        if bad != [ ] then
+          head bad
+        else
+          {
+            refused = false;
+            opaque = false;
+            inherit name;
+            clauses = walked;
+          }
+    );
 
   # ── THE DECLARED ESCAPE — THE v1-LAMBDA COMPAT CHANNEL, PRICED ──
   # NO DEFAULTS on the five fields: an absent one still does not construct

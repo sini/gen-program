@@ -46,6 +46,15 @@ let
   refusesCatchably = e: !(builtins.tryEval (builtins.deepSeq e null)).success;
   answers = e: (builtins.tryEval (builtins.deepSeq e null)).success;
 
+  # ★ `firesAtApplication` (den-hoag-7gp66 P1 strictness sweep) is `refusesCatchably`'s WHNF-only
+  # twin: a bare `builtins.seq`, matching what merely APPLYING a door forces, with no later field
+  # read. This is the distinct defect the sweep measured on `body`: `refusesCatchably` above passed
+  # for a missing required field there even before the strictness fix, because `deepSeq` reached the
+  # refusal's `culprit` field and re-triggered a check that a bare `seq` on the door's own return
+  # never touched. `answers`'s WHNF twin is not needed — an admitted RECORD-class extra field is a
+  # data question (does it construct), not a strictness one.
+  firesAtApplication = e: !(builtins.tryEval (builtins.seq e null)).success;
+
   validProgram = program {
     declarations = [ ];
     frozen = [ ];
@@ -67,6 +76,20 @@ in
     };
     test-control-tryeval-answers-a-non-throwing-value = {
       expr = answers 1;
+      expected = true;
+    };
+
+    # ★★ LIVE CONTROL FOR `firesAtApplication`, BOTH ARMS: a throw hidden behind an unread field
+    # reads `false` — the predicate does not mistake a merely-`deepSeq`-reachable check for a
+    # WHNF-strict one — and a bare throw reads `true`. This is `body`'s own pre-fix shape (a throw
+    # reachable only through a field nothing here forces) in miniature, so a `false` on the door
+    # cells below is attributable to the SAME mechanism this control exercises, not a fluke.
+    test-control-firesAtApplication-is-false-for-a-throw-behind-an-unread-field = {
+      expr = firesAtApplication { culprit = throw "control probe, not this suite's subject"; };
+      expected = false;
+    };
+    test-control-firesAtApplication-is-true-for-an-ordinary-throw = {
+      expr = firesAtApplication (throw "control probe, not this suite's subject");
       expected = true;
     };
 
@@ -112,6 +135,17 @@ in
     # body — RECORD class.
     test-body-missing-required-field-refused-catchably = {
       expr = refusesCatchably (body {
+        name = "x";
+      });
+      expected = true;
+    };
+    # ★ den-hoag-7gp66 P1 strictness fix, 2026-09-27: RED on the pre-fix door — `refusesCatchably`
+    # above already passed on the unfixed door, because `deepSeq` reached the returned refusal's
+    # `culprit` field and re-triggered `checkRequired`'s cached throw; a bare `builtins.seq` on the
+    # door's own return did not, so the check ran only behind a field read nothing at application
+    # forces. `builtins.seq checked (…)` at the return is what makes this cell strict.
+    test-body-missing-required-field-fires-at-application = {
+      expr = firesAtApplication (body {
         name = "x";
       });
       expected = true;
@@ -197,6 +231,49 @@ in
     };
     test-escape-unknown-field-refused-catchably = {
       expr = refusesCatchably (escape {
+        name = "x";
+        fn = _: { };
+        emits = [ ];
+        binds = [ ];
+        suppresses = [ ];
+        zzqran7f = 1;
+      });
+      expected = true;
+    };
+
+    # ★ den-hoag-7gp66 P1 strictness sweep, 2026-09-27: the four cells above already used
+    # `refusesCatchably` (`deepSeq`); these re-assert the identical calls with `firesAtApplication`
+    # (a bare `seq`) to pin that each door's `checkOptions` runs unconditionally at the top of its
+    # own body — `builtins.seq (checkOptions …) (…)` — rather than only behind a later field read,
+    # which is the defect class `body` had (see above) and these four doors never did.
+    test-declaration-unknown-field-fires-at-application = {
+      expr = firesAtApplication (declaration {
+        head = "h";
+        relata = [ ];
+        zzqran7f = 1;
+      });
+      expected = true;
+    };
+    test-model-unknown-field-fires-at-application = {
+      expr = firesAtApplication (model {
+        program = validProgram;
+        interpretation = validInterpretation;
+        complete = true;
+        zzqran7f = 1;
+      });
+      expected = true;
+    };
+    test-mkModel-unknown-field-fires-at-application = {
+      expr = firesAtApplication (mkModel {
+        solved = validSolved;
+        adjudication = null;
+        complete = true;
+        zzqran7f = 1;
+      });
+      expected = true;
+    };
+    test-escape-unknown-field-fires-at-application = {
+      expr = firesAtApplication (escape {
         name = "x";
         fn = _: { };
         emits = [ ];
