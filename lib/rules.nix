@@ -100,9 +100,19 @@ let
   # something refused would be equally satisfied by a construction with one refusal in it, so the
   # CONTENT is computed by a function a caller can call and a cell can assert. The throw renders
   # what this returns; it does not re-derive it.
+  # RECORD class (den-hoag-7gp66 P1, R5): `declarations`/`frozen` were a native closed formal, so a
+  # missing one aborted uncatchably past `tryEval` (ADR-0025 item 1). `checkRequired` (gate C3)
+  # makes that refusal NAMED and CATCHABLE; R5's stated price is that the door is now OPEN — an
+  # extra field is admitted, never refused. `declaration` keeps its native formal: den-hoag-bkdkg
+  # rules that a wrapper here would erase what `builtins.functionArgs` reads, and ORACLE-tested
+  # doors (`declaration`, `model`, `mkModel`, `escape`) are STOP-AND-PROMOTE, out of this landing.
   unresolvedRelata =
-    { declarations, frozen }:
+    args:
     let
+      inherit (prelude.checkRequired "gen-program.unresolvedRelata" [ "declarations" "frozen" ] args)
+        declarations
+        frozen
+        ;
       settled = builtins.seq (identifiers "unresolvedRelata" "the frozen set" frozen) (
         prelude.genAttrs frozen (_: true)
       );
@@ -160,9 +170,14 @@ let
   # them — and with no minted atoms there is nothing to carry, so the wrapper goes too. A program
   # is plain data by its own module's statement, so handing it back as itself re-exports no build
   # (ADR-0014) and puts no second shape in front of a consumer.
+  # RECORD class (den-hoag-7gp66 P1, R5) — same rationale as `unresolvedRelata` above.
   program =
-    { declarations, frozen }:
+    args:
     let
+      inherit (prelude.checkRequired "gen-program.program" [ "declarations" "frozen" ] args)
+        declarations
+        frozen
+        ;
       unresolved = unresolvedRelata { inherit declarations frozen; };
     in
     if unresolved != [ ] then

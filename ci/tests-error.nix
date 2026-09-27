@@ -192,5 +192,31 @@ in
       expr = ((resolved false).resolve "not-derived-here").included;
       expectedError.msg = exactly "gen-program: the membership 'not-derived-here' is not derived at this pass, but the relation is still growing (complete = false), so a NEGATIVE answer is not yet sound — a later pass may derive it. van Antwerpen et al. 2018 §4.3 delays such a query rather than answering it; read `flag` and handle 'P'";
     };
+
+    # ── THE DOOR-CHECK BYTES (den-hoag-7gp66 P1) — R6's naming, pinned per door. `ci/tests/door-
+    # checks.nix` pins that each door's violations are CATCHABLE; a boolean cannot see WHICH
+    # refusal fired, so WHICH is pinned here, one golden per door.
+    test-unresolvedRelata-missing-required-field-message = {
+      expr = genProgram.unresolvedRelata { declarations = [ ]; };
+      expectedError.msg = exactly "gen-program.unresolvedRelata: required field 'frozen' is missing (required: 'declarations', 'frozen') (in prelude.checkRequired)";
+    };
+    test-program-missing-required-field-message = {
+      expr = genProgram.program { declarations = [ ]; };
+      expectedError.msg = exactly "gen-program.program: required field 'frozen' is missing (required: 'declarations', 'frozen') (in prelude.checkRequired)";
+    };
+    test-body-missing-required-field-message = {
+      expr = genProgram.body { name = "x"; };
+      expectedError.msg = exactly "gen-program.body: required field 'clauses' is missing (required: 'name', 'clauses') (in prelude.checkRequired)";
+    };
+    test-adjudicate-missing-required-field-message = {
+      expr = genProgram.adjudicate {
+        program = genProgram.program {
+          declarations = [ ];
+          frozen = [ ];
+        };
+        model = null;
+      };
+      expectedError.msg = exactly "gen-program.adjudicate: required field 'interpretation' is missing (required: 'program', 'model', 'interpretation') (in prelude.checkRequired)";
+    };
   };
 }

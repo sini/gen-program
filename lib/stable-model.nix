@@ -160,13 +160,17 @@ let
   # ── THE ADJUDICATION ──
   # Total: every branch returns a NAMED outcome with its ground. There is no path that returns
   # nothing, and none that returns an outcome without saying what decided it.
+  # RECORD class (den-hoag-7gp66 P1, R5): `program`/`model`/`interpretation` were a native closed
+  # formal, so a missing one aborted uncatchably past `tryEval`. `checkRequired` (gate C3) makes
+  # that refusal NAMED and CATCHABLE; the price is an extra field is admitted, never refused (R5).
   adjudicate =
-    {
-      program,
-      model,
-      interpretation,
-    }:
+    args:
     let
+      inherit (prelude.checkRequired "gen-program.adjudicate" [ "program" "model" "interpretation" ] args)
+        program
+        model
+        interpretation
+        ;
       undefined = model.undefinedAtoms;
       contested = prelude.length undefined;
       trueSet = prelude.genAttrs model.trueAtoms (_: true);

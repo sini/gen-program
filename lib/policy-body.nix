@@ -296,9 +296,17 @@ let
   emit = walkSkeleton;
   forEach = walkClause;
 
+  # RECORD class (den-hoag-7gp66 P1, R5): `name`/`clauses` were a native closed formal, so a
+  # missing one aborted uncatchably past `tryEval` — the exact defect class this module's own
+  # refusal discipline (line 30 above) exists to retire, and it sat unconverted at this one door.
+  # `checkRequired` (gate C3) makes it NAMED and CATCHABLE; the price is that an extra field is
+  # admitted rather than refused (R5). `escape` (below) keeps its native formal: den-hoag-bkdkg
+  # rules that a wrapper would erase what `builtins.functionArgs` reads there (line 324's own
+  # citation of that precedent), so `escape` is STOP-AND-PROMOTE, out of this landing.
   body =
-    { name, clauses }:
+    args:
     let
+      inherit (prelude.checkRequired "gen-program.body" [ "name" "clauses" ] args) name clauses;
       lst = tryEval (seq clauses (isList clauses));
     in
     if !lst.success || !lst.value then
