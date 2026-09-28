@@ -73,7 +73,7 @@ it introduces are the reserved partners below, which name no kind and no relatio
 
 ### The pass boundary
 
-`engine.solve` takes `{ program, interpretation }`, and a prior pass's verdicts cross as the
+`engine.solve interpretation program` takes the program last, and a prior pass's verdicts cross as the
 **interpretation** — a list of `{ atom, verdict }`, travelling as themselves. The parameter carries
 no default: a defaulted empty carry is the silent collapse it exists to prevent, so the first pass
 supplies `[ ]` and says so.

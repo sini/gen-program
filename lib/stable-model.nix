@@ -197,12 +197,7 @@ let
       # `lfp T_{(P′)/M} = lfp_{⊇Pos(I)} T_{P/M}`, so seeding the door with the carried-true atoms
       # IS evaluating the criterion on `P′`. An unseeded predicate computes `lfp T_{P/M}` and
       # therefore FALSELY REFUSES a program whose stable model rests on an externally-true atom.
-      isStable =
-        guess:
-        (scope.leastModel {
-          program = scope.reduct program guess;
-          seed = posSet;
-        }).derived == guess;
+      isStable = guess: (scope.leastModel posSet (scope.reduct program guess)).derived == guess;
 
       step =
         acc:

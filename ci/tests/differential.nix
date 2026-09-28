@@ -84,12 +84,7 @@ let
         prelude.genAttrs (prelude.concatMap (
           j: prelude.optional (builtins.bitAnd i (prelude.elemAt powers j) != 0) (prelude.elemAt base j)
         ) (prelude.genList (j: j) m)) (_: true);
-      stable =
-        g:
-        (scope.leastModel {
-          program = scope.reduct p g;
-          seed = posSet;
-        }).derived == g;
+      stable = g: (scope.leastModel posSet (scope.reduct p g)).derived == g;
     in
     prelude.any (i: stable (candidate i)) (prelude.genList (i: i) (pow2 m));
 
@@ -292,10 +287,7 @@ in
               posSet = prelude.genAttrs (scope.Pos member.interpretation) (_: true);
               trueSet = prelude.genAttrs mi.trueAtoms (_: true);
             in
-            (scope.leastModel {
-              program = scope.reduct p trueSet;
-              seed = posSet;
-            }).derived == trueSet;
+            (scope.leastModel posSet (scope.reduct p trueSet)).derived == trueSet;
           caught = prelude.filter (r: narrowed r.member != r.brute) rows;
         in
         prelude.length caught >= 1;

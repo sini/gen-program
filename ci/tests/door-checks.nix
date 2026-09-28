@@ -60,10 +60,7 @@ let
     frozen = [ ];
   };
   validInterpretation = [ ];
-  validSolved = scope.solve {
-    program = validProgram;
-    interpretation = validInterpretation;
-  };
+  validSolved = scope.solve validInterpretation validProgram;
 in
 {
   flake.tests.door-checks = {

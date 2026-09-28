@@ -43,7 +43,7 @@ let
     carried = [ ];
   };
 
-  solved = scope.solve built.program;
+  solved = scope.solve [ ] built.program;
 
   # Everything the constructor needs EXCEPT the statement. This is the mutilated construction the
   # oracle asks about, written out rather than described.

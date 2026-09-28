@@ -193,7 +193,7 @@ let
       (prelude.checkOptions "gen-program.model" (builtins.attrNames (builtins.functionArgs model)) args)
       (
         let
-          solved = scope.solve { inherit program interpretation; };
+          solved = scope.solve interpretation program;
         in
         mkModel {
           inherit solved complete;

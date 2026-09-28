@@ -146,9 +146,7 @@ in
     # back is a second shape in front of a consumer.
     test-the-construction-returns-the-substrates-own-program-value = {
       expr = prelude.sort (a: b: a < b) (prelude.attrNames built);
-      expected = prelude.sort (a: b: a < b) (
-        prelude.attrNames (scope.mkProgram { rules = [ { head = "x"; } ]; })
-      );
+      expected = prelude.sort (a: b: a < b) (prelude.attrNames (scope.mkProgram [ { head = "x"; } ]));
     };
 
     # And every atom in it is a string the caller wrote. There is no minter left to exempt.
