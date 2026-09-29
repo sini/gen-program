@@ -12,10 +12,11 @@
 #
 #   `U` — the atom has no two-valued verdict at all. Answering either way would be this library
 #         deciding ADR-0020's third value on a consumer's behalf, silently.
-#   `P` — the atom is not derived AND the relation is still growing. Growth across the pass
-#         sequence is monotone in the positive direction, so `true` stays true; `false` does not
-#         stay false, because a later pass may derive it. vA2018 §4.3 delays such a query rather
-#         than answering it, and so does this.
+#   `P` — the atom is not derived AND the relation is still growing. A derived atom with
+#         negation-free support stays true, because the positive fragment is monotone; `false` does
+#         not stay false, because a later pass may derive it. vA2018 §4.3 delays such a query rather
+#         than answering it, and so does this. (A derived atom whose support rests on negation is
+#         the third withheld state; `withhold.nix` carries it.)
 #
 # ★ THE REFUSAL IS A FIELD THAT THROWS, NOT AN ABSENT FIELD AND NOT A `null`. An absent field is a
 # missing-attribute error naming nothing a consumer can act on; `null` is worse, because every

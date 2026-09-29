@@ -220,6 +220,7 @@ in
     test-mkModel-unknown-field-refused-catchably = {
       expr = refusesCatchably (mkModel {
         solved = validSolved;
+        program = validProgram;
         adjudication = null;
         complete = true;
         zzqran7f = 1;
@@ -263,6 +264,7 @@ in
     test-mkModel-unknown-field-fires-at-application = {
       expr = firesAtApplication (mkModel {
         solved = validSolved;
+        program = validProgram;
         adjudication = null;
         complete = true;
         zzqran7f = 1;

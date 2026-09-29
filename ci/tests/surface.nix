@@ -105,6 +105,7 @@ in
       expected = [
         "adjudication"
         "complete"
+        "program"
         "solved"
       ];
     };

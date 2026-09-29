@@ -246,11 +246,12 @@ in
     test-mkModel-unknown-field-message = {
       expr = genProgram.mkModel {
         solved = null;
+        program = null;
         adjudication = null;
         complete = true;
         zzqran7f = 1;
       };
-      expectedError.msg = exactly "gen-program.mkModel: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'adjudication', 'complete', 'solved') (in prelude.checkOptions)";
+      expectedError.msg = exactly "gen-program.mkModel: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'adjudication', 'complete', 'program', 'solved') (in prelude.checkOptions)";
     };
     test-escape-unknown-field-message = {
       expr = genProgram.escape {

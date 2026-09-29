@@ -173,15 +173,26 @@ handles, in van Antwerpen et al. 2016 §4.1–4.2's published `T` / `P` / `U` sh
 
 There is no shape of the result record from which a consumer can take a bare boolean:
 
-| flag | when                                                       | `included`                                                    |
-| ---- | ---------------------------------------------------------- | ------------------------------------------------------------- |
-| `T`  | the relation is closed, the atom has a two-valued verdict  | answers both ways                                             |
-| `P`  | the relation is still growing, the atom **is** derived     | answers `true` — growth is monotone in the positive direction |
-| `P`  | the relation is still growing, the atom is **not** derived | **refuses by name** — a later pass may derive it              |
-| `U`  | the atom has no two-valued verdict                         | **refuses by name** — the semantics' third value              |
+| flag | when                                                                                               | `included`                                                                       |
+| ---- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `T`  | the relation is closed, the atom has a two-valued verdict                                          | answers both ways                                                                |
+| `P`  | the relation is still growing, the atom **is** derived and its whole support is negation-free      | answers `true` — the positive fragment is monotone, so no later pass retracts it |
+| `P`  | the relation is still growing, the atom **is** derived but its support rests on `not` at any depth | **refuses by name** — a later pass may derive what the `not` reads               |
+| `P`  | the relation is still growing, the atom is **not** derived                                         | **refuses by name** — a later pass may derive it                                 |
+| `U`  | the atom has no two-valued verdict                                                                 | **refuses by name** — the semantics' third value                                 |
 
-The two withheld answers are **fields that throw**, never absent fields and never `null`. Every
+The three withheld answers are **fields that throw**, never absent fields and never `null`. Every
 `if r.included` in the world reads `null` as false, which is the silent collapse the ruling ended.
+On a growing relation `verdict` refuses a withheld atom by the same name, and the atom is enumerated
+in `withheldAtoms` rather than `trueAtoms`, so no reader of the record serves it.
+
+**The passes are the caller's to drive** — this library owns no driver. A stepping caller owes three
+things at every pass: resubmit **every** earlier pass's declarations plus its own (a prior pass's
+verdicts are not rules, so a delta-only program re-derives nothing earlier passes settled); carry
+forward the previous pass's **`undefined`** atoms only, read off the record; and set
+`complete = true` only once it knows, by its own external knowledge, that no further declarations
+can arrive. An unchanged answer set between two passes is consistent with that and does not
+entail it.
 
 ★ **The letters are kept rather than spelled, and that is a transplant guard.** This library cites
 two primaries that both use *total* and *partial* for **different things**: VGRS Definition 2.6

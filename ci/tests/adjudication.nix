@@ -400,6 +400,7 @@ in
       expected = {
         adjudication = false;
         complete = false;
+        program = false;
         solved = false;
       };
     };

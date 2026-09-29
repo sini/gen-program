@@ -75,10 +75,19 @@ document's prose in one cell, so neither side can drift onto the other.
   which fields are required rather than discovering it from a crash. Every formal is required;
   `adjudication` in particular.
 
-The record carries `trueAtoms` / `undefinedAtoms` / `falseAtoms` **as gen-scope reports them, over
-`program.atoms ∪ dom(interpretation)`**, the total `verdict`, `resolve`, `adjudication`,
-`complete`, `converged`, and gen-scope's `provenance` and `condensationDepth` unchanged. Nothing is
-filtered here, because nothing in them was put there by this library.
+The record carries `trueAtoms` / `withheldAtoms` / `undefinedAtoms` / `falseAtoms`, which partition
+**gen-scope's extended base, `program.atoms ∪ dom(interpretation)`**, in its order: on a growing
+relation a derived atom whose support rests on negation moves from `trueAtoms` to `withheldAtoms`,
+and on a closed one `withheldAtoms` is empty and the other three are gen-scope's own. It carries
+`verdict` — total on a closed relation, refusing a withheld atom by name on a growing one — and
+`resolve`, `adjudication`, `complete`, `converged`, and gen-scope's `provenance` and
+`condensationDepth` unchanged. `mkModel` takes `program` because whether a derived atom's support is
+negation-free is a fact about the rules, which `solved` does not carry.
+
+The passes are the caller's to drive (see "What this library does NOT do"). At every pass a stepping
+caller resubmits every earlier pass's declarations plus its own, carries forward the previous pass's
+`undefined` atoms only, and sets `complete = true` only on its own knowledge that nothing further
+can arrive.
 
 ### The resolved relation
 
@@ -87,15 +96,19 @@ filtered here, because nothing in them was put there by this library.
 - **`flagNames`** / **`flags`** — van Antwerpen et al. 2016 §4.1–4.2's `T` / `P` / `U`, kept as
   his own letters with the gloss carried as data.
 
-| flag | when                                                         | `included`                                                                         |
-| ---- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| `T`  | the relation is closed and the atom has a two-valued verdict | answers both ways                                                                  |
-| `P`  | the relation is still growing and the atom IS derived        | answers `true` — growth is monotone in the positive direction                      |
-| `P`  | the relation is still growing and the atom is NOT derived    | **refuses by name** — a later pass may derive it (vA2018 §4.3 delays such a query) |
-| `U`  | the atom has no two-valued verdict                           | **refuses by name** — ADR-0020's third value                                       |
+| flag | when                                                                                               | `included`                                                                                   |
+| ---- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `T`  | the relation is closed and the atom has a two-valued verdict                                       | answers both ways                                                                            |
+| `P`  | the relation is still growing and the atom IS derived, with negation-free support                  | answers `true` — the positive fragment is monotone, so no later pass retracts it             |
+| `P`  | the relation is still growing and the atom IS derived, but its support rests on `not` at any depth | **refuses by name** — a later pass may derive what the `not` reads (den-hoag-ea3j4, arm (a)) |
+| `P`  | the relation is still growing and the atom is NOT derived                                          | **refuses by name** — a later pass may derive it (vA2018 §4.3 delays such a query)           |
+| `U`  | the atom has no two-valued verdict                                                                 | **refuses by name** — ADR-0020's third value                                                 |
 
-The two withheld answers are **fields that throw**, never absent fields and never `null`. Every
+The three withheld answers are **fields that throw**, never absent fields and never `null`. Every
 `if r.included` in the world reads `null` as false, which is the silent collapse the ruling ended.
+"Negation-free" is transitive: it is gen-scope's `leastModel` over the program's rules with every
+`neg`-bearing rule dropped, so `a :- y` is withheld when `y :- root, not z` is. `ci/tests/withhold.nix`
+carries the oracle, quantified over every served answer at every pass.
 
 ### The coherence criterion
 

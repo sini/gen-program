@@ -61,7 +61,7 @@ let
       source = "van Antwerpen et al. 2016, §4.1";
     };
     P = {
-      gloss = "partial — the atom's verdict is two-valued and will not change, but the RELATION is still growing: later passes may add memberships this reading does not carry";
+      gloss = "partial — the RELATION is still growing: later passes may add memberships this reading does not carry. A positive answer is given only for an atom whose whole support is negation-free, which no later pass can retract; every other two-valued answer is withheld until the relation is closed";
       source = "van Antwerpen et al. 2016, §4.1–4.2";
     };
     U = {
@@ -89,9 +89,14 @@ let
   # ★★ `authored` IS GONE, AND IT DIED WITH THE FILTER RATHER THAN BEING TIDIED AWAY. Its only
   # consumer was the subtraction of the gadget's own atoms; with no minted atoms there is nothing
   # to distinguish an authored atom from any other, so the formal has no question left to answer.
+  #
+  # ★ `program` IS A FORMAL BECAUSE THE POSITIVE ANSWER'S SOUNDNESS IS A FACT ABOUT THE RULES, not
+  # about the model: whether a derived atom's support is negation-free is read off the program, and
+  # `solved` does not carry it.
   mkModel =
     {
       solved,
+      program,
       adjudication,
       complete,
       ...
@@ -102,21 +107,42 @@ let
       )) args)
       (
         let
+          # ── WHICH DERIVED ATOMS A GROWING RELATION MAY SERVE ──
+          # The atoms derivable with no negative literal ANYWHERE in their support: gen-scope's own
+          # least fixpoint over the negation-free rules alone. Both of its arms read only `pos`, so
+          # dropping every rule with a `neg` leaves exactly the positive fragment, and an atom whose
+          # support passes through such a rule at ANY depth is unreachable in it — transitively, not
+          # by inspecting the atom's own rule body. The positive fragment is monotone, so no later
+          # pass retracts what it derives; that, and not the frozen set (ADR-0016 ruling 7 freezes
+          # IDENTIFIERS, never verdicts), is what makes a positive answer sound before the relation
+          # closes. Nothing is seeded from the interpretation: a carried verdict's own support is not
+          # visible to this pass, so it cannot license a positive serve.
+          #
+          # Demand-driven: forced only under `complete = false`, and only for a derived atom.
+          negationFree =
+            (scope.leastModel { } (scope.mkProgram (builtins.filter (r: r.neg == [ ]) program.rules))).derived;
+
+          withheld = atom: !complete && solved.verdict atom == "true" && !(negationFree ? ${atom});
+
+          withholding =
+            atom:
+            "gen-program: the membership '${atom}' is derived at this pass, but its support rests on negation and the relation is still growing (complete = false), so a later pass may still falsify it. van Antwerpen et al. 2018 §4.3 delays such a query rather than answering it; read `flag` and handle 'P'";
+
           # ── THE RESOLVED RELATION, WITH THE THIRD VALUE EVERY CONSUMER HANDLES ──
           # Total on every string, and every answer carries its flag. There is no shape of this record
           # from which a consumer can take a bare boolean.
           #
-          # ★ THE NEGATIVE ANSWER IS WITHHELD UNDER `P`, AND THAT IS van Antwerpen 2018 §4.3's
-          # DISCIPLINE RATHER THAN CAUTION. Growth across the pass sequence is monotone in the
-          # positive direction — the frozen-set construction means no pass retracts an earlier pass's
-          # derivation — so `included = true` is sound at any pass. `included = false` is NOT: an
-          # atom no pass has yet derived reads false from a total verdict function, and a later pass
-          # may derive it. vA2018's own statement of the problem: "Invoking the resolution algorithm
-          # on an intermediate, incomplete graph may yield a different result than invoking it on the
-          # final graph. This is potentially unsound" (archived transcription, file lines 1861–1863);
-          # its answer is that "resolution is aborted, and the query constraint delayed" (lines
-          # 1925–1926 — the quote is split across the two). So under `P` this record delays the
-          # negative answer by NAME rather than serving one that a later pass can falsify.
+          # ★ UNDER `P` ONLY A NEGATION-FREE POSITIVE ANSWER IS GIVEN, AND THAT IS van Antwerpen 2018
+          # §4.3's DISCIPLINE RATHER THAN CAUTION. vA2018's own statement of the problem: "Invoking the
+          # resolution algorithm on an intermediate, incomplete graph may yield a different result
+          # than invoking it on the final graph. This is potentially unsound" (archived
+          # transcription, file lines 1861–1863); its answer is that "resolution is aborted, and the
+          # query constraint delayed" (lines 1925–1926 — the quote is split across the two). Two
+          # answers are unsound before the relation closes, and both are delayed by NAME:
+          # `included = false` for an atom no pass has yet derived (a later pass may derive it), and
+          # `included = true` for a derived atom whose support rests on `not q` at any depth (a later
+          # pass may derive `q`). van Antwerpen et al. 2016's Lemma 2 is what licenses serving the
+          # remaining one — a derived atom with negation-free support — while the graph still grows.
           #
           # ★ THE WITHHELD ANSWERS ARE FIELDS THAT REFUSE, NOT FIELDS THAT ARE ABSENT. An absent
           # field is a missing-attribute error naming nothing a consumer can act on, and `null` would
@@ -131,6 +157,11 @@ let
               {
                 flag = "U";
                 included = throw "gen-program: the membership '${atom}' is UNDEFINED — ADR-0020's third value, which this relation carries rather than collapsing. Read `flag` and handle 'U'; `included` has no answer to give here";
+              }
+            else if withheld atom then
+              {
+                flag = "P";
+                included = throw (withholding atom);
               }
             else if v == "true" then
               {
@@ -151,9 +182,13 @@ let
         {
           inherit resolve complete;
 
-          # gen-scope's own enumerations, over its own extended base, unchanged. Nothing is filtered
-          # here because nothing in them was put there by this library.
-          inherit (solved) trueAtoms undefinedAtoms falseAtoms;
+          # gen-scope's own enumerations, over its own extended base, in its order. Nothing is
+          # removed: a WITHHELD atom moves from `trueAtoms` to `withheldAtoms`, so the four lists
+          # still partition the base and a withheld answer cannot be read back out of `trueAtoms`.
+          # On a closed relation `withheldAtoms` is empty and `trueAtoms` is gen-scope's own.
+          inherit (solved) undefinedAtoms falseAtoms;
+          trueAtoms = builtins.filter (atom: !(withheld atom)) solved.trueAtoms;
+          withheldAtoms = builtins.filter withheld solved.trueAtoms;
 
           # THE REQUIRED FIELD. It names ADR-0020's criterion, records the criterion's outcome on this
           # program, and names what decided it. It is plain data and crosses an evaluation boundary as
@@ -161,8 +196,13 @@ let
           # drop is a channel on which silence reads as admission.
           inherit adjudication;
 
-          # gen-scope's own, cited apart. `verdict` is TOTAL and stays total.
-          inherit (solved) verdict converged;
+          # gen-scope's own, cited apart. `verdict` is TOTAL on a closed relation. On a growing one it
+          # refuses a WITHHELD atom by the same name `resolve` does, and answers every other atom as
+          # gen-scope does: a consumer reading `verdict` instead of `resolve` — and carrying that
+          # forward — would otherwise route the served `P:in` around the withholding. The raw model
+          # stays the adjudication's input, inside this library, and is not republished.
+          verdict = atom: if withheld atom then throw (withholding atom) else solved.verdict atom;
+          inherit (solved) converged;
 
           # The engine's stamp, carried as the engine emits it: empty inside the benchmark-verified
           # condensation depth and populated past it, which is what makes a stamped result say
@@ -196,7 +236,7 @@ let
           solved = scope.solve interpretation program;
         in
         mkModel {
-          inherit solved complete;
+          inherit solved program complete;
           adjudication = stableModel.adjudicate {
             inherit program interpretation;
             model = solved;
