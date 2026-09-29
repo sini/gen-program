@@ -22,9 +22,9 @@
 # `$PIPESTATUS`. A probe whose failure arm is read through a pipe can report success while the
 # thing it probes is broken.
 #
-# MEASURED, 2026-08-20, nix 2.34.8:
-#   dropped  ⇒ exit 1, "error: function 'anonymous lambda' called without required argument
-#              'adjudication'"
+# MEASURED, 2026-09-29, nix 2.34.8 (re-derived at den-hoag-ea3j4: the previous fixture passed a
+# retired `carried` option and read a retired `authored` field, so its CONTROL arm had died):
+#   dropped  ⇒ exit 1, "error: function 'mkModel' called without required argument 'adjudication'"
 #   attached ⇒ exit 0, the record's own attribute names
 let
   ci = builtins.getFlake (toString ../.);
@@ -32,7 +32,7 @@ let
   prelude = ci.inputs.gen-scope.inputs.gen-prelude.lib;
   genProgram = import ../../lib { inherit prelude scope; };
 
-  built = genProgram.program {
+  program = genProgram.program {
     declarations = [
       {
         head = "a";
@@ -40,16 +40,14 @@ let
       }
     ];
     frozen = [ ];
-    carried = [ ];
   };
 
-  solved = scope.solve [ ] built.program;
+  solved = scope.solve [ ] program;
 
   # Everything the constructor needs EXCEPT the statement. This is the mutilated construction the
   # oracle asks about, written out rather than described.
   withoutTheStatement = {
-    inherit solved;
-    inherit (built) authored;
+    inherit solved program;
     complete = true;
   };
 in
@@ -64,7 +62,8 @@ in
       withoutTheStatement
       // {
         adjudication = genProgram.adjudicate {
-          inherit (built) program;
+          inherit program;
+          interpretation = [ ];
           model = solved;
         };
       }

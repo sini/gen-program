@@ -10,11 +10,14 @@
 # with no caller would rebuild the wiring gap one layer up — which is the finding this whole
 # commission exists to close.
 #
-# ── THE PRIOR PASS ARRIVES AS AN INTERPRETATION, AND THAT IS THE WHOLE BOUNDARY NOW ──
+# ── EACH PASS IS SOLVED FROM SCRATCH; NO VERDICT CROSSES A PASS BOUNDARY (den-hoag-ea3j4, arm (ii)) ──
 # `solve` takes `{ program, interpretation }`. The interpretation is a LIST of `{ atom, verdict }`
-# — a prior pass's verdicts, travelling as themselves. It carries NO default here for the same
-# reason it carries none there: a defaulted empty carry is the silent collapse the parameter
-# exists to prevent, and the first pass supplies `[ ]` and says so.
+# the caller ASSERTS at this pass — an input of this pass alone, restated at a later pass if it is
+# to hold there. It carries NO default here for the same reason it carries none there: a defaulted
+# empty list is the silent collapse the parameter exists to prevent, so a caller asserting nothing
+# supplies `[ ]` and says so. A prior pass's verdicts are never carried: every pass solves its whole
+# cumulative program, so a carried verdict is either redundant or — for an atom a later rule
+# settles — a pin that makes the answer depend on where the pass boundary fell (ADR-0022).
 #
 # ★★ WHAT THIS REPLACED, BECAUSE THE DELETION IS THE HEADLINE. The boundary used to be a two-rule
 # gadget per contested atom, and the gadget's fresh atoms had to be SUBTRACTED from every verdict
@@ -182,11 +185,18 @@ let
         {
           inherit resolve complete;
 
-          # The rules this record was solved over, as plain data, so that a NEXT pass handed this
-          # record as its `prior` can check it resubmitted every one. gen-scope's program value
-          # itself is not carried: it holds more than the rules, and not all of it crosses an
-          # evaluation boundary.
-          inherit (program) rules;
+          # The rules this record was solved over, as plain data KEYED by their JSON rendering — an
+          # index, so a NEXT pass handed this record as its `prior` checks it resubmitted every one
+          # by attribute lookup rather than a list scan per rule (quadratic at thousands of rules).
+          # The same index is this record's side of that check. gen-scope's program value itself is
+          # not carried: it holds more than the rules, and not all of it crosses an evaluation
+          # boundary.
+          rules = builtins.listToAttrs (
+            map (r: {
+              name = builtins.toJSON r;
+              value = r;
+            }) program.rules
+          );
 
           # gen-scope's own enumerations, over its own extended base, in its order. Nothing is
           # removed: a WITHHELD atom moves from `trueAtoms` to `withheldAtoms`, so the four lists
@@ -224,26 +234,21 @@ let
   # `false` would withhold every negative answer forever. `interpretation` carries none either, for
   # the reason gen-scope states at its own parameter. Absence is a decision, so the caller makes it.
   #
-  # ── THE PRIOR PASS ARRIVES AS ITS OWN RESULT RECORD (den-hoag-ea3j4, owner-ruled arm (B)) ──
-  # A stepping caller hands this pass the previous pass's RECORD, and the carry is DERIVED from it:
-  # the prior's `undefinedAtoms`, each as `undefined`, and nothing else. A served `P` — a prior
-  # true or withheld atom — has no path into the carry, because the carry reads no field that holds
-  # one. By construction, not by a convention a caller can forget.
+  # ── `prior` IS THE OMISSION GUARD, AND NOTHING ELSE (den-hoag-ea3j4, owner-ruled arms (B), (ii)) ──
+  # A stepping caller hands this pass the previous pass's RECORD. No verdict of it is read: this
+  # pass is solved from scratch over its own cumulative program, at its own `complete`, under its
+  # own `interpretation`. What `prior` guards is the cumulation itself. A prior pass's verdicts are
+  # not rules, so a program that drops an earlier pass's declaration re-derives nothing that
+  # declaration settled, and reads the dropped atoms `false` by the closed-world default —
+  # silently, and sometimes to the right answer for the wrong reason. Every rule of `prior.rules`
+  # must be a rule of this program, or the entry refuses by name, catchably. Rules and not
+  # declarations are compared: a declaration's relata are identifiers resolved against the frozen
+  # set, and they are not part of the atom's meaning.
   #
-  # ★ AND THE PRIOR'S DECLARATIONS MUST ALL BE HERE. A prior pass's verdicts are not rules, so a
-  # program that drops an earlier pass's declaration re-derives nothing that declaration settled,
-  # and reads the dropped atoms `false` by the closed-world default — silently, and sometimes to
-  # the right answer for the wrong reason. Every rule of `prior.rules` must be a rule of this
-  # program, or the entry refuses by name, catchably. Rules and not declarations are compared: a
-  # declaration's relata are identifiers resolved against the frozen set, and they are not part of
-  # the atom's meaning.
-  #
-  # ★ `prior` CARRIES NO DEFAULT EITHER. A defaulted `null` would silently restore the unchecked
-  # path — no derived carry, no omission refusal — for every stepping caller who forgot it, which is
-  # the fallback this parameter exists to remove. A first or single pass states `prior = null`, and
-  # that is the base case: an empty carry and nothing to have resubmitted. What is left of
-  # `interpretation` is the general ASSERTION channel — external verdicts a caller states of atoms,
-  # as gen-scope reads them — and it is no longer the way a pass carries its predecessor.
+  # ★ `prior` CARRIES NO DEFAULT. A defaulted `null` would silently skip the omission refusal for
+  # every stepping caller who forgot it, which is the fallback this parameter exists to remove. A
+  # first or single pass states `prior = null`, and that is the base case: nothing to have
+  # resubmitted.
   #
   # AN ELLIPSIS PATTERN (den-hoag-7gp66 P1, arm (C)), same as `mkModel` above: the four required
   # formals still refuse a MISSING value the evaluator's own uncatchable way, and `...` +
@@ -261,38 +266,29 @@ let
       (prelude.checkOptions "gen-program.model" (builtins.attrNames (builtins.functionArgs model)) args)
       (
         let
-          priorRules =
+          priorKeys =
             if prior == null then
               [ ]
-            else if builtins.isAttrs prior && prior ? rules && prior ? undefinedAtoms then
-              prior.rules
+            else if builtins.isAttrs prior && builtins.isAttrs (prior.rules or null) then
+              builtins.attrNames prior.rules
             else
               throw "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or `prior = null` on the first pass";
-          omitted = builtins.filter (r: !(builtins.elem r program.rules)) priorRules;
-          carry =
-            if prior == null then
-              [ ]
-            else
-              map (atom: {
-                inherit atom;
-                verdict = "undefined";
-              }) prior.undefinedAtoms;
-          interpretation' = interpretation ++ carry;
-          solved = scope.solve interpretation' program;
+          solved = scope.solve interpretation program;
+          result = mkModel {
+            inherit solved program complete;
+            adjudication = stableModel.adjudicate {
+              inherit program interpretation;
+              model = solved;
+            };
+          };
+          omitted = builtins.filter (k: !(result.rules ? ${k})) priorKeys;
         in
         if omitted != [ ] then
           throw "gen-program.model: this pass's program drops ${toString (builtins.length omitted)} rule(s) of the prior pass, headed ${
-            builtins.concatStringsSep ", " (map (r: "'${r.head}'") omitted)
+            builtins.concatStringsSep ", " (map (k: "'${prior.rules.${k}.head}'") omitted)
           } — every pass resubmits every earlier pass's declarations, because a prior pass's verdicts are not rules and a dropped declaration re-derives nothing it settled"
         else
-          mkModel {
-            inherit solved program complete;
-            adjudication = stableModel.adjudicate {
-              inherit program;
-              interpretation = interpretation';
-              model = solved;
-            };
-          }
+          result
       );
 in
 {

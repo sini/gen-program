@@ -75,11 +75,12 @@ it introduces are the reserved partners below, which name no kind and no relatio
 ### The pass boundary
 
 `engine.solve interpretation program` takes the program last, and verdicts reach it as the
-**interpretation** — a list of `{ atom, verdict }`, travelling as themselves. `model` builds that
-list from two sources: the caller's own `interpretation`, the general assertion channel, which
-carries no default (a defaulted empty list is the silent collapse it exists to prevent, so a caller
-asserting nothing supplies `[ ]` and says so); and the carry it DERIVES from `prior`, the previous
-pass's record (below).
+**interpretation** — a list of `{ atom, verdict }`, travelling as themselves. In `model` that list
+is the caller's own and nothing else: the general **assertion** channel, an input of the pass that
+states it. It carries no default (a defaulted empty list is the silent collapse it exists to
+prevent, so a caller asserting nothing supplies `[ ]` and says so), and **an assertion does not
+persist**: a later pass holds it only if it restates it. No verdict of a prior pass is ever carried
+into this list (below).
 
 The three values are three different kinds of thing, and gen-scope's engine is where that is
 stated. **TRUE** is an external fact and seeds both of the engine's operators. **FALSE** is inert —
@@ -177,18 +178,24 @@ handles, in van Antwerpen et al. 2016 §4.1–4.2's published `T` / `P` / `U` sh
 
 There is no shape of the result record from which a consumer can take a bare boolean:
 
-| flag | when                                                                                               | `included`                                                                       |
-| ---- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `T`  | the relation is closed, the atom has a two-valued verdict                                          | answers both ways                                                                |
-| `P`  | the relation is still growing, the atom **is** derived and its whole support is negation-free      | answers `true` — the positive fragment is monotone, so no later pass retracts it |
-| `P`  | the relation is still growing, the atom **is** derived but its support rests on `not` at any depth | **refuses by name** — a later pass may derive what the `not` reads               |
-| `P`  | the relation is still growing, the atom is **not** derived                                         | **refuses by name** — a later pass may derive it                                 |
-| `U`  | the atom has no two-valued verdict                                                                 | **refuses by name** — the semantics' third value                                 |
+| flag | when                                                                                                                                            | `included`                                                                                     |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `T`  | the relation is closed, the atom has a two-valued verdict                                                                                       | answers both ways                                                                              |
+| `P`  | the relation is still growing, the atom **is** derived and its whole support is negation-free                                                   | answers `true` — the positive fragment is monotone, so no later pass retracts it               |
+| `P`  | the relation is still growing, the atom **is** derived but its support rests on `not` at any depth, or on an atom only `interpretation` asserts | **refuses by name** — a later pass may derive what the `not` reads; an assertion is not a rule |
+| `P`  | the relation is still growing, the atom is **not** derived                                                                                      | **refuses by name** — a later pass may derive it                                               |
+| `U`  | the atom has no two-valued verdict                                                                                                              | **refuses by name** — the semantics' third value                                               |
 
 The three withheld answers are **fields that throw**, never absent fields and never `null`. Every
 `if r.included` in the world reads `null` as false, which is the silent collapse the ruling ended.
 On a growing relation `verdict` refuses a withheld atom by the same name, and the atom is enumerated
 in `withheldAtoms` rather than `trueAtoms`, so no reader of the record serves it.
+
+**At `complete = false`, an asserted atom withholds too.** "Negation-free" is gen-scope's least
+model over the program's negation-free RULES, and an assertion is not a rule: with `x` asserted
+`true` and `y :- x`, both `x` and `y` read `P` and refuse while the relation grows, and both answer
+`T`, in, once it closes. That is conservative — latency, never an unsound answer — and
+`ci/tests/withhold.nix` pins it.
 
 **The passes are the caller's to drive** — this library owns no driver — **and each pass takes
 the previous one's record as `prior`:**
@@ -198,13 +205,18 @@ pass1 = genProgram.model { program = p1; interpretation = [ ]; complete = false;
 pass2 = genProgram.model { program = p2; interpretation = [ ]; complete = true; prior = pass1; };
 ```
 
-The carry is **derived**: `prior`'s `undefinedAtoms`, each as `undefined`, and nothing else, so a
-served `P` cannot cross. And `p2` must contain **every** rule of `pass1.rules` — a prior pass's
-verdicts are not rules, so a delta-only program re-derives nothing earlier passes settled — or
-`model` refuses by name, catchably. `interpretation` stays the general assertion channel for
-verdicts a caller states of atoms. What remains the caller's is `complete = true`, set only once
-it knows, by its own external knowledge, that no further declarations can arrive; an unchanged
-answer set between two passes is consistent with that and does not entail it.
+**No verdict crosses a pass.** Each pass solves its own cumulative program from scratch, at its own
+`complete`, under its own `interpretation`, so the final pass's answers are the final graph's
+answers whatever the pass boundaries were (ADR-0022). A carried `undefined` used to pin an atom a
+later rule settled — a negation cycle broken by a later fact stayed `U` — and that construction is
+gone (den-hoag-ea3j4, owner-ruled arm (ii)). `prior` is the **omission guard** and nothing else:
+`p2` must contain **every** rule of `pass1.rules` — a prior pass's verdicts are not rules, so a
+delta-only program re-derives nothing earlier passes settled — or `model` refuses by name,
+catchably. `pass1.rules` is an index keyed by each rule's JSON rendering, so the check is a lookup
+per rule rather than a scan. `prior` is required: a first or single pass states `prior = null`.
+What remains the caller's is `complete = true`, set only once it knows, by its own external
+knowledge, that no further declarations can arrive; an unchanged answer set between two passes is
+consistent with that and does not entail it.
 
 ★ **The letters are kept rather than spelled, and that is a transplant guard.** This library cites
 two primaries that both use *total* and *partial* for **different things**: VGRS Definition 2.6

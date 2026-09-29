@@ -67,35 +67,45 @@ document's prose in one cell, so neither side can drift onto the other.
 ### The call
 
 - **`model`** — `{ program, interpretation, complete, prior }` → the result record. It drives
-  `engine.solve`. **`prior`** is the previous pass's result record (den-hoag-ea3j4, owner-ruled arm
-  (B)): the carry is DERIVED from it — its `undefinedAtoms`, each as `undefined`, and nothing else,
-  so a served `P` has no path across — and the entry **refuses by name, catchably,** when any rule
-  of `prior.rules` is missing from this pass's program. `prior` carries **no default**: a first or
-  single pass states `prior = null`, and a defaulted `null` would silently restore the unchecked
-  path for a stepping caller who forgot it. `interpretation` is the general **assertion** channel — a
-  LIST of `{ atom, verdict }` a caller states of atoms, as gen-scope reads them — and it carries
-  **no default**; it is no longer how one pass carries the next. `complete` carries none either: a
-  defaulted `true` would silently claim the pass sequence had closed.
+  `engine.solve` over THIS pass's program and interpretation, from scratch: no verdict of a prior
+  pass is carried (den-hoag-ea3j4, owner-ruled arm (ii)). **`prior`** is the previous pass's result
+  record, and it is the **omission guard** only: the entry **refuses by name, catchably,** when any
+  rule of `prior.rules` is missing from this pass's program. `prior` carries **no default**: a first
+  or single pass states `prior = null`, and a defaulted `null` would silently skip the guard for a
+  stepping caller who forgot it. `interpretation` is the general **assertion** channel — a LIST of
+  `{ atom, verdict }` a caller states of atoms at THIS pass, restated at a later pass if it is to
+  hold there — and it carries **no default**. `complete` carries none either: a defaulted `true`
+  would silently claim the pass sequence had closed.
 - **`mkModel`** — the result record's constructor, published so a consumer (and a cell) can READ
   which fields are required rather than discovering it from a crash. Every formal is required;
   `adjudication` in particular.
 
+★ **Two entry refusals are UNCATCHABLE, and both are the evaluator's own "called without required
+argument":** a `model` call without `prior`, and a `mkModel` call without `program` (both added at
+den-hoag-ea3j4, the same class as every other required formal of both). `tryEval` does not contain
+them, so no cell can provoke one; each is held by a formal-set cell reading `builtins.functionArgs`
+(`relation.nix`, `adjudication.nix`, `surface.nix`), and `ci/bench/requiredness-probe.nix` exhibits
+the refusal itself as an exit status. The omission refusal, the non-record `prior` refusal and the
+withholding refusal are ordinary throws, and `tryEval` catches them.
+
 The record carries `trueAtoms` / `withheldAtoms` / `undefinedAtoms` / `falseAtoms`, which partition
 **gen-scope's extended base, `program.atoms ∪ dom(interpretation)`**, in its order: on a growing
-relation a derived atom whose support rests on negation moves from `trueAtoms` to `withheldAtoms`,
-and on a closed one `withheldAtoms` is empty and the other three are gen-scope's own. It carries
-`verdict` — total on a closed relation, refusing a withheld atom by name on a growing one — and
-`resolve`, `adjudication`, `complete`, `converged`, and gen-scope's `provenance` and
-`condensationDepth` unchanged. `mkModel` takes `program` because whether a derived atom's support is
-negation-free is a fact about the rules, which `solved` does not carry.
+relation a derived atom whose support rests on negation, or on an assertion, moves from `trueAtoms`
+to `withheldAtoms`, and on a closed one `withheldAtoms` is empty and the other three are gen-scope's
+own. It carries `verdict` — total on a closed relation, refusing a withheld atom by name on a
+growing one — and `resolve`, `adjudication`, `complete`, `converged`, and gen-scope's `provenance`
+and `condensationDepth` unchanged. `mkModel` takes `program` because whether a derived atom's support
+is negation-free is a fact about the rules, which `solved` does not carry.
 
-The record also carries `rules` — the rules it was solved over, as plain data — which is what a
-next pass's `prior` check reads.
+The record also carries `rules` — the rules it was solved over, as plain data, in an attrset keyed
+by each rule's `builtins.toJSON` — which is the index a next pass's `prior` check looks each rule up
+in. A list scanned per rule would be quadratic at thousands of rules; evaluator counters cannot see
+the difference, so `withhold.nix` asserts the index's structure.
 
-The passes are the caller's to drive (see "What this library does NOT do"); what a stepping caller
-owes is now enforced at the entry. Handing each pass the previous record as `prior` makes the carry
-undefined-only by construction and refuses a pass that drops an earlier declaration. What stays the
-caller's is `complete = true`, set only on its own knowledge that nothing further can arrive.
+The passes are the caller's to drive (see "What this library does NOT do"). What a stepping caller
+owes — resubmitting every earlier declaration — is enforced at the entry through `prior`. What stays
+the caller's is restating any assertion it wants to hold at a later pass, and `complete = true`, set
+only on its own knowledge that nothing further can arrive.
 
 ### The resolved relation
 
@@ -104,13 +114,13 @@ caller's is `complete = true`, set only on its own knowledge that nothing furthe
 - **`flagNames`** / **`flags`** — van Antwerpen et al. 2016 §4.1–4.2's `T` / `P` / `U`, kept as
   his own letters with the gloss carried as data.
 
-| flag | when                                                                                               | `included`                                                                                   |
-| ---- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `T`  | the relation is closed and the atom has a two-valued verdict                                       | answers both ways                                                                            |
-| `P`  | the relation is still growing and the atom IS derived, with negation-free support                  | answers `true` — the positive fragment is monotone, so no later pass retracts it             |
-| `P`  | the relation is still growing and the atom IS derived, but its support rests on `not` at any depth | **refuses by name** — a later pass may derive what the `not` reads (den-hoag-ea3j4, arm (a)) |
-| `P`  | the relation is still growing and the atom is NOT derived                                          | **refuses by name** — a later pass may derive it (vA2018 §4.3 delays such a query)           |
-| `U`  | the atom has no two-valued verdict                                                                 | **refuses by name** — ADR-0020's third value                                                 |
+| flag | when                                                                                                                                            | `included`                                                                                                               |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `T`  | the relation is closed and the atom has a two-valued verdict                                                                                    | answers both ways                                                                                                        |
+| `P`  | the relation is still growing and the atom IS derived, with negation-free support                                                               | answers `true` — the positive fragment is monotone, so no later pass retracts it                                         |
+| `P`  | the relation is still growing and the atom IS derived, but its support rests on `not` at any depth, or on an atom only `interpretation` asserts | **refuses by name** — a later pass may derive what the `not` reads; an assertion is not a rule (den-hoag-ea3j4, arm (a)) |
+| `P`  | the relation is still growing and the atom is NOT derived                                                                                       | **refuses by name** — a later pass may derive it (vA2018 §4.3 delays such a query)                                       |
+| `U`  | the atom has no two-valued verdict                                                                                                              | **refuses by name** — ADR-0020's third value                                                                             |
 
 The three withheld answers are **fields that throw**, never absent fields and never `null`. Every
 `if r.included` in the world reads `null` as false, which is the silent collapse the ruling ended.

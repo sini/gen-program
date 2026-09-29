@@ -6,6 +6,10 @@
 # declaration set the coherence adjudication flipped REFUSED → ADMITTED at the first pass and never
 # returned. The channel is the repair: a prior pass's verdicts are not rules.
 #
+# ★ `model` no longer carries anything itself (den-hoag-ea3j4, arm (ii)): `interpretation` is the
+# caller's assertion channel, and the passes below are a caller ASSERTING the previous pass's
+# undefined atoms by hand. What they arm is how gen-scope reads such assertions at the boundary.
+#
 # ★★ WHAT IS ARMED HERE AND WHAT IS ARMED NEXT DOOR, STATED SO THE COVERAGE IS READABLE.
 # The two operator defects — `U` reaching the UNDERESTIMATE (the mirror), and `U` subtracted from
 # it (pinning) — are defects of gen-scope's construction, and gen-scope arrives here as a LOCKED

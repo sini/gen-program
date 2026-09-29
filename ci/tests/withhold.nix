@@ -9,16 +9,18 @@
 # `complete = true`. van Antwerpen et al. 2016 Lemma 2 licenses the positive serve; vA2018 §4.3's
 # prevention — delay the query until the graph is total — is the withholding, applied per atom.
 #
-# ★★ THE ORACLE QUANTIFIES OVER EVERY SERVED ANSWER AT EVERY PASS, not over the final one. Under
-# the carry-undefined-only protocol the FINAL pass is correct even in the defective library, so a
-# "final answer matches from-scratch" oracle passes at the RED state and discriminates nothing.
+# ★★ THE ORACLE QUANTIFIES OVER EVERY SERVED ANSWER AT EVERY PASS, not over the final one. The
+# FINAL pass of N1/N2 is correct even in the defective library, so a "final answer matches
+# from-scratch" oracle passes at that RED state and discriminates nothing.
 # RED = an intermediate pass SERVES `included = true` for an atom the final graph, evaluated from
 # scratch, answers `false`.
 #
-# ★ THE PASSES FOLLOW THE STEPPING CONSUMER'S CONTRACT: every later pass resubmits EVERY earlier
-# pass's declarations plus its own, and carries forward only the previous pass's `undefined` atoms.
-# For N1/N2 that carry is EMPTY (an atom no rule heads is `false`, not `undefined`), so the final
-# pass's correctness comes from the cumulative resubmission, not from the carry.
+# ★ THE PASSES FOLLOW THE STEPPING CONSUMER'S CONTRACT (owner-ruled arms (B), (ii)): every later
+# pass resubmits EVERY earlier pass's declarations plus its own and is handed the previous record as
+# `prior`, which only guards that resubmission. No verdict crosses a pass boundary, so each pass is
+# its cumulative program solved from scratch — and the FINAL pass must equal that from-scratch
+# evaluation on every shape, including the ones a carried `undefined` used to pin (the second half
+# of this suite, ported from reports/den-hoag-ea3j4-carry-arms-v0.md).
 {
   genProgram,
   prelude,
@@ -38,11 +40,6 @@ let
       inherit interpretation complete;
     };
 
-  undef = map (atom: {
-    inherit atom;
-    verdict = "undefined";
-  });
-
   # One stepping consumer's two passes over a pass-1 declaration set and the declarations pass 2
   # adds, plus the from-scratch evaluation of the final graph that every served answer answers to.
   twoPass =
@@ -53,7 +50,7 @@ let
     in
     {
       inherit pass1;
-      pass2 = modelOf final (undef pass1.undefinedAtoms) true;
+      pass2 = withPrior final pass1 true;
       scratch = modelOf final [ ] true;
     };
 
@@ -139,7 +136,7 @@ let
 
   sort = prelude.sort (a: b: a < b);
 
-  # ── THE PRIOR RECORD (owner-ruled arm (B)): the carry is DERIVED from the previous pass ──
+  # ── THE PASS PROTOCOL: `prior` guards the cumulation; nothing is carried ──
   withPrior =
     declarations: prior: complete:
     genProgram.model {
@@ -151,29 +148,317 @@ let
       inherit prior complete;
     };
 
-  n1First = [
+  n1Final = [
     root
     (d {
       head = "member:a";
       pos = [ "member:root" ];
       neg = [ "member:b" ];
     })
+    (d { head = "member:b"; })
   ];
-  n1Final = n1First ++ [ (d { head = "member:b"; }) ];
-  n1Next = withPrior n1Final n1.pass1 true;
 
-  # A NON-EMPTY carry: pass 1 is handed `x` as undefined through the assertion channel, so `z :- x`
-  # is undefined too; pass 2 only sees `x` again through the carry.
-  zx = [
+  # One case's passes, stepped with `prior`, against the from-scratch evaluation of the final
+  # cumulative program at the final pass's own `complete` and `interpretation`. A pass is
+  # `{ add; complete; interp ? [ ]; }`; `serve` renders an answer as `flag:in|out|refused`.
+  serve =
+    m: atom:
+    let
+      r = m.resolve atom;
+      t = builtins.tryEval r.included;
+    in
+    r.flag
+    + ":"
+    + (
+      if !t.success then
+        "refused"
+      else if t.value then
+        "in"
+      else
+        "out"
+    );
+  stepped =
+    c:
+    let
+      progAt =
+        k:
+        genProgram.program {
+          declarations = builtins.concatLists (prelude.genList (i: (builtins.elemAt c.passes i).add) (k + 1));
+          frozen = [ ];
+        };
+      go =
+        k: prior:
+        let
+          p = builtins.elemAt c.passes k;
+          m = genProgram.model {
+            program = progAt k;
+            interpretation = p.interp or [ ];
+            inherit (p) complete;
+            inherit prior;
+          };
+        in
+        if k + 1 == builtins.length c.passes then m else go (k + 1) m;
+      last = builtins.length c.passes - 1;
+      lastPass = builtins.elemAt c.passes last;
+      final = go 0 null;
+      scratch = genProgram.model {
+        program = progAt last;
+        interpretation = lastPass.interp or [ ];
+        inherit (lastPass) complete;
+        prior = null;
+      };
+      at = m: prelude.genAttrs c.watch (serve m);
+    in
+    {
+      final = at final;
+      agrees = at final == at scratch && view final == view scratch;
+    };
+
+  cyc = [
     (d {
-      head = "member:z";
-      pos = [ "member:x" ];
+      head = "p";
+      neg = [ "q" ];
+    })
+    (d {
+      head = "q";
+      neg = [ "p" ];
     })
   ];
-  zxFirst = modelOf zx (undef [ "member:x" ]) false;
-  zxNext = withPrior (zx ++ [ (d { head = "member:w"; }) ]) zxFirst true;
-  zxHand = modelOf (zx ++ [ (d { head = "member:w"; }) ]) (undef zxFirst.undefinedAtoms) true;
-  zxNone = modelOf (zx ++ [ (d { head = "member:w"; }) ]) [ ] true;
+  U = atom: {
+    inherit atom;
+    verdict = "undefined";
+  };
+  # gen-inspect's fleet fixture (`examples/fleet/default.nix`), relata dropped: they are
+  # identifiers resolved against the frozen set and no part of an atom's meaning.
+  fleet = map d [
+    {
+      head = "enrolled:hemony:chiming";
+    }
+    {
+      head = "absorbs:full-circle:chiming";
+    }
+    {
+      head = "admits:bourdon:full-circle";
+    }
+    {
+      head = "enrolled:hemony:full-circle";
+      pos = [
+        "enrolled:hemony:chiming"
+        "absorbs:full-circle:chiming"
+      ];
+    }
+    {
+      head = "rings:hemony:bourdon";
+      pos = [
+        "enrolled:hemony:full-circle"
+        "admits:bourdon:full-circle"
+      ];
+      neg = [ "silenced:hemony:bourdon" ];
+    }
+  ];
+
+  cases = {
+    # a negation cycle that a later pass settles
+    C1 = {
+      watch = [
+        "p"
+        "q"
+      ];
+      passes = [
+        {
+          add = cyc;
+          complete = false;
+        }
+        {
+          add = [ (d { head = "q"; }) ];
+          complete = true;
+        }
+      ];
+    };
+    # three passes: a cycle, a dependant of it, then the settling fact
+    CHAIN3 = {
+      watch = [
+        "p"
+        "q"
+        "r"
+      ];
+      passes = [
+        {
+          add = cyc;
+          complete = false;
+        }
+        {
+          add = [
+            (d {
+              head = "r";
+              pos = [ "p" ];
+            })
+          ];
+          complete = false;
+        }
+        {
+          add = [ (d { head = "q"; }) ];
+          complete = true;
+        }
+      ];
+    };
+    # asserted `undefined` at pass 1, then a later pass DECLARES it with a rule that cannot fire
+    ASU_RULE_F = {
+      watch = [
+        "r"
+        "e"
+      ];
+      passes = [
+        {
+          add = [
+            (d {
+              head = "r";
+              pos = [ "e" ];
+            })
+          ];
+          complete = false;
+          interp = [ (U "e") ];
+        }
+        {
+          add = [
+            (d {
+              head = "e";
+              pos = [ "never" ];
+            })
+          ];
+          complete = true;
+        }
+      ];
+    };
+    # a pure asserted-`undefined` atom, asserted at pass 1 only: it does not persist
+    EXT = {
+      watch = [
+        "r"
+        "e"
+      ];
+      passes = [
+        {
+          add = [
+            (d {
+              head = "r";
+              pos = [ "e" ];
+            })
+          ];
+          complete = false;
+          interp = [ (U "e") ];
+        }
+        {
+          add = [ ];
+          complete = true;
+        }
+      ];
+    };
+    # the same assertion RESTATED at the final pass: that is how an assertion persists
+    EXT_RESTATE = {
+      watch = [
+        "r"
+        "e"
+      ];
+      passes = [
+        {
+          add = [
+            (d {
+              head = "r";
+              pos = [ "e" ];
+            })
+          ];
+          complete = false;
+          interp = [ (U "e") ];
+        }
+        {
+          add = [ ];
+          complete = true;
+          interp = [ (U "e") ];
+        }
+      ];
+    };
+    # three passes, an external `undefined` asserted once at pass 1 and never restated
+    CHAIN3_EXT = {
+      watch = [
+        "r"
+        "s"
+        "e"
+      ];
+      passes = [
+        {
+          add = [
+            (d {
+              head = "r";
+              pos = [ "e" ];
+            })
+          ];
+          complete = false;
+          interp = [ (U "e") ];
+        }
+        {
+          add = [
+            (d {
+              head = "s";
+              pos = [ "r" ];
+            })
+          ];
+          complete = false;
+        }
+        {
+          add = [ ];
+          complete = true;
+        }
+      ];
+    };
+    # gen-inspect's fleet over three passes, the silencing asserted `undefined` at pass 1 only
+    FLEET3 = {
+      watch = [
+        "rings:hemony:bourdon"
+        "enrolled:hemony:full-circle"
+      ];
+      passes = [
+        {
+          add = prelude.genList (builtins.elemAt fleet) 3;
+          complete = false;
+          interp = [ (U "silenced:hemony:bourdon") ];
+        }
+        {
+          add = [ (builtins.elemAt fleet 3) ];
+          complete = false;
+        }
+        {
+          add = [ (builtins.elemAt fleet 4) ];
+          complete = true;
+        }
+      ];
+    };
+  };
+  run = builtins.mapAttrs (_: stepped) cases;
+
+  # an asserted `true` at a GROWING pass, and a reader of it (the gate's P1)
+  asserted =
+    complete:
+    let
+      m =
+        modelOf
+          [
+            (d {
+              head = "y";
+              pos = [ "x" ];
+            })
+          ]
+          [
+            {
+              atom = "x";
+              verdict = "true";
+            }
+          ]
+          complete;
+    in
+    {
+      x = serve m "x";
+      y = serve m "y";
+    };
 
   view = m: {
     inherit (m)
@@ -427,55 +712,131 @@ in
       ];
     };
 
-    # ══ THE PRIOR RECORD: THE CARRY IS DERIVED, NEVER CHOSEN ══
-    test-the-derived-carry-equals-the-hand-built-undefined-only-carry = {
-      expr = view zxNext == view zxHand;
-      expected = true;
-    };
-
-    # ★ AND THE CARRY IS NOT EMPTY: without it the same pass reads `x` and `z` false.
-    test-control-the-derived-carry-is-non-empty-and-moves-the-model = {
-      expr = {
-        derived = zxNext.undefinedAtoms;
-        none = zxNone.undefinedAtoms;
-      };
+    # ══ NO VERDICT CROSSES A PASS: THE FINAL PASS EQUALS THE FINAL GRAPH FROM SCRATCH ══
+    # Each case's final pass, stepped with `prior`, against the same cumulative program evaluated
+    # with `prior = null` — served answers on the watched atoms and all four enumerations. The
+    # literal finals beside `agrees` keep the cell from passing on two identically wrong readings.
+    test-c1-a-cycle-a-later-pass-settles-is-settled-at-the-final-pass = {
+      expr = run.C1;
       expected = {
-        derived = [
-          "member:z"
-          "member:x"
-        ];
-        none = [ ];
-      };
-    };
-
-    # A served `P` in the prior cannot reach the carry: N1's pass 1 served `root` and withheld `a`,
-    # and the next pass answers `a` from its own graph.
-    test-a-served-p-in-the-prior-does-not-reach-the-carry = {
-      expr = {
-        a = n1Next.resolve "member:a";
-        sameAsNoCarry = view n1Next == view n1.scratch;
-      };
-      expected = {
-        a = {
-          flag = "T";
-          included = false;
+        agrees = true;
+        final = {
+          p = "T:out";
+          q = "T:in";
         };
-        sameAsNoCarry = true;
       };
     };
 
-    # ★ THE CONTROL: had the prior's served answers been carried as `true` — carry-all — `a` would
-    # be pinned in. That is the path the record's carry has no field to take.
-    test-control-carrying-the-served-answers-would-pin-a-in = {
-      expr =
-        (modelOf n1Final (map (atom: {
-          inherit atom;
-          verdict = "true";
-        }) (n1.pass1.trueAtoms ++ n1.pass1.withheldAtoms)) true).resolve
-          "member:a";
+    test-chain3-a-cycle-its-dependant-and-the-settling-fact-over-three-passes = {
+      expr = run.CHAIN3;
       expected = {
-        flag = "T";
-        included = true;
+        agrees = true;
+        final = {
+          p = "T:out";
+          q = "T:in";
+          r = "T:out";
+        };
+      };
+    };
+
+    test-asu-rule-f-a-declared-rule-settles-an-atom-asserted-undefined-earlier = {
+      expr = run.ASU_RULE_F;
+      expected = {
+        agrees = true;
+        final = {
+          e = "T:out";
+          r = "T:out";
+        };
+      };
+    };
+
+    # An ASSERTION is an input of the pass that states it: asserted at pass 1 only, it is absent
+    # from the final pass, which reads `e` closed-world.
+    test-ext-an-assertion-not-restated-does-not-persist = {
+      expr = run.EXT;
+      expected = {
+        agrees = true;
+        final = {
+          e = "T:out";
+          r = "T:out";
+        };
+      };
+    };
+
+    # ★ THE CONTROL: restated at the final pass, the same assertion holds there.
+    test-control-ext-restated-the-assertion-holds = {
+      expr = run.EXT_RESTATE;
+      expected = {
+        agrees = true;
+        final = {
+          e = "U:refused";
+          r = "U:refused";
+        };
+      };
+    };
+
+    test-chain3-ext-an-assertion-made-once-does-not-reach-the-third-pass = {
+      expr = run.CHAIN3_EXT;
+      expected = {
+        agrees = true;
+        final = {
+          e = "T:out";
+          r = "T:out";
+          s = "T:out";
+        };
+      };
+    };
+
+    test-fleet3-gen-inspects-fleet-over-three-passes = {
+      expr = run.FLEET3;
+      expected = {
+        agrees = true;
+        final = {
+          "enrolled:hemony:full-circle" = "T:in";
+          "rings:hemony:bourdon" = "T:in";
+        };
+      };
+    };
+
+    # ══ AN ASSERTED ATOM AT A GROWING PASS IS WITHHELD, AND SO ARE ITS READERS (the gate's P1) ══
+    # An assertion is not a rule, so it never enters the negation-free fragment: at
+    # `complete = false` an asserted `true` and every reader of it refuse under `P`; closed, both
+    # answer. Conservative — latency, never an unsound answer.
+    test-an-asserted-true-and-its-reader-are-withheld-while-growing-and-answer-when-closed = {
+      expr = {
+        growing = asserted false;
+        closed = asserted true;
+      };
+      expected = {
+        growing = {
+          x = "P:refused";
+          y = "P:refused";
+        };
+        closed = {
+          x = "T:in";
+          y = "T:in";
+        };
+      };
+    };
+
+    # ══ THE OMISSION GUARD'S INDEX IS AN ATTRSET KEYED BY RULE, NOT A LIST ══
+    # The prior check looks each prior rule up in this index; a list scan per rule is quadratic, and
+    # evaluator counters cannot see the difference (`builtins.elem` runs inside the builtin), so the
+    # oracle is the index's STRUCTURE.
+    test-the-record-rules-index-is-an-attrset-keyed-by-each-rules-json = {
+      expr =
+        let
+          m = n1.scratch;
+        in
+        {
+          isIndex = builtins.isAttrs m.rules;
+          keyed = prelude.all (k: builtins.toJSON m.rules.${k} == k) (builtins.attrNames m.rules);
+          count = builtins.length (builtins.attrNames m.rules);
+        };
+      expected = {
+        isIndex = true;
+        keyed = true;
+        count = 3;
       };
     };
 
@@ -497,12 +858,12 @@ in
     };
 
     test-control-the-cumulative-pass-is-admitted = {
-      expr = refuses (withPrior (n1Final) n1.pass1 true);
+      expr = refuses (withPrior n1Final n1.pass1 true);
       expected = false;
     };
 
     test-a-prior-that-is-not-a-result-record-is-refused = {
-      expr = refuses (withPrior n1Final { undefinedAtoms = [ ]; } true);
+      expr = refuses (withPrior n1Final { rules = [ ]; } true);
       expected = true;
     };
 
