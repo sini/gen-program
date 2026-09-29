@@ -84,8 +84,9 @@ document's prose in one cell, so neither side can drift onto the other.
 argument":** a `model` call without `prior`, and a `mkModel` call without `program` (both added at
 den-hoag-ea3j4, the same class as every other required formal of both). `tryEval` does not contain
 them, so no cell can provoke one; each is held by a formal-set cell reading `builtins.functionArgs`
-(`relation.nix`, `adjudication.nix`, `surface.nix`), and `ci/bench/requiredness-probe.nix` exhibits
-the refusal itself as an exit status. The omission refusal, the non-record `prior` refusal and the
+(`relation.nix`, `adjudication.nix`, `surface.nix`). Neither is exhibited as an exit status:
+`ci/bench/requiredness-probe.nix` drops `mkModel`'s `adjudication` only. Both stay native aborts
+until gen-program's P2 level makes a missing formal a catchable door refusal (den-hoag-7gp66). The omission refusal, the non-record `prior` refusal and the
 withholding refusal are ordinary throws, and `tryEval` catches them.
 
 The record carries `trueAtoms` / `withheldAtoms` / `undefinedAtoms` / `falseAtoms`, which partition
