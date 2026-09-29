@@ -207,9 +207,9 @@ pass2 = genProgram.model { program = p2; interpretation = [ ]; complete = true; 
 
 **No verdict crosses a pass.** Each pass solves its own cumulative program from scratch, at its own
 `complete`, under its own `interpretation`, so the final pass's answers are the final graph's
-answers whatever the pass boundaries were (ADR-0022). A carried `undefined` used to pin an atom a
+answers whatever the pass boundaries were: the semantics never mentions arrival. A carried `undefined` used to pin an atom a
 later rule settled — a negation cycle broken by a later fact stayed `U` — and that construction is
-gone (den-hoag-ea3j4, owner-ruled arm (ii)). `prior` is the **omission guard** and nothing else:
+gone. `prior` is the **omission guard** and nothing else:
 `p2` must contain **every** rule of `pass1.rules` — a prior pass's verdicts are not rules, so a
 delta-only program re-derives nothing earlier passes settled — or `model` refuses by name,
 catchably. `pass1.rules` is an index keyed by each rule's JSON rendering, so the check is a lookup
