@@ -36,6 +36,8 @@
   stableModel,
 }:
 let
+  sortUnique = xs: builtins.sort (a: b: a < b) (prelude.unique xs);
+
   # ── THE FLAGS, AND THEY ARE VAN ANTWERPEN'S, CITED AT THEIR OWN PRIMARY ──
   # van Antwerpen et al. 2016 §4.1 puts a flag on a resolution result and gives it three values,
   # verbatim from the archived transcription: "a result flag, **T (total)** if all declarations
@@ -185,17 +187,31 @@ let
         {
           inherit resolve complete;
 
-          # The rules this record was solved over, as plain data KEYED by their JSON rendering — an
-          # index, so a NEXT pass handed this record as its `prior` checks it resubmitted every one
-          # by attribute lookup rather than a list scan per rule (quadratic at thousands of rules).
-          # The same index is this record's side of that check. gen-scope's program value itself is
-          # not carried: it holds more than the rules, and not all of it crosses an evaluation
-          # boundary.
+          # The rules this record was solved over, as plain data KEYED by the JSON rendering of the
+          # CANONICAL rule — an index, so a NEXT pass handed this record as its `prior` checks it
+          # resubmitted every one by attribute lookup rather than a list scan per rule (quadratic at
+          # thousands of rules). The same index is this record's side of that check. A body is a
+          # conjunction, a SET of literals under the well-founded semantics, so each body is sorted
+          # and deduplicated before it is keyed: a resubmission that writes `a :- y, x` for
+          # `a :- x, y`, or repeats a literal, is the same rule and is not an omission. The value is
+          # the canonical rule too, so every key is the rendering of its own value. gen-scope's
+          # program value itself is not carried: it holds more than the rules, and not all of it
+          # crosses an evaluation boundary.
           rules = builtins.listToAttrs (
-            map (r: {
-              name = builtins.toJSON r;
-              value = r;
-            }) program.rules
+            map (
+              r:
+              let
+                canonical = {
+                  inherit (r) head;
+                  pos = sortUnique r.pos;
+                  neg = sortUnique r.neg;
+                };
+              in
+              {
+                name = builtins.toJSON canonical;
+                value = canonical;
+              }
+            ) program.rules
           );
 
           # gen-scope's own enumerations, over its own extended base, in its order. Nothing is

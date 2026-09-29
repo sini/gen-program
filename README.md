@@ -208,12 +208,15 @@ pass2 = genProgram.model { program = p2; interpretation = [ ]; complete = true; 
 **No verdict crosses a pass.** Each pass solves its own cumulative program from scratch, at its own
 `complete`, under its own `interpretation`, so the final pass's answers are the final graph's
 answers whatever the pass boundaries were: the semantics never mentions arrival. A carried `undefined` used to pin an atom a
-later rule settled — a negation cycle broken by a later fact stayed `U` — and that construction is
-gone. `prior` is the **omission guard** and nothing else:
+later rule settled — a negation cycle broken by a later fact stayed `U` — and the protocol no longer
+derives any carry. A caller can still rebuild that pin by hand, by forwarding a prior pass's
+verdicts as its own `interpretation`: that is this pass's assertion, answered as asserted, and it is
+not the protocol. `prior` is the **omission guard** and nothing else:
 `p2` must contain **every** rule of `pass1.rules` — a prior pass's verdicts are not rules, so a
 delta-only program re-derives nothing earlier passes settled — or `model` refuses by name,
-catchably. `pass1.rules` is an index keyed by each rule's JSON rendering, so the check is a lookup
-per rule rather than a scan. `prior` is required: a first or single pass states `prior = null`.
+catchably. A body is a set of literals, so a resubmission may reorder a body or repeat a literal.
+`pass1.rules` is an index keyed by each rule's canonical JSON rendering (bodies sorted and
+deduplicated), so the check is a lookup per rule rather than a scan. `prior` is required: a first or single pass states `prior = null`.
 What remains the caller's is `complete = true`, set only once it knows, by its own external
 knowledge, that no further declarations can arrive; an unchanged answer set between two passes is
 consistent with that and does not entail it.

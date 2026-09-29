@@ -148,6 +148,17 @@ let
       inherit prior complete;
     };
 
+  bodyPass1 = withPrior [
+    (d {
+      head = "a";
+      pos = [
+        "x"
+        "y"
+      ];
+      neg = [ "z" ];
+    })
+  ] null false;
+
   n1Final = [
     root
     (d {
@@ -860,6 +871,58 @@ in
     test-control-the-cumulative-pass-is-admitted = {
       expr = refuses (withPrior n1Final n1.pass1 true);
       expected = false;
+    };
+
+    # A body is a SET of literals, so the guard compares rules, not how their bodies are written:
+    # pass 1 declares `a :- x, y, not z`, and a resubmission that reorders the body or repeats a
+    # literal is the same rule and is admitted. The drop-one cell above is the refusing control.
+    test-a-resubmitted-rule-with-its-body-reordered-is-admitted = {
+      expr = refuses (
+        withPrior [
+          (d {
+            head = "a";
+            pos = [
+              "y"
+              "x"
+            ];
+            neg = [ "z" ];
+          })
+        ] bodyPass1 true
+      );
+      expected = false;
+    };
+
+    test-a-resubmitted-rule-with-a-body-literal-repeated-is-admitted = {
+      expr = refuses (
+        withPrior [
+          (d {
+            head = "a";
+            pos = [
+              "x"
+              "y"
+              "y"
+            ];
+            neg = [
+              "z"
+              "z"
+            ];
+          })
+        ] bodyPass1 true
+      );
+      expected = false;
+    };
+
+    test-control-a-resubmitted-rule-with-a-body-literal-changed-is-refused = {
+      expr = refuses (
+        withPrior [
+          (d {
+            head = "a";
+            pos = [ "x" ];
+            neg = [ "z" ];
+          })
+        ] bodyPass1 true
+      );
+      expected = true;
     };
 
     test-a-prior-that-is-not-a-result-record-is-refused = {

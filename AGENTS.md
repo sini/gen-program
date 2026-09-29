@@ -98,8 +98,9 @@ and `condensationDepth` unchanged. `mkModel` takes `program` because whether a d
 is negation-free is a fact about the rules, which `solved` does not carry.
 
 The record also carries `rules` — the rules it was solved over, as plain data, in an attrset keyed
-by each rule's `builtins.toJSON` — which is the index a next pass's `prior` check looks each rule up
-in. A list scanned per rule would be quadratic at thousands of rules; evaluator counters cannot see
+by the `builtins.toJSON` of each CANONICAL rule (`pos` and `neg` sorted and deduplicated, since a
+body is a set of literals) — which is the index a next pass's `prior` check looks each rule up in. A
+resubmission that reorders a body or repeats a literal is the same rule, and is admitted. A list scanned per rule would be quadratic at thousands of rules; evaluator counters cannot see
 the difference, so `withhold.nix` asserts the index's structure.
 
 The passes are the caller's to drive (see "What this library does NOT do"). What a stepping caller
