@@ -241,7 +241,7 @@ in
         complete = true;
         zzqran7f = 1;
       };
-      expectedError.msg = exactly "gen-program.model: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'complete', 'interpretation', 'program') (in prelude.checkOptions)";
+      expectedError.msg = exactly "gen-program.model: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'complete', 'interpretation', 'prior', 'program') (in prelude.checkOptions)";
     };
     test-mkModel-unknown-field-message = {
       expr = genProgram.mkModel {
@@ -263,6 +263,75 @@ in
         zzqran7f = 1;
       };
       expectedError.msg = exactly "gen-program.escape: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'binds', 'emits', 'fn', 'name', 'suppresses') (in prelude.checkOptions)";
+    };
+
+    # den-hoag-ea3j4 — the three refusals the multi-pass protocol names.
+    test-withheld-negative-support-message = {
+      expr =
+        (
+          (genProgram.model {
+            program = genProgram.program {
+              declarations = [
+                {
+                  head = "r";
+                  relata = [ ];
+                }
+                {
+                  head = "a";
+                  pos = [ "r" ];
+                  neg = [ "b" ];
+                  relata = [ ];
+                }
+              ];
+              frozen = [ ];
+            };
+            interpretation = [ ];
+            complete = false;
+          }).resolve
+            "a"
+        ).included;
+      expectedError.msg = exactly "gen-program: the membership 'a' is derived at this pass, but its support rests on negation and the relation is still growing (complete = false), so a later pass may still falsify it. van Antwerpen et al. 2018 §4.3 delays such a query rather than answering it; read `flag` and handle 'P'";
+    };
+    test-omitted-prior-declaration-message = {
+      expr = genProgram.model {
+        program = genProgram.program {
+          declarations = [
+            {
+              head = "z";
+              relata = [ ];
+            }
+          ];
+          frozen = [ ];
+        };
+        interpretation = [ ];
+        complete = true;
+        prior = genProgram.model {
+          program = genProgram.program {
+            declarations = [
+              {
+                head = "r";
+                relata = [ ];
+              }
+            ];
+            frozen = [ ];
+          };
+          interpretation = [ ];
+          complete = false;
+        };
+      };
+      expectedError.msg = exactly "gen-program.model: this pass's program drops 1 rule(s) of the prior pass, headed 'r' — every pass resubmits every earlier pass's declarations, because a prior pass's verdicts are not rules and a dropped declaration re-derives nothing it settled";
+    };
+    test-prior-not-a-record-message = {
+      expr = genProgram.model {
+        program = genProgram.program {
+          declarations = [ ];
+          frozen = [ ];
+        };
+        interpretation = [ ];
+        complete = true;
+        prior = 1;
+      };
+      expectedError.msg = exactly "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or omit `prior` on the first pass";
     };
   };
 }

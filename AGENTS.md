@@ -66,10 +66,14 @@ document's prose in one cell, so neither side can drift onto the other.
 
 ### The call
 
-- **`model`** — `{ program, interpretation, complete }` → the result record. It drives
-  `engine.solve`. `interpretation` is a prior pass's verdicts — a LIST of `{ atom, verdict }` —
-  and carries **no default**, because a defaulted empty carry is the silent collapse the parameter
-  exists to prevent; the first pass supplies `[ ]` and says so. `complete` carries none either: a
+- **`model`** — `{ program, interpretation, complete, prior ? null }` → the result record. It drives
+  `engine.solve`. **`prior`** is the previous pass's result record (den-hoag-ea3j4, owner-ruled arm
+  (B)): the carry is DERIVED from it — its `undefinedAtoms`, each as `undefined`, and nothing else,
+  so a served `P` has no path across — and the entry **refuses by name, catchably,** when any rule
+  of `prior.rules` is missing from this pass's program. A pass with no prior is the first pass, and
+  that is the default's whole meaning. `interpretation` is the general **assertion** channel — a
+  LIST of `{ atom, verdict }` a caller states of atoms, as gen-scope reads them — and it carries
+  **no default**; it is no longer how one pass carries the next. `complete` carries none either: a
   defaulted `true` would silently claim the pass sequence had closed.
 - **`mkModel`** — the result record's constructor, published so a consumer (and a cell) can READ
   which fields are required rather than discovering it from a crash. Every formal is required;
@@ -84,10 +88,13 @@ and on a closed one `withheldAtoms` is empty and the other three are gen-scope's
 `condensationDepth` unchanged. `mkModel` takes `program` because whether a derived atom's support is
 negation-free is a fact about the rules, which `solved` does not carry.
 
-The passes are the caller's to drive (see "What this library does NOT do"). At every pass a stepping
-caller resubmits every earlier pass's declarations plus its own, carries forward the previous pass's
-`undefined` atoms only, and sets `complete = true` only on its own knowledge that nothing further
-can arrive.
+The record also carries `rules` — the rules it was solved over, as plain data — which is what a
+next pass's `prior` check reads.
+
+The passes are the caller's to drive (see "What this library does NOT do"); what a stepping caller
+owes is now enforced at the entry. Handing each pass the previous record as `prior` makes the carry
+undefined-only by construction and refuses a pass that drops an earlier declaration. What stays the
+caller's is `complete = true`, set only on its own knowledge that nothing further can arrive.
 
 ### The resolved relation
 

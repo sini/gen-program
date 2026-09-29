@@ -182,6 +182,12 @@ let
         {
           inherit resolve complete;
 
+          # The rules this record was solved over, as plain data, so that a NEXT pass handed this
+          # record as its `prior` can check it resubmitted every one. gen-scope's program value
+          # itself is not carried: it holds more than the rules, and not all of it crosses an
+          # evaluation boundary.
+          inherit (program) rules;
+
           # gen-scope's own enumerations, over its own extended base, in its order. Nothing is
           # removed: a WITHHELD atom moves from `trueAtoms` to `withheldAtoms`, so the four lists
           # still partition the base and a withheld answer cannot be read back out of `trueAtoms`.
@@ -218,7 +224,26 @@ let
   # `false` would withhold every negative answer forever. `interpretation` carries none either, for
   # the reason gen-scope states at its own parameter. Absence is a decision, so the caller makes it.
   #
-  # AN ELLIPSIS PATTERN (den-hoag-7gp66 P1, arm (C)), same as `mkModel` above: the three named
+  # ── THE PRIOR PASS ARRIVES AS ITS OWN RESULT RECORD (den-hoag-ea3j4, owner-ruled arm (B)) ──
+  # A stepping caller hands this pass the previous pass's RECORD, and the carry is DERIVED from it:
+  # the prior's `undefinedAtoms`, each as `undefined`, and nothing else. A served `P` — a prior
+  # true or withheld atom — has no path into the carry, because the carry reads no field that holds
+  # one. By construction, not by a convention a caller can forget.
+  #
+  # ★ AND THE PRIOR'S DECLARATIONS MUST ALL BE HERE. A prior pass's verdicts are not rules, so a
+  # program that drops an earlier pass's declaration re-derives nothing that declaration settled,
+  # and reads the dropped atoms `false` by the closed-world default — silently, and sometimes to
+  # the right answer for the wrong reason. Every rule of `prior.rules` must be a rule of this
+  # program, or the entry refuses by name, catchably. Rules and not declarations are compared: a
+  # declaration's relata are identifiers resolved against the frozen set, and they are not part of
+  # the atom's meaning.
+  #
+  # ★ `prior` IS THE ONE DEFAULTED FORMAL, AND ITS DEFAULT IS THE BASE CASE, NOT A COLLAPSE: a pass
+  # with no prior is the first pass (or the only one), whose carry is empty by definition. What is
+  # left of `interpretation` is the general ASSERTION channel — external verdicts a caller states
+  # of atoms, as gen-scope reads them — and it is no longer the way a pass carries its predecessor.
+  #
+  # AN ELLIPSIS PATTERN (den-hoag-7gp66 P1, arm (C)), same as `mkModel` above: the three required
   # formals still refuse a MISSING value the evaluator's own uncatchable way, and `...` +
   # `prelude.checkOptions` over the raw `args` now names and catches an UNKNOWN one instead of the
   # native closed formal's identical uncatchable abort.
@@ -227,21 +252,45 @@ let
       program,
       interpretation,
       complete,
+      prior ? null,
       ...
     }@args:
     builtins.seq
       (prelude.checkOptions "gen-program.model" (builtins.attrNames (builtins.functionArgs model)) args)
       (
         let
-          solved = scope.solve interpretation program;
+          priorRules =
+            if prior == null then
+              [ ]
+            else if builtins.isAttrs prior && prior ? rules && prior ? undefinedAtoms then
+              prior.rules
+            else
+              throw "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or omit `prior` on the first pass";
+          omitted = builtins.filter (r: !(builtins.elem r program.rules)) priorRules;
+          carry =
+            if prior == null then
+              [ ]
+            else
+              map (atom: {
+                inherit atom;
+                verdict = "undefined";
+              }) prior.undefinedAtoms;
+          interpretation' = interpretation ++ carry;
+          solved = scope.solve interpretation' program;
         in
-        mkModel {
-          inherit solved program complete;
-          adjudication = stableModel.adjudicate {
-            inherit program interpretation;
-            model = solved;
-          };
-        }
+        if omitted != [ ] then
+          throw "gen-program.model: this pass's program drops ${toString (builtins.length omitted)} rule(s) of the prior pass, headed ${
+            builtins.concatStringsSep ", " (map (r: "'${r.head}'") omitted)
+          } — every pass resubmits every earlier pass's declarations, because a prior pass's verdicts are not rules and a dropped declaration re-derives nothing it settled"
+        else
+          mkModel {
+            inherit solved program complete;
+            adjudication = stableModel.adjudicate {
+              inherit program;
+              interpretation = interpretation';
+              model = solved;
+            };
+          }
       );
 in
 {

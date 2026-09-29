@@ -73,10 +73,12 @@ it introduces are the reserved partners below, which name no kind and no relatio
 
 ### The pass boundary
 
-`engine.solve interpretation program` takes the program last, and a prior pass's verdicts cross as the
-**interpretation** — a list of `{ atom, verdict }`, travelling as themselves. The parameter carries
-no default: a defaulted empty carry is the silent collapse it exists to prevent, so the first pass
-supplies `[ ]` and says so.
+`engine.solve interpretation program` takes the program last, and verdicts reach it as the
+**interpretation** — a list of `{ atom, verdict }`, travelling as themselves. `model` builds that
+list from two sources: the caller's own `interpretation`, the general assertion channel, which
+carries no default (a defaulted empty list is the silent collapse it exists to prevent, so a caller
+asserting nothing supplies `[ ]` and says so); and the carry it DERIVES from `prior`, the previous
+pass's record (below).
 
 The three values are three different kinds of thing, and gen-scope's engine is where that is
 stated. **TRUE** is an external fact and seeds both of the engine's operators. **FALSE** is inert —
@@ -186,13 +188,21 @@ The three withheld answers are **fields that throw**, never absent fields and ne
 On a growing relation `verdict` refuses a withheld atom by the same name, and the atom is enumerated
 in `withheldAtoms` rather than `trueAtoms`, so no reader of the record serves it.
 
-**The passes are the caller's to drive** — this library owns no driver. A stepping caller owes three
-things at every pass: resubmit **every** earlier pass's declarations plus its own (a prior pass's
-verdicts are not rules, so a delta-only program re-derives nothing earlier passes settled); carry
-forward the previous pass's **`undefined`** atoms only, read off the record; and set
-`complete = true` only once it knows, by its own external knowledge, that no further declarations
-can arrive. An unchanged answer set between two passes is consistent with that and does not
-entail it.
+**The passes are the caller's to drive** — this library owns no driver — **and each pass takes
+the previous one's record as `prior`:**
+
+```nix
+pass1 = genProgram.model { program = p1; interpretation = [ ]; complete = false; };
+pass2 = genProgram.model { program = p2; interpretation = [ ]; complete = true; prior = pass1; };
+```
+
+The carry is **derived**: `prior`'s `undefinedAtoms`, each as `undefined`, and nothing else, so a
+served `P` cannot cross. And `p2` must contain **every** rule of `pass1.rules` — a prior pass's
+verdicts are not rules, so a delta-only program re-derives nothing earlier passes settled — or
+`model` refuses by name, catchably. `interpretation` stays the general assertion channel for
+verdicts a caller states of atoms. What remains the caller's is `complete = true`, set only once
+it knows, by its own external knowledge, that no further declarations can arrive; an unchanged
+answer set between two passes is consistent with that and does not entail it.
 
 ★ **The letters are kept rather than spelled, and that is a transplant guard.** This library cites
 two primaries that both use *total* and *partial* for **different things**: VGRS Definition 2.6

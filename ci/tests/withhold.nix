@@ -137,6 +137,54 @@ let
       [ ];
 
   sort = prelude.sort (a: b: a < b);
+
+  # ── THE PRIOR RECORD (owner-ruled arm (B)): the carry is DERIVED from the previous pass ──
+  withPrior =
+    declarations: prior: complete:
+    genProgram.model {
+      program = genProgram.program {
+        inherit declarations;
+        frozen = [ ];
+      };
+      interpretation = [ ];
+      inherit prior complete;
+    };
+
+  n1First = [
+    root
+    (d {
+      head = "member:a";
+      pos = [ "member:root" ];
+      neg = [ "member:b" ];
+    })
+  ];
+  n1Final = n1First ++ [ (d { head = "member:b"; }) ];
+  n1Next = withPrior n1Final n1.pass1 true;
+
+  # A NON-EMPTY carry: pass 1 is handed `x` as undefined through the assertion channel, so `z :- x`
+  # is undefined too; pass 2 only sees `x` again through the carry.
+  zx = [
+    (d {
+      head = "member:z";
+      pos = [ "member:x" ];
+    })
+  ];
+  zxFirst = modelOf zx (undef [ "member:x" ]) false;
+  zxNext = withPrior (zx ++ [ (d { head = "member:w"; }) ]) zxFirst true;
+  zxHand = modelOf (zx ++ [ (d { head = "member:w"; }) ]) (undef zxFirst.undefinedAtoms) true;
+  zxNone = modelOf (zx ++ [ (d { head = "member:w"; }) ]) [ ] true;
+
+  view = m: {
+    inherit (m)
+      trueAtoms
+      withheldAtoms
+      undefinedAtoms
+      falseAtoms
+      ;
+    outcome = m.adjudication.outcome;
+  };
+
+  refuses = v: !(builtins.tryEval v).success;
 in
 {
   flake.tests.withhold = {
@@ -376,6 +424,103 @@ in
         [ ]
         [ ]
       ];
+    };
+
+    # ══ THE PRIOR RECORD: THE CARRY IS DERIVED, NEVER CHOSEN ══
+    test-the-derived-carry-equals-the-hand-built-undefined-only-carry = {
+      expr = view zxNext == view zxHand;
+      expected = true;
+    };
+
+    # ★ AND THE CARRY IS NOT EMPTY: without it the same pass reads `x` and `z` false.
+    test-control-the-derived-carry-is-non-empty-and-moves-the-model = {
+      expr = {
+        derived = zxNext.undefinedAtoms;
+        none = zxNone.undefinedAtoms;
+      };
+      expected = {
+        derived = [
+          "member:z"
+          "member:x"
+        ];
+        none = [ ];
+      };
+    };
+
+    # A served `P` in the prior cannot reach the carry: N1's pass 1 served `root` and withheld `a`,
+    # and the next pass answers `a` from its own graph.
+    test-a-served-p-in-the-prior-does-not-reach-the-carry = {
+      expr = {
+        a = n1Next.resolve "member:a";
+        sameAsNoCarry = view n1Next == view n1.scratch;
+      };
+      expected = {
+        a = {
+          flag = "T";
+          included = false;
+        };
+        sameAsNoCarry = true;
+      };
+    };
+
+    # ★ THE CONTROL: had the prior's served answers been carried as `true` — carry-all — `a` would
+    # be pinned in. That is the path the record's carry has no field to take.
+    test-control-carrying-the-served-answers-would-pin-a-in = {
+      expr =
+        (modelOf n1Final (map (atom: {
+          inherit atom;
+          verdict = "true";
+        }) (n1.pass1.trueAtoms ++ n1.pass1.withheldAtoms)) true).resolve
+          "member:a";
+      expected = {
+        flag = "T";
+        included = true;
+      };
+    };
+
+    # ══ AN OMITTED PRIOR DECLARATION IS REFUSED BY NAME, CATCHABLY ══
+    # N2 delta-only: pass 2 submits only its new `z`, and every earlier rule is missing.
+    test-a-delta-only-pass-is-refused = {
+      expr = refuses (withPrior [ (d { head = "member:z"; }) ] n2.pass1 true);
+      expected = true;
+    };
+
+    test-a-pass-dropping-one-prior-declaration-is-refused = {
+      expr = refuses (
+        withPrior [
+          root
+          (d { head = "member:b"; })
+        ] n1.pass1 true
+      );
+      expected = true;
+    };
+
+    test-control-the-cumulative-pass-is-admitted = {
+      expr = refuses (withPrior (n1Final) n1.pass1 true);
+      expected = false;
+    };
+
+    test-a-prior-that-is-not-a-result-record-is-refused = {
+      expr = refuses (withPrior n1Final { undefinedAtoms = [ ]; } true);
+      expected = true;
+    };
+
+    # ★ THE WITHHOLDING REFUSAL IS CATCHABLE: `tryEval` contains it, on `included` and on `verdict`.
+    test-the-withholding-refusal-is-caught-by-tryEval = {
+      expr = {
+        included = builtins.tryEval (n1.pass1.resolve "member:a").included;
+        verdict = builtins.tryEval (n1.pass1.verdict "member:a");
+      };
+      expected = {
+        included = {
+          success = false;
+          value = false;
+        };
+        verdict = {
+          success = false;
+          value = false;
+        };
+      };
     };
   };
 }

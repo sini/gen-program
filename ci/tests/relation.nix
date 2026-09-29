@@ -191,6 +191,7 @@ in
       expected = {
         complete = false;
         interpretation = false;
+        prior = true;
         program = false;
       };
     };
