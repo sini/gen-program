@@ -24,7 +24,8 @@ program = genProgram.program {
 
 model = genProgram.model {
   inherit program;
-  interpretation = [ ];   # a prior pass's verdicts; required, so the first pass says so
+  interpretation = [ ];   # verdicts the caller asserts; required, so an empty one is said
+  prior = null;           # the previous pass's record; required, so the first pass says so
   complete = true;
 };
 
@@ -89,6 +90,7 @@ support lies outside this program, and it enters by being exempt from the greate
 
 ```nix
 model = genProgram.model {
+  prior = null;
   program = genProgram.program { declarations = …; frozen = …; };
   interpretation = [ { atom = "member:X"; verdict = "undefined"; } ];
   complete = false;
@@ -192,7 +194,7 @@ in `withheldAtoms` rather than `trueAtoms`, so no reader of the record serves it
 the previous one's record as `prior`:**
 
 ```nix
-pass1 = genProgram.model { program = p1; interpretation = [ ]; complete = false; };
+pass1 = genProgram.model { program = p1; interpretation = [ ]; complete = false; prior = null; };
 pass2 = genProgram.model { program = p2; interpretation = [ ]; complete = true; prior = pass1; };
 ```
 

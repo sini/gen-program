@@ -37,6 +37,7 @@ let
   modelOf =
     declarations:
     genProgram.model {
+      prior = null;
       program = genProgram.program {
         inherit declarations;
         frozen = [ ];

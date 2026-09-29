@@ -238,12 +238,14 @@ let
   # declaration's relata are identifiers resolved against the frozen set, and they are not part of
   # the atom's meaning.
   #
-  # ★ `prior` IS THE ONE DEFAULTED FORMAL, AND ITS DEFAULT IS THE BASE CASE, NOT A COLLAPSE: a pass
-  # with no prior is the first pass (or the only one), whose carry is empty by definition. What is
-  # left of `interpretation` is the general ASSERTION channel — external verdicts a caller states
-  # of atoms, as gen-scope reads them — and it is no longer the way a pass carries its predecessor.
+  # ★ `prior` CARRIES NO DEFAULT EITHER. A defaulted `null` would silently restore the unchecked
+  # path — no derived carry, no omission refusal — for every stepping caller who forgot it, which is
+  # the fallback this parameter exists to remove. A first or single pass states `prior = null`, and
+  # that is the base case: an empty carry and nothing to have resubmitted. What is left of
+  # `interpretation` is the general ASSERTION channel — external verdicts a caller states of atoms,
+  # as gen-scope reads them — and it is no longer the way a pass carries its predecessor.
   #
-  # AN ELLIPSIS PATTERN (den-hoag-7gp66 P1, arm (C)), same as `mkModel` above: the three required
+  # AN ELLIPSIS PATTERN (den-hoag-7gp66 P1, arm (C)), same as `mkModel` above: the four required
   # formals still refuse a MISSING value the evaluator's own uncatchable way, and `...` +
   # `prelude.checkOptions` over the raw `args` now names and catches an UNKNOWN one instead of the
   # native closed formal's identical uncatchable abort.
@@ -252,7 +254,7 @@ let
       program,
       interpretation,
       complete,
-      prior ? null,
+      prior,
       ...
     }@args:
     builtins.seq
@@ -265,7 +267,7 @@ let
             else if builtins.isAttrs prior && prior ? rules && prior ? undefinedAtoms then
               prior.rules
             else
-              throw "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or omit `prior` on the first pass";
+              throw "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or `prior = null` on the first pass";
           omitted = builtins.filter (r: !(builtins.elem r program.rules)) priorRules;
           carry =
             if prior == null then

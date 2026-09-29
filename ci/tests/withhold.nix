@@ -30,6 +30,7 @@ let
   modelOf =
     declarations: interpretation: complete:
     genProgram.model {
+      prior = null;
       program = genProgram.program {
         inherit declarations;
         frozen = [ ];

@@ -31,6 +31,7 @@ let
   modelOf =
     complete:
     genProgram.model {
+      prior = null;
       program = genProgram.program {
         declarations = [
           {
@@ -191,7 +192,7 @@ in
       expected = {
         complete = false;
         interpretation = false;
-        prior = true;
+        prior = false;
         program = false;
       };
     };

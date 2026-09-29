@@ -51,6 +51,7 @@ let
   modelOf =
     { declarations, interpretation }:
     genProgram.model {
+      prior = null;
       program = programOf declarations;
       inherit interpretation;
       complete = true;

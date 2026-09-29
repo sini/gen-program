@@ -213,6 +213,7 @@ in
         program = validProgram;
         interpretation = validInterpretation;
         complete = true;
+        prior = null;
         zzqran7f = 1;
       });
       expected = true;
@@ -257,6 +258,7 @@ in
         program = validProgram;
         interpretation = validInterpretation;
         complete = true;
+        prior = null;
         zzqran7f = 1;
       });
       expected = true;

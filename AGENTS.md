@@ -66,12 +66,13 @@ document's prose in one cell, so neither side can drift onto the other.
 
 ### The call
 
-- **`model`** — `{ program, interpretation, complete, prior ? null }` → the result record. It drives
+- **`model`** — `{ program, interpretation, complete, prior }` → the result record. It drives
   `engine.solve`. **`prior`** is the previous pass's result record (den-hoag-ea3j4, owner-ruled arm
   (B)): the carry is DERIVED from it — its `undefinedAtoms`, each as `undefined`, and nothing else,
   so a served `P` has no path across — and the entry **refuses by name, catchably,** when any rule
-  of `prior.rules` is missing from this pass's program. A pass with no prior is the first pass, and
-  that is the default's whole meaning. `interpretation` is the general **assertion** channel — a
+  of `prior.rules` is missing from this pass's program. `prior` carries **no default**: a first or
+  single pass states `prior = null`, and a defaulted `null` would silently restore the unchecked
+  path for a stepping caller who forgot it. `interpretation` is the general **assertion** channel — a
   LIST of `{ atom, verdict }` a caller states of atoms, as gen-scope reads them — and it carries
   **no default**; it is no longer how one pass carries the next. `complete` carries none either: a
   defaulted `true` would silently claim the pass sequence had closed.

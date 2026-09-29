@@ -137,6 +137,7 @@ let
         frozen = [ ];
       };
       m = measuring.model {
+        prior = null;
         program = built;
         inherit interpretation;
         complete = true;

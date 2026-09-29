@@ -59,6 +59,7 @@ let
   resolved =
     complete:
     (genProgram.model {
+      prior = null;
       program = genProgram.program {
         declarations = [
           {
@@ -233,6 +234,7 @@ in
     };
     test-model-unknown-field-message = {
       expr = genProgram.model {
+        prior = null;
         program = genProgram.program {
           declarations = [ ];
           frozen = [ ];
@@ -270,6 +272,7 @@ in
       expr =
         (
           (genProgram.model {
+            prior = null;
             program = genProgram.program {
               declarations = [
                 {
@@ -306,6 +309,7 @@ in
         interpretation = [ ];
         complete = true;
         prior = genProgram.model {
+          prior = null;
           program = genProgram.program {
             declarations = [
               {
@@ -331,7 +335,7 @@ in
         complete = true;
         prior = 1;
       };
-      expectedError.msg = exactly "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or omit `prior` on the first pass";
+      expectedError.msg = exactly "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or `prior = null` on the first pass";
     };
   };
 }
