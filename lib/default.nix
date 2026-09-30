@@ -83,6 +83,13 @@ let
     budget = import ./budget.nix;
   };
   modelling = import ./model.nix { inherit prelude scope stableModel; };
+  # The model's edges read declarations through the one door and rules through the model's own
+  # canonical-rule key, so neither is derived twice.
+  edging = import ./rule-edges.nix {
+    inherit prelude;
+    inherit (rules) declaration;
+    inherit (modelling) ruleKey;
+  };
 in
 {
   # ── THE TRANSLATION ──
@@ -103,6 +110,11 @@ in
     model
     mkModel
     ;
+
+  # ── THE SOLVED MODEL'S EDGES ──
+  # `ruleEdges { declarations, model }` → `{ candidates, reached }`: the declared edge set of the labelled
+  # declarations, and the part of it the model includes, as plain edge records.
+  inherit (edging) ruleEdges;
 
   # ── THE RESOLVED RELATION'S VOCABULARY ──
   inherit (modelling)

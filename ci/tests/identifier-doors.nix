@@ -16,7 +16,17 @@
         pos = [ "p" ];
         neg = [ ];
         relata = [ "x" ];
+        label = null;
       };
+    };
+    test-declaration-admits-a-string-label = {
+      expr =
+        (genProgram.declaration {
+          head = "h";
+          relata = [ "x" ];
+          label = "l";
+        }).label;
+      expected = "l";
     };
     test-unresolvedRelata-with-no-relata-reads-no-frozen-entry = {
       expr = genProgram.unresolvedRelata {
@@ -31,6 +41,7 @@
       expr = builtins.functionArgs genProgram.declaration;
       expected = {
         head = false;
+        label = true;
         neg = true;
         pos = true;
         relata = false;

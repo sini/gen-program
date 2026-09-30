@@ -82,6 +82,29 @@ let
       interpretation = [ ];
       inherit complete;
     });
+
+  # `ruleEdges` over a model solved from the same labelled declarations, handed to `program` unstripped.
+  ab = [
+    "a"
+    "b"
+  ];
+  modelOf =
+    complete: declarations:
+    genProgram.model {
+      program = genProgram.program {
+        inherit declarations;
+        frozen = ab;
+      };
+      interpretation = [ ];
+      prior = null;
+      inherit complete;
+    };
+  edgesAt =
+    complete: declarations:
+    genProgram.ruleEdges {
+      inherit declarations;
+      model = modelOf complete declarations;
+    };
 in
 {
   flake.testsError = {
@@ -230,7 +253,7 @@ in
         relata = [ ];
         zzqran7f = 1;
       };
-      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'head', 'neg', 'pos', 'relata') (in prelude.checkOptions)";
+      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'head', 'label', 'neg', 'pos', 'relata') (in prelude.checkOptions)";
     };
     test-model-unknown-field-message = {
       expr = genProgram.model {
@@ -336,6 +359,115 @@ in
         prior = 1;
       };
       expectedError.msg = exactly "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or `prior = null` on the first pass";
+    };
+
+    # ── THE SOLVED MODEL'S EDGES ──
+    # An edge has no third value. A negative cycle leaves `r:a:b` UNDEFINED, and reading only the
+    # included atoms would drop its edge with no error: the refusal is what this cell holds.
+    test-rule-edges-refuses-an-undefined-labelled-membership = {
+      expr =
+        (edgesAt true [
+          {
+            head = "r:a:b";
+            neg = [ "h:a:b" ];
+            relata = ab;
+            label = "r";
+          }
+          {
+            head = "h:a:b";
+            neg = [ "r:a:b" ];
+            relata = ab;
+          }
+        ]).reached;
+      expectedError.msg = exactly "gen-program.ruleEdges: 'r:a:b' is UNDEFINED (U); an edge has no third value, so the membership can be carried into the graph neither as an edge nor as its absence, and is refused rather than collapsed. Read its answer through the model's `resolve` and handle 'U'";
+    };
+    # A negation-free head is served `included = true` under P; the SET still refuses, because its
+    # absences are the negatives a growing relation withholds.
+    test-rule-edges-refuses-a-growing-relation = {
+      expr =
+        (edgesAt false [
+          {
+            head = "r:a:b";
+            relata = ab;
+            label = "r";
+          }
+        ]).reached;
+      expectedError.msg = exactly "gen-program.ruleEdges: the relation is still growing (complete = false), so an edge set read from it would assert a negative for every absent candidate that a later pass may still falsify; read `reached` from the pass that closes the relation, or one membership's answer through the model's `resolve`";
+    };
+    test-rule-edges-refuses-a-model-of-other-declarations = {
+      expr =
+        (genProgram.ruleEdges {
+          declarations = [
+            {
+              head = "r:a:b";
+              relata = ab;
+              label = "r";
+            }
+          ];
+          model = modelOf true [
+            {
+              head = "s:a:b";
+              relata = ab;
+            }
+          ];
+        }).reached;
+      expectedError.msg = exactly "gen-program.ruleEdges: 'r:a:b' is labelled by a declaration that is not a rule of this model; the model was solved from other declarations, so it cannot answer for these";
+    };
+    # Keyed by head: a conflict is decidable from the declarations, so it refuses in `candidates`
+    # with no model at all.
+    test-rule-edges-refuses-conflicting-edges-for-one-head = {
+      expr =
+        (genProgram.ruleEdges {
+          declarations = [
+            {
+              head = "r:x";
+              relata = ab;
+              label = "r";
+            }
+            {
+              head = "r:x";
+              pos = [ "f" ];
+              relata = [
+                "a"
+                "c"
+              ];
+              label = "r";
+            }
+          ];
+          model = throw "no model was asked for";
+        }).candidates;
+      expectedError.msg = exactly "gen-program.ruleEdges: 'r:x' is labelled by declarations naming different edges; an edge is a property of the membership, so its declarations must agree on from, to and label";
+    };
+    test-rule-edges-refuses-a-labelled-declaration-not-relating-two = {
+      expr =
+        (genProgram.ruleEdges {
+          declarations = [
+            {
+              head = "r:x";
+              relata = [
+                "a"
+                "b"
+                "c"
+              ];
+              label = "r";
+            }
+          ];
+          model = throw "no model was asked for";
+        }).candidates;
+      expectedError.msg = exactly "gen-program.ruleEdges: 'r:x' (3 relata) carries a label, but an edge relates exactly two relata, from and to";
+    };
+    test-declaration-refuses-a-label-that-is-not-a-string = {
+      expr =
+        (genProgram.declaration {
+          head = "h";
+          relata = ab;
+          label = 42;
+        }).head;
+      expectedError.msg = exactly "gen-program.declaration: the label is a int, expected an edge label (a string) or null";
+    };
+    test-rule-edges-missing-field-message = {
+      expr = genProgram.ruleEdges { declarations = [ ]; };
+      expectedError.msg = exactly "gen-program.ruleEdges: required field 'model' is missing (required: 'declarations', 'model') (in prelude.checkRequired)";
     };
   };
 }

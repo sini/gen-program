@@ -42,6 +42,7 @@ let
     "model"
     "program"
     "rule"
+    "ruleEdges"
     "stableModelBudget"
     "stableModelCriterion"
     "unresolvedRelata"

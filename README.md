@@ -227,6 +227,24 @@ makes a *model* total when it is two-valued over the Herbrand base, while van An
 about whether an answer **set** is complete. A field named `total` would read as one and mean the
 other.
 
+### The solved model's edges
+
+A declaration may carry a **`label`**. It then asserts that its head, when included, **is** the
+edge `{ from = relata[0]; to = relata[1]; label; }` — the label is the rule's own, never parsed out
+of the atom, and the endpoints are relata that already passed the frozen-set check.
+`ruleEdges { declarations, model }` returns two plain edge lists:
+
+- **`candidates`** — every labelled edge, whatever it resolves to. A function of the declarations
+  alone: it never forces `model`, so a gate over the declared edges reads it at registration.
+- **`reached`** — the candidates whose head the model includes. An edge that resolves off is
+  absent. The caller appends it to its declared edges: one edge list, one graph.
+
+An edge is a property of the membership, so the set is keyed by head: agreeing declarations of one
+head collapse and conflicting ones refuse. An edge list has no third value and no flag, so
+`reached` refuses by name on a `U` head, on a relation still growing (`complete = false`: its
+absences are the negatives that relation withholds), and on a model solved from other
+declarations. One membership's answer stays readable through `resolve`.
+
 ### The policy-body algebra
 
 The registration-time authoring surface, and it **evaluates nothing** — the sole-evaluator charter
@@ -319,7 +337,8 @@ Corollary 5.7's restriction working: the budget prices the contested corner, not
   `engine.solve` is the meaning of one pass's rules. This library owns the program handed to the
   second, once per pass.
 - **It mints no identity**, publishes **no query surface**, **no ordering door** and **no
-  materialisation**, and **re-exports nothing of gen-scope**.
+  materialisation** of a view of the graph (`ruleEdges` is a source of the graph's edges, not a view
+  of it), and **re-exports nothing of gen-scope**.
 - **It reproduces no shape it retires**: no keyset-equality convergence test, no
   union-accumulation without retraction, no in-flight membership predicate handed to a caller's
   guard. The program is closed before it is solved; the model is a function of the rules.

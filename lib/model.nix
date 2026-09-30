@@ -38,6 +38,20 @@
 let
   sortUnique = xs: builtins.sort (a: b: a < b) (prelude.unique xs);
 
+  # ── THE CANONICAL RULE, AND ITS KEY ──
+  # A body is a conjunction, a SET of literals under the well-founded semantics, so each body is
+  # sorted and deduplicated: `a :- y, x` and `a :- x, x, y` are the rule `a :- x, y`. The key is the
+  # JSON rendering of the canonical rule. It reads `head`, `pos` and `neg` only, so a rule and the
+  # declaration it came from key alike — which is what lets `ruleEdges` ask whether a declaration is a
+  # rule of a given model by the same index the `prior` omission guard reads, and not by a second
+  # derivation of it.
+  canonicalRule = r: {
+    inherit (r) head;
+    pos = sortUnique r.pos;
+    neg = sortUnique r.neg;
+  };
+  ruleKey = r: builtins.toJSON (canonicalRule r);
+
   # ── THE FLAGS, AND THEY ARE VAN ANTWERPEN'S, CITED AT THEIR OWN PRIMARY ──
   # van Antwerpen et al. 2016 §4.1 puts a flag on a resolution result and gives it three values,
   # verbatim from the archived transcription: "a result flag, **T (total)** if all declarations
@@ -187,31 +201,19 @@ let
         {
           inherit resolve complete;
 
-          # The rules this record was solved over, as plain data KEYED by the JSON rendering of the
-          # CANONICAL rule — an index, so a NEXT pass handed this record as its `prior` checks it
+          # The rules this record was solved over, as plain data KEYED by the canonical rule's key
+          # (`ruleKey` above) — an index, so a NEXT pass handed this record as its `prior` checks it
           # resubmitted every one by attribute lookup rather than a list scan per rule (quadratic at
-          # thousands of rules). The same index is this record's side of that check. A body is a
-          # conjunction, a SET of literals under the well-founded semantics, so each body is sorted
-          # and deduplicated before it is keyed: a resubmission that writes `a :- y, x` for
-          # `a :- x, y`, or repeats a literal, is the same rule and is not an omission. The value is
-          # the canonical rule too, so every key is the rendering of its own value. gen-scope's
-          # program value itself is not carried: it holds more than the rules, and not all of it
-          # crosses an evaluation boundary.
+          # thousands of rules). The same index is this record's side of that check. A resubmission
+          # that writes `a :- y, x` for `a :- x, y`, or repeats a literal, is the same rule and is not
+          # an omission. The value is the canonical rule too, so every key is the rendering of its
+          # own value. gen-scope's program value itself is not carried: it holds more than the rules,
+          # and not all of it crosses an evaluation boundary.
           rules = builtins.listToAttrs (
-            map (
-              r:
-              let
-                canonical = {
-                  inherit (r) head;
-                  pos = sortUnique r.pos;
-                  neg = sortUnique r.neg;
-                };
-              in
-              {
-                name = builtins.toJSON canonical;
-                value = canonical;
-              }
-            ) program.rules
+            map (r: {
+              name = ruleKey r;
+              value = canonicalRule r;
+            }) program.rules
           );
 
           # gen-scope's own enumerations, over its own extended base, in its order. Nothing is
@@ -313,5 +315,6 @@ in
     mkModel
     flagNames
     flags
+    ruleKey
     ;
 }

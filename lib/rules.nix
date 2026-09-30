@@ -137,12 +137,19 @@ let
   # a fact; `relata` does NOT, because a defaulted empty relatum list is a decision nobody made and
   # nobody can see — it would silently assert "this declaration relates nothing" and skip the
   # frozen-set check for exactly the declarations that forgot to state it.
+  #
+  # `label` names the edge the head denotes when it is included: `{ from = relata[0]; to =
+  # relata[1]; label; }`, read by `ruleEdges`. It is the rule's OWN, on its own declaration, and never
+  # parsed out of the atom — an atom is a string the caller wrote. A declaration is labelled exactly
+  # when `label != null`, so an explicit `null` is the omission and never a null-labelled edge. The
+  # rule ignores it: `rule` builds from `head`, `pos` and `neg` alone.
   declaration =
     {
       head,
       pos ? [ ],
       neg ? [ ],
       relata,
+      label ? null,
       ...
     }@args:
     builtins.seq
@@ -156,6 +163,11 @@ let
             && identifiers "declaration" "pos" pos
             && identifiers "declaration" "neg" neg
             && identifiers "declaration" "relata" relata
+            && (
+              label == null
+              || builtins.isString label
+              || throw "gen-program.declaration: the label is a ${builtins.typeOf label}, expected an edge label (a string) or null"
+            )
           )
           {
             inherit
@@ -163,6 +175,7 @@ let
               pos
               neg
               relata
+              label
               ;
           }
       );

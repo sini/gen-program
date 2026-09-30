@@ -41,6 +41,7 @@ the `follows` rule is therefore declared once in this repository, in `default.ni
   "model",
   "program",
   "rule",
+  "ruleEdges",
   "stableModelBudget",
   "stableModelCriterion",
   "unresolvedRelata"
@@ -54,7 +55,9 @@ document's prose in one cell, so neither side can drift onto the other.
 
 - **`declaration`** — normalises one declaration. A **strict pattern**: `head` and `relata` carry
   no default, `pos` and `neg` default to empty because a declaration with neither body is a FACT
-  (ADR-0020's own base case). An unknown field is refused by name at application.
+  (ADR-0020's own base case). An unknown field is refused by name at application. An optional
+  `label` (a string, or `null`, the default) names the edge the head denotes when included; a
+  declaration is labelled exactly when `label != null`, and a non-string label is refused by name.
 - **`rule`** — one declaration's rule, through gen-scope's `mkRule`. The relata do not appear:
   they are IDENTIFIERS resolved against the frozen set, and a rule's atoms are MEMBERSHIP FACTS.
   Two universes; collapsing them would make an identifier derivable.
@@ -76,6 +79,14 @@ document's prose in one cell, so neither side can drift onto the other.
   `{ atom, verdict }` a caller states of atoms at THIS pass, restated at a later pass if it is to
   hold there — and it carries **no default**. `complete` carries none either: a defaulted `true`
   would silently claim the pass sequence had closed.
+- **`ruleEdges`** — `{ declarations, model }` → `{ candidates, reached }`, plain lists of
+  `{ from, to, label }` edge records, one per labelled head (`from`/`to` are the declaration's two
+  relata). `candidates` is every labelled edge whatever it resolves to and never forces `model`;
+  `reached` is the candidates whose head the model includes. Declarations of one head that agree
+  collapse to one edge and ones that conflict refuse, as does a labelled declaration not relating
+  exactly two. `reached` refuses by name, naming every offending head, on an undefined (`U`)
+  head, on a relation still growing (`complete = false`), and on a labelled declaration that is not
+  a rule of `model`. Linear in the labelled declarations.
 - **`mkModel`** — the result record's constructor, published so a consumer (and a cell) can READ
   which fields are required rather than discovering it from a crash. Every formal is required;
   `adjudication` in particular.
@@ -261,7 +272,8 @@ name — the cheapest discharge available, and also asserted with a control.
 - **It mints no identity.** Identity is substrate vocabulary with exactly one authority
   (ADR-0016 rulings 4–5); a second copy is a second authority.
 - **It publishes no query surface, no ordering door and no materialisation.** The last is
-  gen-view's by ADR-0012.
+  gen-view's by ADR-0012, which governs views OF the graph. `ruleEdges` is not one: it is a SOURCE of
+  the graph's edges, plain data the caller appends to its declared edges before any graph exists.
 - **It re-exports nothing of gen-scope.** The program VALUE crosses as a field of a construction
   result, which is plain data by its own module's statement; no gen-scope construct is republished
   under a name here, and `ci/tests/surface.nix` asserts the disjointness with a control.
