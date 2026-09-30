@@ -255,7 +255,7 @@ let
       {
         inherit criterion contested;
         outcome = "refused";
-        reason = "the well-founded model is PARTIAL and the candidate space was walked EXHAUSTIVELY within the budget with no stable model found, so the program has none — ADR-0020's criterion refuses it";
+        reason = "the well-founded model is PARTIAL and the candidate space was walked EXHAUSTIVELY within the budget with no stable model found, so the program has none, and a program with no stable model is refused";
         ground = "Van Gelder, Ross & Schlipf 1991 Corollary 5.7 bounds every stable model to this candidate space, so an exhausted walk is a decision and not a sample";
         searched = true;
         candidatesTested = final.tested;

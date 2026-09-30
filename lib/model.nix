@@ -161,7 +161,7 @@ let
             if v == "undefined" then
               {
                 flag = "U";
-                included = throw "gen-program: the membership '${atom}' is UNDEFINED — ADR-0020's third value, which this relation carries rather than collapsing. Read `flag` and handle 'U'; `included` has no answer to give here";
+                included = throw "gen-program: the membership '${atom}' is UNDEFINED — the well-founded model's third truth value, neither true nor false, which this relation carries rather than collapsing. Read `flag` and handle 'U'; `included` has no answer to give here";
               }
             else if withheld atom then
               {

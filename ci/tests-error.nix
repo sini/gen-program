@@ -51,7 +51,7 @@ let
 
   unresolvedRefusal =
     named:
-    "gen-program: ${named} is not in the frozen set of relata that strictly earlier passes settled (ADR-0016 ruling 7), so it does not resolve — a same-pass reference and a root relatum both reach this refusal by that one path, and neither is named as a cycle because a stratum's in-flight output is not nameable from inside it (ADR-0033)";
+    "gen-program: ${named} is not in the frozen set of relata that strictly earlier passes settled, so it does not resolve — a same-pass reference and a root relatum both reach this refusal by that one path, and neither is named as a cycle because a stratum's in-flight output is not nameable from inside it";
 
   # The two withheld answers on the resolved relation. Each is a FIELD that refuses rather than a
   # field that is absent, so what a consumer meets is a sentence naming the membership and the
@@ -186,7 +186,7 @@ in
     # ── THE THIRD VALUE'S TWO WITHHELD ANSWERS ──
     test-an-undefined-membership-refuses-to-answer-included = {
       expr = ((resolved true).resolve "x").included;
-      expectedError.msg = exactly "gen-program: the membership 'x' is UNDEFINED — ADR-0020's third value, which this relation carries rather than collapsing. Read `flag` and handle 'U'; `included` has no answer to give here";
+      expectedError.msg = exactly "gen-program: the membership 'x' is UNDEFINED — the well-founded model's third truth value, neither true nor false, which this relation carries rather than collapsing. Read `flag` and handle 'U'; `included` has no answer to give here";
     };
 
     test-a-negative-answer-on-a-growing-relation-is-delayed-by-name = {

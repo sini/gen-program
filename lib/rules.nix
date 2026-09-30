@@ -195,7 +195,7 @@ let
       unresolved = unresolvedRelata { inherit declarations frozen; };
     in
     if unresolved != [ ] then
-      throw "gen-program: ${quoteAll unresolved} is not in the frozen set of relata that strictly earlier passes settled (ADR-0016 ruling 7), so it does not resolve — a same-pass reference and a root relatum both reach this refusal by that one path, and neither is named as a cycle because a stratum's in-flight output is not nameable from inside it (ADR-0033)"
+      throw "gen-program: ${quoteAll unresolved} is not in the frozen set of relata that strictly earlier passes settled, so it does not resolve — a same-pass reference and a root relatum both reach this refusal by that one path, and neither is named as a cycle because a stratum's in-flight output is not nameable from inside it"
     else
       scope.mkProgram (map rule declarations);
 in
