@@ -152,6 +152,7 @@ in
     admit
     deriveCodomain
     fireEscape
+    codomainBreaches
     groundInstances
     ;
 

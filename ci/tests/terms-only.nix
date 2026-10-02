@@ -366,6 +366,61 @@ in
         "policy-body/undeclared-name"
       ];
     };
+    # The escape's per-firing check, published: the one row table, read by a door with no escape.
+    test-codomain-breaches-is-the-escapes-check = {
+      expr =
+        let
+          contract = {
+            emits = [ "host" ];
+            binds = [ "host" ];
+            suppresses = [ ];
+          };
+          ds = [
+            {
+              ctor = "member";
+              kind = "host";
+              payload = {
+                host = 1;
+                extra = 2;
+              };
+            }
+            {
+              ctor = "suppress";
+              target = "p";
+            }
+            { modules = [ ]; }
+          ];
+        in
+        [
+          (gp.codomainBreaches contract ds)
+          (
+            gp.codomainBreaches contract [ (builtins.head ds) ] == (gp.fireEscape (gp.escape (
+              contract
+              // {
+                name = "e";
+                fn = _: [ (builtins.head ds) ];
+              }
+            )) { }).witness.breaches
+          )
+        ];
+      expected = [
+        [
+          {
+            field = "binds";
+            delta = "extra";
+          }
+          {
+            field = "suppresses";
+            delta = "p";
+          }
+          {
+            field = "shape";
+            delta = "a declaration without a ctor";
+          }
+        ]
+        true
+      ];
+    };
     test-codomain-over-approx = {
       expr = gp.deriveCodomain hostBody;
       expected = {

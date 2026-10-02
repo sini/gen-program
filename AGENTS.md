@@ -29,6 +29,7 @@ the `follows` rule is therefore declared once in this repository, in `default.ni
   "adjudicationOutcomes",
   "admit",
   "body",
+  "codomainBreaches",
   "ctorNames",
   "declaration",
   "deriveCodomain",
@@ -210,6 +211,10 @@ never recovered by firing.
   path until the gen-rules door exists.
 - **`fireEscape`** — the escape's firing path, with the codomain contract checked at EVERY
   firing; a breach refuses by name with the site, field and delta.
+- **`codomainBreaches`** — that per-firing check as a function: `contract` (`{ emits; binds; suppresses; }`)
+  → `declarations` → the list of breaches `{ field; delta; }` (`field` is `emits`, `binds`, `suppresses`
+  or `shape`), `[ ]` when the contract holds. `fireEscape` is it applied to an escape; it is published so
+  the gen-rules door reads this one row table rather than a copy.
 - **`admit`** — the registration door: re-runs the walk on hand-rolled records, checks a marked
   escape's contract for totality, and refuses a bare lambda with the signpost to the escape.
 
@@ -398,5 +403,5 @@ nix eval --json --impure --file ci/repl.nix --apply 'r: builtins.attrNames r.gen
 Current output (verbatim):
 
 ```json
-["adjudicate","adjudicationOutcomes","admit","body","ctorNames","declaration","deriveCodomain","emit","escape","fireEscape","flagNames","flags","forEach","groundInstances","mkModel","model","program","rule","ruleEdges","stableModelBudget","stableModelCriterion","unresolvedRelata"]
+["adjudicate","adjudicationOutcomes","admit","body","codomainBreaches","ctorNames","declaration","deriveCodomain","emit","escape","fireEscape","flagNames","flags","forEach","groundInstances","mkModel","model","program","rule","ruleEdges","stableModelBudget","stableModelCriterion","unresolvedRelata"]
 ```

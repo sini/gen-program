@@ -625,39 +625,46 @@ let
   # Contracted at EVERY FIRING (ADR-0008: the licence is the contract). The firing's actual
   # declarations are checked against the declared sets; a breach refuses at the firing, naming the
   # site, the field and the delta. This function IS the escape's firing path.
+  # The per-firing check itself, published so a closure's other path — the gen-rules door — reads
+  # this one row table rather than a copy of it: `contract` is `{ emits; binds; suppresses; }`, and
+  # the result is the list of breaches, `[ ]` when the declarations keep the contract.
+  codomainBreaches =
+    contract: declarations:
+    concatMap (
+      d:
+      # The shape arm (P-2, exec gate): a declaration outside the skeleton shape is a contract
+      # breach at the author's door, not an internal crash blaming this module.
+      if !(isAttrs d && d ? ctor && isString d.ctor && rows ? ${d.ctor}) then
+        [
+          {
+            field = "shape";
+            delta =
+              if isAttrs d && d ? ctor then
+                "a declaration whose ctor is not a known constructor"
+              else
+                "a declaration without a ctor";
+          }
+        ]
+      else
+        map (k: {
+          field = "emits";
+          delta = k;
+        }) (filter (k: !elem k contract.emits) (rows.${d.ctor}.emitted d))
+        ++ map (k: {
+          field = "binds";
+          delta = k;
+        }) (if d.ctor == "member" then filter (k: !elem k contract.binds) (attrNames d.payload) else [ ])
+        ++ map (n: {
+          field = "suppresses";
+          delta = n;
+        }) (if d.ctor == "suppress" && !elem d.target contract.suppresses then [ d.target ] else [ ])
+    ) declarations;
+
   fireEscape =
     e: ctx:
     let
       declarations = e.fn ctx;
-      breaches = concatMap (
-        d:
-        # The shape arm (P-2, exec gate): a declaration outside the skeleton shape is a contract
-        # breach at the author's door, not an internal crash blaming this module.
-        if !(isAttrs d && d ? ctor && isString d.ctor && rows ? ${d.ctor}) then
-          [
-            {
-              field = "shape";
-              delta =
-                if isAttrs d && d ? ctor then
-                  "a declaration whose ctor is not a known constructor"
-                else
-                  "a declaration without a ctor";
-            }
-          ]
-        else
-          map (k: {
-            field = "emits";
-            delta = k;
-          }) (filter (k: !elem k e.emits) (rows.${d.ctor}.emitted d))
-          ++ map (k: {
-            field = "binds";
-            delta = k;
-          }) (if d.ctor == "member" then filter (k: !elem k e.binds) (attrNames d.payload) else [ ])
-          ++ map (n: {
-            field = "suppresses";
-            delta = n;
-          }) (if d.ctor == "suppress" && !elem d.target e.suppresses then [ d.target ] else [ ])
-      ) declarations;
+      breaches = codomainBreaches e declarations;
       renderBreach =
         br: if br.field == "shape" then "shape: ${br.delta}" else "${br.field} is missing '${br.delta}'";
     in
@@ -930,6 +937,7 @@ in
     admit
     deriveCodomain
     fireEscape
+    codomainBreaches
     groundInstances
     ;
 }

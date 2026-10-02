@@ -31,6 +31,7 @@ let
     "adjudicationOutcomes"
     "admit"
     "body"
+    "codomainBreaches"
     "ctorNames"
     "declaration"
     "deriveCodomain"

@@ -271,7 +271,8 @@ gen-identity, the firing's over the sources of what it read, never the values.
 Until the framework's door exists, the declared `escape` stays the closure's path: its
 `{ emits, binds, suppresses }` are required and total at the site, and its firing path
 (`fireEscape`) checks the declaration at **every firing** — a breach refuses with the site, field
-and delta. `admit` is the registration door: hand-rolled records fail the same walk the formers
+and delta. The check itself is published as `codomainBreaches contract declarations`, so the framework's
+door validates a closure's output against the same row table. `admit` is the registration door: hand-rolled records fail the same walk the formers
 run, and a bare lambda without the `opaque` marker is refused with the signpost to the escape.
 
 A declaration can also write its body as a condition term: `declaration { head; relata; when = all [ (has "a") (not (has "b")) ]; }` is `pos = [ "a" ]; neg = [ "b" ];`, solved by the same
