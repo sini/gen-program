@@ -421,6 +421,51 @@ in
         true
       ];
     };
+    # A `null` field is the over-approximation a door clause may declare: it admits every name, never
+    # aborts; the finite field beside it still reports its breach.
+    test-codomain-breaches-null-admits-all = {
+      expr =
+        let
+          ds = [
+            {
+              ctor = "member";
+              kind = "host";
+              payload.extra = 1;
+            }
+            {
+              ctor = "suppress";
+              target = "p";
+            }
+          ];
+        in
+        [
+          (gp.codomainBreaches {
+            emits = [ "host" ];
+            binds = null;
+            suppresses = [ "p" ];
+          } ds)
+          (gp.codomainBreaches {
+            emits = [ "host" ];
+            binds = [ "extra" ];
+            suppresses = null;
+          } ds)
+          (gp.codomainBreaches {
+            emits = [ "host" ];
+            binds = null;
+            suppresses = [ ];
+          } ds)
+        ];
+      expected = [
+        [ ]
+        [ ]
+        [
+          {
+            field = "suppresses";
+            delta = "p";
+          }
+        ]
+      ];
+    };
     test-codomain-over-approx = {
       expr = gp.deriveCodomain hostBody;
       expected = {

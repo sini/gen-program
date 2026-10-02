@@ -627,7 +627,10 @@ let
   # site, the field and the delta. This function IS the escape's firing path.
   # The per-firing check itself, published so a closure's other path — the gen-rules door — reads
   # this one row table rather than a copy of it: `contract` is `{ emits; binds; suppresses; }`, and
-  # the result is the list of breaches, `[ ]` when the declarations keep the contract.
+  # the result is the list of breaches, `[ ]` when the declarations keep the contract. A `null`
+  # `binds`/`suppresses` is the written over-approximation a door clause may declare: it admits every
+  # name, so that field contributes no breach (its refusal belongs to a head analysis, not here).
+  admits = names: n: names == null || elem n names;
   codomainBreaches =
     contract: declarations:
     concatMap (
@@ -653,11 +656,11 @@ let
         ++ map (k: {
           field = "binds";
           delta = k;
-        }) (if d.ctor == "member" then filter (k: !elem k contract.binds) (attrNames d.payload) else [ ])
+        }) (if d.ctor == "member" then filter (k: !admits contract.binds k) (attrNames d.payload) else [ ])
         ++ map (n: {
           field = "suppresses";
           delta = n;
-        }) (if d.ctor == "suppress" && !elem d.target contract.suppresses then [ d.target ] else [ ])
+        }) (if d.ctor == "suppress" && !admits contract.suppresses d.target then [ d.target ] else [ ])
     ) declarations;
 
   fireEscape =
