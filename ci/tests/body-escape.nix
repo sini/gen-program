@@ -300,6 +300,7 @@ in
         (genProgram.admit {
           name = "half-migrated";
           clauses = [ ];
+          declared = null;
         }).refused;
       expected = false;
     };

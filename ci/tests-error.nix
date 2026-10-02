@@ -230,7 +230,7 @@ in
     };
     test-body-missing-required-field-message = {
       expr = genProgram.body { name = "x"; };
-      expectedError.msg = exactly "gen-program.body: required field 'clauses' is missing (required: 'name', 'clauses') (in prelude.checkRequired)";
+      expectedError.msg = exactly "gen-program.body: required field 'clauses' is missing (required: 'name', 'clauses', 'declared') (in prelude.checkRequired)";
     };
     test-adjudicate-missing-required-field-message = {
       expr = genProgram.adjudicate {
@@ -253,7 +253,7 @@ in
         relata = [ ];
         zzqran7f = 1;
       };
-      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'head', 'label', 'neg', 'pos', 'relata') (in prelude.checkOptions)";
+      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'head', 'label', 'neg', 'pos', 'relata', 'when') (in prelude.checkOptions)";
     };
     test-model-unknown-field-message = {
       expr = genProgram.model {

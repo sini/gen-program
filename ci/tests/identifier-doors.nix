@@ -45,6 +45,8 @@
         neg = true;
         pos = true;
         relata = false;
+        # The literal tier (den-hoag-lwbb1 unit 3, fuci G1): a condition term lowered to `pos`/`neg`.
+        when = true;
       };
     };
   };

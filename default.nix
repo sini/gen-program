@@ -84,6 +84,10 @@ in
       "gen-prelude"
     ]),
   scope ? inputs.gen-scope or (dep [ "gen-scope" ]),
+  # The term algebra and ADR-0034's one minting authority, both dependency-free leaves taken
+  # directly, as gen-scope takes `identity` (den-hoag-lwbb1 unit 3, spec §2.1).
+  algebra ? inputs.gen-algebra or (dep [ "gen-algebra" ]),
+  identity ? inputs.gen-identity or (dep [ "gen-identity" ]),
 }:
 # THE BODY IS EAGER, AND THAT IS WHAT MAKES THE ENTRY CELL TOTAL RATHER THAN PARTIAL. `forced` forces
 # every wired dependency to WHNF before `./lib` sees it, so a default that cannot resolve is loud AT
@@ -99,7 +103,14 @@ in
 # this reaches each dependency's root VALUE and never a member of it. A library that deliberately
 # refuses to build some member is therefore not an exception to it.
 let
-  deps = { inherit prelude scope; };
+  deps = {
+    inherit
+      prelude
+      scope
+      algebra
+      identity
+      ;
+  };
   forced = builtins.deepSeq (builtins.mapAttrs (_: builtins.typeOf) deps) null;
 in
 builtins.seq forced (wire {

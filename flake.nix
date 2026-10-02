@@ -6,7 +6,7 @@
   # VALUES constructed inside the consumer's own evaluation, which is the gen↔gen boundary rule's
   # shape: only plain data crosses; two instances of gen-scope in one evaluation are two identity
   # formulas for the same node, so the pin still belongs to whoever assembles the run. What changes
-  # is which artefact this flake's OWN pin source is: both dependencies — `gen-scope` and
+  # is which artefact this flake's OWN pin source is: its dependencies — `gen-scope` and
   # `gen-prelude` — are now declared root inputs, so `nix flake lock` has a root lock to write and
   # the standalone entry (`default.nix`) has a pin source that is not `ci/flake.lock` — ADR-0037's
   # amendment forecloses staying there. Declaring is not applying: the ruling's ground is that all
@@ -22,11 +22,15 @@
   # two entry paths differ only in who supplies the arguments. Publishing the root unapplied is what
   # lets the consumer supply every argument rather than dropping the edge through to this
   # repository's own root lock on the flake path. The hub applies this output verbatim
-  # (`(input "gen-program").lib { prelude; scope; }`), so an APPLIED output here would abort every
+  # (`(input "gen-program").lib { prelude; scope; algebra; identity; }`), so an APPLIED output here would abort every
   # hub evaluation with `attempt to call something which is not a function but a set`.
   inputs = {
     gen-scope.url = "github:sini/gen-scope";
     gen-prelude.url = "github:sini/gen-prelude";
+    # The one term algebra a rule body is written in, and the one minting authority it is applied to
+    # (den-hoag-lwbb1 unit 3). Both are dependency-free leaves, so there is nothing to `follows`.
+    gen-algebra.url = "github:sini/gen-algebra";
+    gen-identity.url = "github:sini/gen-identity";
   };
 
   outputs = _: {

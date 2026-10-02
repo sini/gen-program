@@ -151,6 +151,7 @@ in
       expr = answers (body {
         name = "x";
         clauses = [ ];
+        declared = null;
         zzqran7f = 1;
       });
       expected = true;
@@ -159,12 +160,14 @@ in
       expr = body {
         name = "x";
         clauses = [ ];
+        declared = null;
       };
       expected = {
         refused = false;
         opaque = false;
         name = "x";
         clauses = [ ];
+        declared = null;
       };
     };
 

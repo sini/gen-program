@@ -247,25 +247,35 @@ declarations. One membership's answer stays readable through `resolve`.
 
 ### The policy-body algebra
 
-The registration-time authoring surface, and it **evaluates nothing** — the sole-evaluator charter
-is untouched. A normal-form policy body is a list of emission clauses: a single skeleton (`emit`)
-or an iteration over a computed list (`forEach { over, emit }`, the item joining the scope). Four
-slots are registration data — the constructor (closed enum `member` · `deliver` · `edge` ·
-`suppress` · `realize`, published as `ctorNames`), the emitted kind, the payload attrset's
-**spine**, and the suppress target — and the firing context is **unreachable from them by
-construction**: the context enters only through slots typed as functions, and the walk's signature
-takes no context. Everything else — guards, `over`, payload values, free targets — is arbitrary
-Nix the algebra never interprets.
+The authoring surface for policy bodies, and the interpreter that resolves one. A normal-form
+policy body is a list of clauses: a single skeleton (`emit`), an iteration over a computed list
+(`forEach { over, emit }`, the item joining the scope), or a **door clause** whose body is a
+reference to a closure the framework registered. Four slots are registration data — the
+constructor (closed enum `member` · `deliver` · `edge` · `suppress` · `realize`, published as
+`ctorNames`), the emitted kind, the payload attrset's **spine**, and the suppress target — and the
+firing context is **unreachable from them by construction**. Every other slot — guards, `over`,
+payload values, free targets — is a **term** of gen-algebra's first-order term algebra: data the
+walk can read, never a function. A body names the coordinates it may read (`declared`), and each
+clause is checked at construction: a body reads a coordinate only where its condition guarantees it
+is present.
 
 `deriveCodomain` reads `{ emits; binds; suppresses }` off the structure with no context parameter,
 so the recovered-empty-head failure class (fire a value-conditional body at a sentinel, read back
 the empty codomain) has no expression: **a term is read, not fired**. A malformed body is refused
 at construction as a **tagged value** naming the violated slot, the author as the blamed party,
-and the sanctioned alternative: the declared `escape`, whose `{ emits, binds, suppresses }` are
-required and total at the site, and whose firing path (`fireEscape`) checks the declaration at
-**every firing** — a breach refuses with the site, field and delta. `admit` is the registration
-door: hand-rolled records fail the same walk the formers run, and a bare lambda without the
-`opaque` marker is refused with the signpost to the escape.
+and the remedy. `groundInstances` resolves an admitted body at a context and returns the fired
+declarations as data; a door clause resolves through the door the framework passes in, which is
+the only place a closure is applied. Each rule and each firing carries an identity minted through
+gen-identity, the firing's over the sources of what it read, never the values.
+
+Until the framework's door exists, the declared `escape` stays the closure's path: its
+`{ emits, binds, suppresses }` are required and total at the site, and its firing path
+(`fireEscape`) checks the declaration at **every firing** — a breach refuses with the site, field
+and delta. `admit` is the registration door: hand-rolled records fail the same walk the formers
+run, and a bare lambda without the `opaque` marker is refused with the signpost to the escape.
+
+A declaration can also write its body as a condition term: `declaration { head; relata; when = all [ (has "a") (not (has "b")) ]; }` is `pos = [ "a" ]; neg = [ "b" ];`, solved by the same
+well-founded engine.
 
 ## The budget, and the curve it is derived from
 

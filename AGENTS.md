@@ -11,9 +11,10 @@ coherence adjudication, and the call.
 
 ## The published surface
 
-The library is a function of its injected substrate: `import ./lib { prelude, scope }`, where
-`scope` is `gen-scope.lib`. It declares no flake inputs — only plain data crosses a gen↔gen
-boundary, and a library that re-declared the evaluator would pin it on its consumer's behalf.
+The library is a function of its injected substrate: `import ./lib { prelude, scope, algebra, identity }`, where `scope` is `gen-scope.lib`, `algebra` is `gen-algebra.lib` and `identity` is
+`gen-identity.lib`. Its flake inputs are declared, never applied (the root is published
+unapplied) — only plain data crosses a gen↔gen boundary, and a library that applied the evaluator
+would pin it on its consumer's behalf.
 
 Root `default.nix`'s `wire ? { deps, resolve, lock }: import ./lib deps` formal is the seam that hands
 this exact substrate attrset to `./lib` as `deps`, and it is also the only channel by which the shim
@@ -37,6 +38,7 @@ the `follows` rule is therefore declared once in this repository, in `default.ni
   "flagNames",
   "flags",
   "forEach",
+  "groundInstances",
   "mkModel",
   "model",
   "program",
@@ -58,6 +60,12 @@ document's prose in one cell, so neither side can drift onto the other.
   (ADR-0020's own base case). An unknown field is refused by name at application. An optional
   `label` (a string, or `null`, the default) names the edge the head denotes when included; a
   declaration is labelled exactly when `label != null`, and a non-string label is refused by name.
+  An optional **`when`** is the **literal tier** (fuci G1): a condition term lowered to `pos`/`neg`
+  — `has a` ↦ `a ∈ pos`, `not (has a)` ↦ `a ∈ neg`, `all` conjoins, `always` is the empty body. `any`,
+  `eq`, `not` over a compound and a function are refused by name (a rule body is a conjunction of
+  literals, and nothing here mints an atom), and `when` beside `pos`/`neg` is refused: they are two
+  writings of one body. Its atoms are program atoms solved by the well-founded engine, never context
+  coordinates.
 - **`rule`** — one declaration's rule, through gen-scope's `mkRule`. The relata do not appear:
   they are IDENTIFIERS resolved against the frozen set, and a rule's atoms are MEMBERSHIP FACTS.
   Two universes; collapsing them would make an identifier derivable.
@@ -158,29 +166,48 @@ The normal path is **polynomial**; the bounded search is the coherence gate only
 - past the budget the field carries **`not-evaluated`** — a named outcome stating an ABSENCE of
   adjudication, never an admission.
 
-### The policy-body algebra (registration-time; evaluates nothing)
+### The policy-body algebra, on terms
 
 The normal form a policy body is authored in, from `lib/policy-body.nix` (spec of record:
-den-ag-design `specs/2026-08-26-gen-policy-body-algebra-spec.md`). A body's three codomain facts —
-`emits`, `binds`, `suppresses` — are READ off its structure at registration, never recovered by
-firing; the sole-evaluator charter above is untouched.
+den-ag-design `specs/2026-08-26-gen-policy-body-algebra-spec.md`, made terms-only by
+`specs/2026-10-02-gen-program-terms-only-spec.md`, den-hoag-lwbb1 unit 3). Every free slot — `when`,
+payload values, `over`, edge/realize targets — is a **term** of gen-algebra's one algebra, applied
+to gen-identity's `hashIdentity`; a function there is refused `policy-body/term-function`. A body's
+three codomain facts — `emits`, `binds`, `suppresses` — are READ off its structure at registration,
+never recovered by firing.
 
-- **`body`** — `{ name, clauses }` → the admitted normal form, or a tagged refusal
+- **`body`** — `{ name, clauses, declared }` → the admitted normal form, or a tagged refusal
   `{ refused = true; code; blamed = "author"; witness; message; }`. Refusals are VALUES, never
-  throws.
+  throws. `declared` is the framework's declared coordinate set, **required**: `null` is written for
+  the open world. Every clause passes gen-algebra's `checkClause` under it — a body reads a
+  coordinate only where a positive atom of its condition covers it — and a core refusal keeps its
+  name as `policy-body/<code>`.
 - **`emit`** / **`forEach`** — the two structural formers (a single emission skeleton; an
-  iteration `{ over, emit }` whose items join the scope). Each runs the structural walk at call
-  time: constructor in the closed enum, field presence exactly per the constructor row, payload
+  iteration `{ over, emit }` whose items join the scope as `item`). Each runs the structural walk at
+  call time: constructor in the closed enum, field presence exactly per the constructor row, payload
   keys forced at construction, suppress target literal. An out-of-row field is refused, never
-  ignored.
+  ignored. `over` has no guard field: its condition is `has` over its safety reads (`readCtx`,
+  `default`), so a `has` test inside it stays a test.
+- A **door clause** `{ when?, body = ref r, emits, binds, suppresses }` is the third clause form:
+  `r` is a door-registration identifier (gen-algebra's `refId`), and the contract is declared at
+  registration — `binds`/`suppresses` are a name list or `null`, the over-approximation. A
+  door-registration `ref` anywhere else is refused `policy-body/ref-position`.
 - **`ctorNames`** — the closed constructor enum as data: `member` · `deliver` · `edge` ·
   `suppress` · `realize` (the ruled mechanism column's names; extended by owner ruling only).
 - **`deriveCodomain`** — body → `{ emits; binds; suppresses }`. Its signature takes **no
   context**, which is its own by-construction proof that no derived fact depends on the firing
-  context. On an escape it reads the declared contract, so every policy has a codomain at
-  registration (ADR-0008 §3's precondition).
+  context. On an escape or a door clause it reads the declared contract, so every policy has a
+  codomain at registration (ADR-0008 §3's precondition); a `null` stays `null`.
+- **`groundInstances`** — `{ body, context, sources ? { }, door ? null }` → the list of fired
+  declarations, data only, or a refusal. It resolves an admitted body at `context` under the body's
+  own `declared`, and a door clause's `ref r` through `door { id; context; sources; captured; }`,
+  which answers `{ output; scope; }`; a nested door clause in the output passes the same walk and
+  fires under the extended scope. Each admitted rule carries `__mint`, its rule identity; each
+  fired declaration carries its firing identity over the rule and the `sources` of its reads (an
+  absent declared coordinate enters as a fixed absence tag).
 - **`escape`** — the declared v1-lambda channel: `{ name, fn, emits, binds, suppresses }`, the
-  three codomain fields REQUIRED and total (`[ ]` is written, not defaulted).
+  three codomain fields REQUIRED and total (`[ ]` is written, not defaulted). It stays the closure's
+  path until the gen-rules door exists.
 - **`fireEscape`** — the escape's firing path, with the codomain contract checked at EVERY
   firing; a breach refuses by name with the site, field and delta.
 - **`admit`** — the registration door: re-runs the walk on hand-rolled records, checks a marked
@@ -371,5 +398,5 @@ nix eval --json --impure --file ci/repl.nix --apply 'r: builtins.attrNames r.gen
 Current output (verbatim):
 
 ```json
-["adjudicate","adjudicationOutcomes","admit","body","ctorNames","declaration","deriveCodomain","emit","escape","fireEscape","flagNames","flags","forEach","mkModel","model","program","rule","stableModelBudget","stableModelCriterion","unresolvedRelata"]
+["adjudicate","adjudicationOutcomes","admit","body","ctorNames","declaration","deriveCodomain","emit","escape","fireEscape","flagNames","flags","forEach","groundInstances","mkModel","model","program","rule","ruleEdges","stableModelBudget","stableModelCriterion","unresolvedRelata"]
 ```

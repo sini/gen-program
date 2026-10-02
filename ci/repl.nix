@@ -1,15 +1,24 @@
 # gen-program REPL — all exports in scope, plus the lib value itself as `genProgram`.
 #
 # The library is a FUNCTION of its injected substrate, so this file has to resolve one before
-# there is a value to splice. It resolves the acceptance run's own — this flake's `gen-scope` and
-# the prelude beneath it — so what the REPL hands back is the surface the suite tests and not a
+# there is a value to splice. It resolves the acceptance run's own — this flake's `gen-scope`, the
+# prelude and the mint beneath it, and its `gen-algebra` — so what the REPL hands back is the surface the suite tests and not a
 # second, differently-pinned one. That is also why it needs `--impure`.
 let
   ci = builtins.getFlake (toString ./.);
   scope = ci.inputs.gen-scope.lib;
   prelude = ci.inputs.gen-scope.inputs.gen-prelude.lib;
+  algebra = ci.inputs.gen-algebra.lib;
+  identity = ci.inputs.gen-scope.inputs.gen-identity.lib;
 
-  genProgram = import ../lib { inherit prelude scope; };
+  genProgram = import ../lib {
+    inherit
+      prelude
+      scope
+      algebra
+      identity
+      ;
+  };
 in
 {
   inherit genProgram scope prelude;

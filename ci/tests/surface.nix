@@ -20,6 +20,8 @@
   genProgram,
   prelude,
   scope,
+  algebra,
+  identity,
   lib,
   ...
 }:
@@ -38,6 +40,7 @@ let
     "flagNames"
     "flags"
     "forEach"
+    "groundInstances"
     "mkModel"
     "model"
     "program"
@@ -69,6 +72,8 @@ let
   mentions = name: prelude.hasInfix "`${name}`" agentsSheet;
 
   lowered = s: lib.toLower s;
+  # The result's collocations, struck so that only an act-naming use of a stem remains to match.
+  resultStruck = s: lib.replaceStrings [ "groundinstance" "groundatom" ] [ "" "" ] (lowered s);
 in
 {
   flake.tests.surface = {
@@ -176,11 +181,13 @@ in
     # ── NO IDENTIFIER FOR THE ACT ──
     # `grounding` measures 0 occurrences across both paper corpora; the act of turning declarations
     # into ground rules has no term, so this library publishes none for it and names the RESULT
-    # instead.
+    # instead. The RESULT's collocations — `ground instance`, `ground atom` — do resolve, and
+    # `groundInstances` (den-hoag-lwbb1 unit 3, the interpreter, ruled name) is one: they are struck
+    # before the stems are matched, so the noun is admitted and the verb still is not.
     test-no-published-identifier-names-the-act-of-translation = {
       expr = prelude.filter (
         n:
-        prelude.any (verb: lib.hasInfix verb (lowered n)) [
+        prelude.any (verb: lib.hasInfix verb (resultStruck n)) [
           "ground"
           "translat"
           "compil"
@@ -196,7 +203,7 @@ in
         prelude.filter
           (
             n:
-            prelude.any (verb: lib.hasInfix verb (lowered n)) [
+            prelude.any (verb: lib.hasInfix verb (resultStruck n)) [
               "ground"
               "translat"
               "compil"
@@ -206,9 +213,14 @@ in
           )
           [
             "groundProgram"
+            "groundInstances"
+            "groundingOf"
             "rule"
           ];
-      expected = [ "groundProgram" ];
+      expected = [
+        "groundProgram"
+        "groundingOf"
+      ];
     };
 
     # ── THE TWO ENTRIES ARE ONE SURFACE ──
@@ -218,7 +230,16 @@ in
     # language. The applied form is also the stronger claim: it is the surface a consumer actually
     # receives.
     test-standalone-entry-matches-lib = {
-      expr = builtins.attrNames (import ../.. { inherit prelude scope; });
+      expr = builtins.attrNames (
+        import ../.. {
+          inherit
+            prelude
+            scope
+            algebra
+            identity
+            ;
+        }
+      );
       expected = publishedSurface;
     };
 

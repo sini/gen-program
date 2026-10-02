@@ -4,7 +4,8 @@
 # refused BY NAME; beside each sits an admitted body differing only in the violating slot — an
 # absence claim without its positive control is not a measurement. The F1 structural code gets
 # the same treatment: the seeded `when`-on-ForEach is the spec's own v0 witness defect, and its
-# green control is the repaired witness itself (the corpus fixture's env-to-hosts).
+# green control is a ForEach carrying its guard at the skeleton (the corpus fixture's fleet-to-envs;
+# env-to-hosts, the original witness, now crosses the door, den-hoag-lwbb1 unit 3).
 #
 # ★ REFUSALS ARE VALUES, NOT THROWS — asserted as such: `tryEval` succeeds on every one of them
 # (`tryEval` cannot catch every failure form, which is why the discipline is tagged values in the
@@ -14,10 +15,12 @@
 {
   genProgram,
   prelude,
+  T,
   ...
 }:
 let
-  fixtures = import ./_fixtures/bodies.nix { inherit prelude genProgram; };
+  fixtures = import ./_fixtures/bodies.nix { inherit prelude genProgram T; };
+  t = T.term;
 
   # V1 — constructor in a field value: anything context-shaped at the ctor slot.
   v1Red = genProgram.emit {
@@ -30,8 +33,9 @@ let
   v1Green = genProgram.emit {
     ctor = "member";
     kind = "host";
+    when = t.has "host";
     payload = {
-      host = { host, ... }: host;
+      host = t.readCtx "host" [ ];
     };
   };
 
@@ -45,8 +49,9 @@ let
   v2Green = genProgram.emit {
     ctor = "member";
     kind = "host";
+    when = t.has "host";
     payload = {
-      host = ctx: ctx.host;
+      host = t.readCtx "host" [ ];
     };
   };
 
@@ -57,7 +62,7 @@ let
     ctor = "member";
     kind = "host";
     payload = {
-      static = _: 1;
+      static = t.lit 1;
     }
     // (throw "a context-shaped merge: this spine cannot force before a context exists");
   };
@@ -65,10 +70,10 @@ let
     ctor = "member";
     kind = "host";
     payload = {
-      static = _: 1;
+      static = t.lit 1;
     }
     // {
-      fromRegistry = _: 2;
+      fromRegistry = t.lit 2;
     };
   };
 
@@ -192,7 +197,7 @@ in
       };
     };
     test-control-f1-the-repaired-witness-parses-under-its-own-grammar = {
-      expr = fixtures.corpus.env-to-hosts.body.refused or false;
+      expr = fixtures.corpus.fleet-to-envs.body.refused or false;
       expected = false;
     };
 
@@ -225,7 +230,8 @@ in
       expr =
         (genProgram.emit {
           ctor = "edge";
-          target = { den, host, ... }: den.aspects.${host.name};
+          when = t.has "den";
+          target = t.readCtx "den" [ "aspects" ];
         }).refused or false;
       expected = false;
     };

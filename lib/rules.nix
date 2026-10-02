@@ -87,7 +87,60 @@ let
   identifier =
     who: what: v:
     builtins.isString v
-    || throw "gen-program.${who}: ${what} is a ${builtins.typeOf v}, expected a node identifier (a string)";
+    || throw "gen-program.${who}: ${what} is a ${builtins.typeOf v}, expected a node identifier (a string)${
+      if builtins.isFunction v then
+        "; a guard is written as a `when` term (has, not, all, always), and a closure crosses the gen-rules door"
+      else
+        ""
+    }";
+
+  # ── THE LITERAL TIER (fuci G1): a `when` term lowered to `pos`/`neg` ──
+  # A rule body is a conjunction of literals, so the tier admits exactly the literals and their
+  # conjunction: `has a` is the positive literal `a`, `not (has a)` the negative one, `all` conjoins,
+  # `always` is the empty body. The atom is the string the caller wrote: nothing here mints one, so
+  # `eq` (a value test with no atom) and `not` over a compound (Lloyd–Topor needs a fresh atom) refuse,
+  # and so does `any`: a disjunction is one declaration per disjunct over the one head.
+  lowerWhen =
+    t:
+    let
+      f = t.__bodyTerm or null;
+      none = {
+        pos = [ ];
+        neg = [ ];
+      };
+      why =
+        if builtins.isFunction t then
+          "a function `when` stays unlowerable (fuci G1); a closure crosses the gen-rules door"
+        else if t ? left then
+          "the term algebra refused it (${t.left.code})"
+        else if f == "Any" then
+          "`any` is a disjunction, and a rule body is a conjunction: write one declaration per disjunct over the one head"
+        else if f == "Eq" then
+          "`eq` tests a value and lowers to no atom; write the tested fact as an atom the caller names"
+        else if f == "Not" then
+          "`not` lowers only over `has a`; negating a compound needs an atom nothing here mints"
+        else
+          "${if f == null then builtins.typeOf t else f} is not a literal, a conjunction or `always`";
+    in
+    if f == "Has" then
+      none // { pos = [ t.name ]; }
+    else if f == "Not" && (t.operand.__bodyTerm or null) == "Has" then
+      none // { neg = [ t.operand.name ]; }
+    else if f == "Always" then
+      none
+    else if f == "All" then
+      builtins.foldl' (
+        acc: x:
+        let
+          l = lowerWhen x;
+        in
+        {
+          pos = acc.pos ++ l.pos;
+          neg = acc.neg ++ l.neg;
+        }
+      ) none t.items
+    else
+      throw "gen-program.declaration: `when` is not in the literal tier: ${why}";
   identifiers =
     who: what: vs:
     if builtins.isList vs then
@@ -150,8 +203,18 @@ let
       neg ? [ ],
       relata,
       label ? null,
+      when ? null,
       ...
     }@args:
+    let
+      lowered =
+        if when == null then
+          { inherit pos neg; }
+        else if args ? pos || args ? neg then
+          throw "gen-program.declaration: `when` and `pos`/`neg` are two writings of one body; write one"
+        else
+          lowerWhen when;
+    in
     builtins.seq
       (prelude.checkOptions "gen-program.declaration" (builtins.attrNames (
         builtins.functionArgs declaration
@@ -160,8 +223,8 @@ let
         builtins.seq
           (
             identifier "declaration" "the head" head
-            && identifiers "declaration" "pos" pos
-            && identifiers "declaration" "neg" neg
+            && identifiers "declaration" "pos" lowered.pos
+            && identifiers "declaration" "neg" lowered.neg
             && identifiers "declaration" "relata" relata
             && (
               label == null
@@ -170,10 +233,9 @@ let
             )
           )
           {
+            inherit (lowered) pos neg;
             inherit
               head
-              pos
-              neg
               relata
               label
               ;

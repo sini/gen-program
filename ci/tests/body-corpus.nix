@@ -11,13 +11,20 @@
 # `binds = [ "accessGroups" ]` and the walk finds `[ "accessGroups" "host" ]` — the declaration
 # was a hand-maintained under-count (the firing at :81-83 confirms `host` is a payload key), and
 # the oracle adjudicates AGAINST the walk's answer being trimmed to match the site.
+#
+# ★ TERMS ONLY (den-hoag-lwbb1 unit 3): four of the seven cross the door (the fixture says why), so
+# their "derived" row is the codomain contract the door clause DECLARES, read without firing exactly
+# as an escape's was. The derivation-equals-observation cell is what keeps those four honest: the
+# observation fires the registered closure through the interpreter and the door, at a real context,
+# and an under-declared contract — fleet.nix:52's `binds` — reads unequal there.
 {
   genProgram,
   prelude,
+  T,
   ...
 }:
 let
-  fixtures = import ./_fixtures/bodies.nix { inherit prelude genProgram; };
+  fixtures = import ./_fixtures/bodies.nix { inherit prelude genProgram T; };
   inherit (fixtures) corpus observe;
 
   # One cell triple per policy, generated so no policy can silently drop out of the suite.

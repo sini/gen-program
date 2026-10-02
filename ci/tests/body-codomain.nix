@@ -2,44 +2,69 @@
 #
 # ★ THE ARMED CELL IS THE POINT OF O2. `deriveCodomain`'s signature has no context parameter —
 # the checker is its own by-construction proof that no derived fact depends on the firing
-# context. Here that is ARMED rather than asserted: a body whose every free slot detonates —
-# `over` a bare throw, `when` and every payload value throwing on application, a free target a
-# bare throw — derives its codomain clean. If the derivation ever forced a free slot, this cell
-# reds; there is no sentinel firing anywhere in the derivation path (defect C has no expression).
+# context. Here that is ARMED rather than asserted. On terms (den-hoag-lwbb1 unit 3) a slot is data
+# the walk reads, so the arming is in RESOLUTION: every term slot of the armed body refuses when
+# resolved at any context, and its door clause's door detonates when called. The body derives its
+# codomain clean; the control beside it resolves the same body and refuses, so the arming is live.
+# There is no sentinel firing anywhere in the derivation path (defect C has no expression).
 #
 # O5 is ADR-0022's alignment as a mechanical check: the folds are unions, so the derived codomain
 # is byte-identical under permutation of the clause list and under an `over` yielding nothing,
-# one item, or many — `over` is never read, which is why it may be fully free.
-{ genProgram, ... }:
+# one item, or many — `over` is never read, which is why it may be any list-valued term.
+{
+  genProgram,
+  T,
+  ...
+}:
 let
+  t = T.term;
+  # Every read of `env` projects a path the context never has, so each one refuses on resolution.
+  detonating = t.readCtx "env" [ "never-present" ];
+  armedDoor =
+    (T.refId {
+      declared = {
+        site = "armed";
+        reads = [ "env" ];
+      };
+    }).right;
   armed = genProgram.body {
     name = "armed";
+    declared = [ "env" ];
     clauses = [
       (genProgram.forEach {
-        over = throw "over must never be forced by the derivation";
+        over = detonating;
         emit = [
           {
             ctor = "member";
             kind = "k";
-            when = _: throw "when must never be applied by the derivation";
+            when = t.has "env";
             payload = {
-              a = _: throw "a payload value must never be applied by the derivation";
+              a = detonating;
             };
           }
         ];
       })
       (genProgram.emit {
         ctor = "edge";
-        target = throw "a free target must never be forced by the derivation";
+        when = t.has "env";
+        target = detonating;
       })
+      {
+        when = t.has "env";
+        body = t.ref armedDoor;
+        emits = [ "d" ];
+        binds = [ ];
+        suppresses = [ ];
+      }
     ];
   };
 
   clauseA = genProgram.emit {
     ctor = "member";
     kind = "host";
+    when = t.has "host";
     payload = {
-      host = s: s.host;
+      host = t.readCtx "host" [ ];
     };
   };
   clauseB = genProgram.emit {
@@ -49,9 +74,9 @@ let
   clauseC = genProgram.emit {
     ctor = "deliver";
     payload = {
-      fromClass = _: "a";
-      intoClass = _: "b";
-      path = _: [ ];
+      fromClass = t.lit "a";
+      intoClass = t.lit "b";
+      path = t.lit [ ];
     };
   };
 
@@ -59,6 +84,7 @@ let
     clauses:
     genProgram.body {
       name = "o5";
+      declared = null;
       inherit clauses;
     };
 
@@ -66,6 +92,7 @@ let
     over:
     genProgram.body {
       name = "o5-multiplicity";
+      declared = null;
       clauses = [
         (genProgram.forEach {
           inherit over;
@@ -74,7 +101,7 @@ let
               ctor = "member";
               kind = "environment";
               payload = {
-                environment = { item, ... }: item;
+                environment = t.readCtx "item" [ ];
               };
             }
           ];
@@ -93,12 +120,31 @@ in
       expr = genProgram.deriveCodomain armed;
       expected = {
         emits = [
+          "d"
           "edge"
           "k"
         ];
         binds = [ "a" ];
         suppresses = [ ];
       };
+    };
+
+    # The arming is live: resolving the same body at a context refuses — the forEach's `over` reads
+    # a path the context lacks — so a derivation that resolved anything would have met it. (The
+    # door here answers a refusal rather than throwing: resolving DOES reach it.)
+    test-control-the-armed-body-refuses-when-resolved = {
+      expr =
+        (genProgram.groundInstances {
+          body = armed;
+          context.env = { };
+          door = _: {
+            left = {
+              code = "armed-door";
+              witness = { };
+            };
+          };
+        }).code;
+      expected = "policy-body/projection-path-missing";
     };
 
     # ── O5: PERMUTATION ──
@@ -120,9 +166,9 @@ in
     # never reads `over`, so all three derive byte-identically.
     test-o5-the-codomain-is-invariant-under-over-yielding-none-one-or-many = {
       expr = map (over: genProgram.deriveCodomain (multiBody over)) [
-        (_: [ ])
-        (_: [ 1 ])
-        (_: [
+        (t.lit [ ])
+        (t.lit [ 1 ])
+        (t.lit [
           1
           2
           3

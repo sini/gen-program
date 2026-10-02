@@ -64,17 +64,29 @@
 # (`program`) and the INPUTS (`rule`, `declaration`) and gives the act no name of its own.
 #
 # ── THE SUBSTRATE ARRIVES INJECTED, WHICH IS THE BOUNDARY RULE AND NOT A CONVENIENCE ──
-# Only plain data crosses a gen↔gen boundary. This library takes `prelude` and `scope` as VALUES
-# and constructs inside the consumer's own evaluation; it re-exports neither, and in particular it
+# Only plain data crosses a gen↔gen boundary. This library takes `prelude`, `scope`, `algebra`
+# (gen-algebra, the one term algebra) and `identity` (gen-identity, ADR-0034's one minting
+# authority, as gen-scope takes it) as VALUES and constructs inside the consumer's own evaluation;
+# it re-exports none of them, and in particular it
 # does not republish gen-scope's constructors under names of its own. What it does carry through
 # is gen-scope's PROGRAM value, unchanged, in a field — that value is plain data by its own
 # module's statement, so carrying it re-exports no build.
-{ prelude, scope }:
+{
+  prelude,
+  scope,
+  algebra,
+  identity,
+}:
 let
+  # The one term algebra (gen-algebra), applied to the one minting authority (gen-identity).
+  T = algebra.term identity.hashIdentity;
   rules = import ./rules.nix { inherit prelude scope; };
-  # The registration-time authoring surface. It evaluates nothing and touches no substrate, so it
-  # takes the prelude alone.
-  bodyAlgebra = import ./policy-body.nix { inherit prelude; };
+  # The authoring surface and its interpreter. It touches no substrate: it takes the prelude, the
+  # term instance, and the mint the rule and firing identities go through (ADR-0034's one authority).
+  bodyAlgebra = import ./policy-body.nix {
+    inherit prelude T;
+    inherit (identity) hashIdentity;
+  };
   # The ONE recorded budget, wired here. The coherence module takes it as a parameter so a
   # derivation run can reach the construction past the figure — but this is the only wiring the
   # published surface has, so a consumer can read the budget and cannot select one.
@@ -122,10 +134,12 @@ in
     flags
     ;
 
-  # ── THE POLICY-BODY ALGEBRA (registration-time; evaluates nothing) ──
-  # The normal form a policy body is authored in, the structural walk that admits or refuses it
-  # at construction, the derived codomain the gate's precondition consumes (ADR-0008 §3 — edge
-  # set complete at registration), and the declared escape with its per-firing contract. The
+  # ── THE POLICY-BODY ALGEBRA ──
+  # The normal form a policy body is authored in (terms of gen-algebra's one algebra), the
+  # structural walk that admits or refuses it at construction, the derived codomain the gate's
+  # precondition consumes (ADR-0008 §3 — edge set complete at registration), the declared escape
+  # with its per-firing contract, and `groundInstances`, the interpreter that resolves an admitted
+  # body at a context, its door clauses through the framework's door. The
   # word `policy` stays out of these identifiers for the measured reason above: the surface a
   # framework maps onto is `body` and its formers, and the framework's own vocabulary names the
   # rest.
@@ -138,6 +152,7 @@ in
     admit
     deriveCodomain
     fireEscape
+    groundInstances
     ;
 
   # ── THE COHERENCE CRITERION ──

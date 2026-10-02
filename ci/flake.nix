@@ -14,21 +14,52 @@
     # boundary between the two, and two prelude instances would make an equality cell a question
     # about which copy answered.
     gen-scope.url = "github:sini/gen-scope";
+
+    # The one term algebra (den-hoag-lwbb1 unit 1) and the minting authority it is applied to,
+    # reached THROUGH gen-scope's pin for the prelude's reason above: two mints in one acceptance
+    # run would make an identity cell a question about which copy answered.
+    gen-algebra.url = "github:sini/gen-algebra";
+    gen-identity.follows = "gen-scope/gen-identity";
   };
 
   outputs =
-    inputs@{ gen-harness, gen-scope, ... }:
+    inputs@{
+      gen-harness,
+      gen-scope,
+      gen-algebra,
+      gen-identity,
+      ...
+    }:
     let
       scope = gen-scope.lib;
       prelude = gen-scope.inputs.gen-prelude.lib;
-      genProgram = import ../lib { inherit prelude scope; };
+      algebra = gen-algebra.lib;
+      identity = gen-identity.lib;
+      genProgram = import ../lib {
+        inherit
+          prelude
+          scope
+          algebra
+          identity
+          ;
+      };
+      # The term instance a test writes a rule body in: the same algebra applied to the same mint
+      # the library applies, so a term built here and one built there have one identity.
+      T = algebra.term identity.hashIdentity;
     in
     gen-harness.lib.mkCi {
       inherit inputs;
       name = "gen-program";
       testModules = ./tests;
       specialArgs = {
-        inherit genProgram scope prelude;
+        inherit
+          genProgram
+          scope
+          prelude
+          algebra
+          identity
+          T
+          ;
       };
       # Cells whose subject is an error MESSAGE cannot live under `testModules`: the batch
       # asserter behind `checks.default` quantifies over `flake.tests` and forces every `expr`
