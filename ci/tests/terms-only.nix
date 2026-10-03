@@ -924,6 +924,7 @@ in
               }
             )
           );
+          deriveCodomainIsPolicy = code (gp.deriveCodomain (rec0 // { __isPolicy = true; }));
           control = code (
             gp.admit {
               name = "nf";
@@ -938,6 +939,7 @@ in
         isPolicyOnly = "policy-body/escape-retired";
         missingField = "policy-body/escape-retired";
         deriveCodomain = "policy-body/escape-retired";
+        deriveCodomainIsPolicy = "policy-body/escape-retired";
         control = "admitted";
       };
     };
