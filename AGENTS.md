@@ -197,8 +197,9 @@ never recovered by firing.
   `suppress` · `realize` (the ruled mechanism column's names; extended by owner ruling only).
 - **`deriveCodomain`** — body → `{ emits; binds; suppresses }`. Its signature takes **no
   context**, which is its own by-construction proof that no derived fact depends on the firing
-  context. On an escape or a door clause it reads the declared contract, so every policy has a
-  codomain at registration (ADR-0008 §3's precondition); a `null` stays `null`.
+  context. On a door clause it reads the declared contract, so every policy has a codomain at
+  registration (ADR-0008 §3's precondition); a `null` stays `null`. A retired escape record handed
+  to it is refused `policy-body/escape-retired`.
 - **`groundInstances`** — `{ body, context, sources ? { }, door ? null }` → the list of fired
   declarations, data only, or a refusal. It resolves an admitted body at `context` under the body's
   own `declared`, and a door clause's `ref r` through `door { id; context; sources; captured; }`,
@@ -206,25 +207,26 @@ never recovered by firing.
   fires under the extended scope. Each admitted rule carries `__mint`, its rule identity; each
   fired declaration carries its firing identity over the rule and the `sources` of its reads (an
   absent declared coordinate enters as a fixed absence tag).
-- **`escape`** — the declared v1-lambda channel: `{ name, fn, emits, binds, suppresses }`, the
-  three codomain fields REQUIRED and total (`[ ]` is written, not defaulted). It stays the closure's
-  path until the gen-rules door exists.
-- **`fireEscape`** — the escape's firing path, with the codomain contract checked at EVERY
-  firing; a breach refuses by name with the site, field and delta.
-- **`codomainBreaches`** — that per-firing check as a function: `contract` (`{ emits; binds; suppresses; }`)
+- **`escape`** — RETIRED (den-hoag-lwbb1 unit 3, U3r): an alias of its original arity that refuses
+  any argument as the value `policy-body/escape-retired`, naming the gen-rules door. A closure crosses
+  that door (`defunctionalize`, `mkApply`) and reaches gen-program as a door clause.
+- **`fireEscape`** — RETIRED with `escape`: refuses `policy-body/escape-retired`, naming the door and
+  `codomainBreaches`, the per-firing check it ran.
+- **`codomainBreaches`** — the per-firing codomain check: `contract` (`{ emits; binds; suppresses; }`)
   → `declarations` → the list of breaches `{ field; delta; }` (`field` is `emits`, `binds`, `suppresses`
-  or `shape`), `[ ]` when the contract holds. `fireEscape` is it applied to an escape; it is published so
-  the gen-rules door reads this one row table rather than a copy.
-- **`admit`** — the registration door: re-runs the walk on hand-rolled records, checks a marked
-  escape's contract for totality, and refuses a bare lambda with the signpost to the escape.
+  or `shape`), `[ ]` when the contract holds. It is published so the gen-rules door, which applies it
+  at every firing, reads this one row table rather than a copy.
+- **`admit`** — the registration door: re-runs the walk on hand-rolled records, refuses an escape
+  record (`opaque` or `__isPolicy`) `policy-body/escape-retired`, and refuses a bare lambda with the
+  signpost to the gen-rules door.
 
 **`__` keys crossing the boundary** (R12 stated contracts; the census that reads these lines takes the
 first line of each):
 
-- `__isPolicy` — writer `escape` (`lib/policy-body.nix`), reader `admit`'s shape check (same file); read by gen-aspects (`lib/types.nix`, its deferred-include recognizer):
-  marks a defunctionalised policy record, the escape's `{ refused; __isPolicy; opaque; name; fn; … }`.
-  gen-aspects reads it off plain data, declaring no input on this library, to pass such a record
-  through its includes type unforced.
+- `__isPolicy` — writer none (retired with `escape`), readers `admit` and `deriveCodomain` (`lib/policy-body.nix`), which refuse a record carrying it `policy-body/escape-retired`:
+  marked the retired escape record `{ refused; __isPolicy; opaque; name; fn; … }`. It is read only so
+  a stale record is refused by name rather than taken for something else; gen-aspects stopped reading
+  it with its own closure retirement (stage 2b).
 
 ### The boundary, and what retired with it
 

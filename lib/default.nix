@@ -137,9 +137,10 @@ in
   # ── THE POLICY-BODY ALGEBRA ──
   # The normal form a policy body is authored in (terms of gen-algebra's one algebra), the
   # structural walk that admits or refuses it at construction, the derived codomain the gate's
-  # precondition consumes (ADR-0008 §3 — edge set complete at registration), the declared escape
-  # with its per-firing contract, and `groundInstances`, the interpreter that resolves an admitted
-  # body at a context, its door clauses through the framework's door. The
+  # precondition consumes (ADR-0008 §3 — edge set complete at registration), the per-firing
+  # contract `codomainBreaches` the gen-rules door applies, the retired escape (`escape`,
+  # `fireEscape`: aliases refusing by name), and `groundInstances`, the interpreter that resolves an
+  # admitted body at a context, its door clauses through the framework's door. The
   # word `policy` stays out of these identifiers for the measured reason above: the surface a
   # framework maps onto is `body` and its formers, and the framework's own vocabulary names the
   # rest.

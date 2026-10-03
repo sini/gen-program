@@ -268,12 +268,12 @@ declarations as data; a door clause resolves through the door the framework pass
 the only place a closure is applied. Each rule and each firing carries an identity minted through
 gen-identity, the firing's over the sources of what it read, never the values.
 
-Until the framework's door exists, the declared `escape` stays the closure's path: its
-`{ emits, binds, suppresses }` are required and total at the site, and its firing path
-(`fireEscape`) checks the declaration at **every firing** — a breach refuses with the site, field
-and delta. The check itself is published as `codomainBreaches contract declarations`, so the framework's
-door validates a closure's output against the same row table. `admit` is the registration door: hand-rolled records fail the same walk the formers
-run, and a bare lambda without the `opaque` marker is refused with the signpost to the escape.
+The per-firing codomain check is published as `codomainBreaches contract declarations`, so the
+gen-rules door validates a closure's output against the same row table at **every firing**; a
+breach is named by field and delta. `admit` is the registration door: hand-rolled records fail the
+same walk the formers run, and a bare lambda is refused with the signpost to the gen-rules door.
+The declared escape is retired: `escape` and `fireEscape` stay as aliases that refuse
+`policy-body/escape-retired`, naming the door, and `admit` refuses an escape record the same way.
 
 A declaration can also write its body as a condition term: `declaration { head; relata; when = all [ (has "a") (not (has "b")) ]; }` is `pos = [ "a" ]; neg = [ "b" ];`, solved by the same
 well-founded engine.

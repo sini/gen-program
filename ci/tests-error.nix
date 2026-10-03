@@ -244,7 +244,7 @@ in
     };
 
     # ── THE NATIVE-ELLIPSIS DOOR-CHECK BYTES (den-hoag-7gp66 P1, arm (C)) ──
-    # `declaration`, `model`, `mkModel` and `escape` keep their native required formals — a missing
+    # `declaration`, `model` and `mkModel` keep their native required formals — a missing
     # one still aborts the evaluator's own uncatchable way, untested here — and gain `...` plus
     # `prelude.checkOptions` over the raw `args`, so an UNKNOWN field is what is named below.
     test-declaration-unknown-field-message = {
@@ -277,17 +277,6 @@ in
         zzqran7f = 1;
       };
       expectedError.msg = exactly "gen-program.mkModel: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'adjudication', 'complete', 'program', 'solved') (in prelude.checkOptions)";
-    };
-    test-escape-unknown-field-message = {
-      expr = genProgram.escape {
-        name = "x";
-        fn = _: { };
-        emits = [ ];
-        binds = [ ];
-        suppresses = [ ];
-        zzqran7f = 1;
-      };
-      expectedError.msg = exactly "gen-program.escape: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'binds', 'emits', 'fn', 'name', 'suppresses') (in prelude.checkOptions)";
     };
 
     # den-hoag-ea3j4 — the three refusals the multi-pass protocol names.

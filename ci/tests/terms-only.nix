@@ -366,8 +366,9 @@ in
         "policy-body/undeclared-name"
       ];
     };
-    # The escape's per-firing check, published: the one row table, read by a door with no escape.
-    test-codomain-breaches-is-the-escapes-check = {
+    # The per-firing check, published: the one row table the gen-rules door reads. The escape that
+    # once applied it is retired (U3r), and its firing alias names this check.
+    test-codomain-breaches-is-the-per-firing-check = {
       expr =
         let
           contract = {
@@ -394,13 +395,10 @@ in
         [
           (gp.codomainBreaches contract ds)
           (
-            gp.codomainBreaches contract [ (builtins.head ds) ] == (gp.fireEscape (gp.escape (
-              contract
-              // {
-                name = "e";
-                fn = _: [ (builtins.head ds) ];
-              }
-            )) { }).witness.breaches
+            let
+              r = gp.fireEscape (contract // { fn = _: [ (builtins.head ds) ]; }) { };
+            in
+            r.code == "policy-body/escape-retired" && builtins.match ".*`codomainBreaches`.*" r.message != null
           )
         ];
       expected = [
@@ -839,6 +837,108 @@ in
       expected = {
         equal = true;
         length = 2;
+      };
+    };
+
+    # ── U3r: THE ESCAPE'S RETIREMENT (spec §2.10) ──
+    # `escape` and `fireEscape` stay published with their original arity and refuse BY NAME, as a
+    # tagged value, naming the door; whatever they are handed — the old five-field form, or one with
+    # an unknown field — gets the same answer. The green twin is the door's own path: a door clause
+    # admitted through `body` in the same run.
+    test-escape-retired = {
+      expr =
+        let
+          old = gp.escape {
+            name = "e";
+            fn = _: [ ];
+            emits = [ ];
+            binds = [ ];
+            suppresses = [ ];
+          };
+        in
+        {
+          escape = code old;
+          unknownField = code (
+            gp.escape {
+              name = "e";
+              fn = _: [ ];
+              emits = [ ];
+              binds = [ ];
+              suppresses = [ ];
+              unknown = 1;
+            }
+          );
+          fireEscape = code (gp.fireEscape old { });
+          tryEval = (builtins.tryEval (builtins.deepSeq old null)).success;
+          inherit (old) witness message;
+          door = code hostBody;
+        };
+      expected = {
+        escape = "policy-body/escape-retired";
+        unknownField = "policy-body/escape-retired";
+        fireEscape = "policy-body/escape-retired";
+        tryEval = true;
+        witness.retired = "escape";
+        message = "`escape` is retired: gen-program's algebra is terms only, and the only closure crossing in gen is the gen-rules door. write the slot as a term of gen-algebra's `term` algebra, or, for a closure, cross the gen-rules door: its lowering (`defunctionalize`) registers the closure and hands gen-program a door clause whose body is `ref r`, which `groundInstances` resolves through the door (`mkApply`); the per-firing codomain check is `codomainBreaches`, applied by the door";
+        door = "admitted";
+      };
+    };
+    # `admit` refuses an escape record by name whichever marker it carries, and `deriveCodomain` does
+    # the same when one is handed to it directly — never the old declared-contract read.
+    test-admit-escape-record-refused = {
+      expr =
+        let
+          rec0 = {
+            name = "e";
+            fn = _: [ ];
+            emits = [ ];
+            binds = [ ];
+            suppresses = [ ];
+          };
+        in
+        {
+          both = code (
+            gp.admit (
+              rec0
+              // {
+                refused = false;
+                __isPolicy = true;
+                opaque = true;
+              }
+            )
+          );
+          opaqueOnly = code (gp.admit (rec0 // { opaque = true; }));
+          isPolicyOnly = code (gp.admit (rec0 // { __isPolicy = true; }));
+          missingField = code (
+            gp.admit {
+              opaque = true;
+              name = "e";
+            }
+          );
+          deriveCodomain = code (
+            gp.deriveCodomain (
+              rec0
+              // {
+                refused = false;
+                opaque = true;
+              }
+            )
+          );
+          control = code (
+            gp.admit {
+              name = "nf";
+              clauses = [ ];
+              declared = null;
+            }
+          );
+        };
+      expected = {
+        both = "policy-body/escape-retired";
+        opaqueOnly = "policy-body/escape-retired";
+        isPolicyOnly = "policy-body/escape-retired";
+        missingField = "policy-body/escape-retired";
+        deriveCodomain = "policy-body/escape-retired";
+        control = "admitted";
       };
     };
   };

@@ -10,17 +10,19 @@
 # and R5's stated price applies uniformly — the door is OPEN, an extra field is admitted, never
 # refused.
 #
-# ★★ `declaration`, `model`, `mkModel` and `escape` ARE NATIVE-ELLIPSIS CLASS DOORS instead
+# ★★ `declaration`, `model` and `mkModel` ARE NATIVE-ELLIPSIS CLASS DOORS instead
 # (den-hoag-7gp66 P1, owner-ruled arm (C)): each is read by `builtins.functionArgs` from an ORACLE
-# this repository already ships (O4/O6, `identifier-doors.nix`, `relation.nix`, `staging.nix`,
-# `surface.nix`, `adjudication.nix`, `body-escape.nix`), and den-hoag-bkdkg rules that a WRAPPER
+# this repository already ships (O6, `identifier-doors.nix`, `relation.nix`, `staging.nix`,
+# `surface.nix`, `adjudication.nix`), and den-hoag-bkdkg rules that a WRAPPER
 # around the door is detectable — it erases the formals a caller reads. The ruled resolution is not
 # a wrapper: the pattern stays native (so a MISSING required field still aborts the evaluator's own
 # uncatchable way, undisturbed and untested here — that is O6's requirement, not this suite's
 # subject) and gains an `...` formal, and the body runs `prelude.checkOptions` over the raw `args`
 # so an UNKNOWN field is what moves — named and caught instead of aborting the identical uncatchable
 # way a missing one still does. `builtins.functionArgs` reads the same named formals either way,
-# which is what keeps the nine oracle assertions above unmoved.
+# which is what keeps the oracle assertions above unmoved. (`escape` was the fourth; it is retired,
+# den-hoag-lwbb1 unit 3 U3r, and refuses every argument by name — `terms-only.nix`'s
+# `test-escape-retired`, including an unknown field.)
 #
 # WHICH refusal fired is a claim about the message and `tryEval` yields only `success`; the byte
 # goldens naming each door (R6) live in `ci/tests-error.nix`'s `flake.testsError`.
@@ -38,7 +40,6 @@ let
     declaration
     model
     mkModel
-    escape
     ;
 
   # `success == false` pins catchability, not the message — the byte goldens are the message's own
@@ -198,7 +199,7 @@ in
       expected = "admitted";
     };
 
-    # declaration/model/mkModel/escape — NATIVE-ELLIPSIS class (arm (C)). A MISSING required field
+    # declaration/model/mkModel — NATIVE-ELLIPSIS class (arm (C)). A MISSING required field
     # is not tested here: it is still the evaluator's own uncatchable abort, untouched by this
     # landing (O6's requirement) — `ci/tests/staging.nix` and its siblings already pin that the
     # formal stays required. What is new is that an UNKNOWN field, which used to abort the
@@ -231,23 +232,12 @@ in
       });
       expected = true;
     };
-    test-escape-unknown-field-refused-catchably = {
-      expr = refusesCatchably (escape {
-        name = "x";
-        fn = _: { };
-        emits = [ ];
-        binds = [ ];
-        suppresses = [ ];
-        zzqran7f = 1;
-      });
-      expected = true;
-    };
 
-    # ★ den-hoag-7gp66 P1 strictness sweep, 2026-09-27: the four cells above already used
+    # ★ den-hoag-7gp66 P1 strictness sweep, 2026-09-27: the three cells above already used
     # `refusesCatchably` (`deepSeq`); these re-assert the identical calls with `firesAtApplication`
     # (a bare `seq`) to pin that each door's `checkOptions` runs unconditionally at the top of its
     # own body — `builtins.seq (checkOptions …) (…)` — rather than only behind a later field read,
-    # which is the defect class `body` had (see above) and these four doors never did.
+    # which is the defect class `body` had (see above) and these three doors never did.
     test-declaration-unknown-field-fires-at-application = {
       expr = firesAtApplication (declaration {
         head = "h";
@@ -272,17 +262,6 @@ in
         program = validProgram;
         adjudication = null;
         complete = true;
-        zzqran7f = 1;
-      });
-      expected = true;
-    };
-    test-escape-unknown-field-fires-at-application = {
-      expr = firesAtApplication (escape {
-        name = "x";
-        fn = _: { };
-        emits = [ ];
-        binds = [ ];
-        suppresses = [ ];
         zzqran7f = 1;
       });
       expected = true;

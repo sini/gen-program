@@ -10,8 +10,8 @@
 # ★ REFUSALS ARE VALUES, NOT THROWS — asserted as such: `tryEval` succeeds on every one of them
 # (`tryEval` cannot catch every failure form, which is why the discipline is tagged values in the
 # type), the code names the violated slot, the blamed party is the AUTHOR at every row, and the
-# four V-row messages carry the signpost to the declared escape — the refusal is how the compat
-# channel is discovered rather than fought.
+# four V-row messages carry the signpost to the gen-rules door — the refusal is how the closure's
+# one path is discovered rather than fought.
 {
   genProgram,
   prelude,
@@ -212,8 +212,10 @@ in
         true
       ];
     };
-    test-the-four-v-row-messages-carry-the-signpost-to-the-declared-escape = {
-      expr = map (r: prelude.hasInfix "escape" r.message) vReds;
+    test-the-four-v-row-messages-carry-the-signpost-to-the-gen-rules-door = {
+      expr = map (
+        r: prelude.hasInfix "gen-rules door" r.message && !prelude.hasInfix "escape" r.message
+      ) vReds;
       expected = [
         true
         true

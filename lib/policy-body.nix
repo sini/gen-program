@@ -23,8 +23,9 @@
 # a body reads a coordinate only where a positive atom of its condition covers it (Apt–Blair–Walker),
 # and the interpreter resolves it under that same value — one `D` for checking and resolving, by
 # construction. A closure is applied nowhere on the term path: a door clause's body is `ref r`, and
-# `r` resolves through the door the framework supplies. Until that door exists (gen-rules, unit 4)
-# the declared escape below stays the closure's path, so every refusal still names it.
+# `r` resolves through the door the framework supplies — gen-rules' `mkApply`, the only place in gen
+# a closure is applied. The declared escape is retired (spec §2.10, U3r): `escape` and `fireEscape`
+# stay as aliases that refuse by name, and every refusal names the door.
 #
 # ── THE MANIFESTNESS INVARIANT, AS CONSTRUCTED ──
 # The four ★ slots — constructor, kind, the payload attrset's SPINE, the suppress target — are
@@ -128,10 +129,9 @@ let
     };
   };
 
-  # Every refusal names the remedy: a term, or — for a closure — the declared escape, which stays
-  # the closure's path until the gen-rules door exists (spec §2.10, U3a). The signpost is how the
-  # compat channel is discovered rather than fought.
-  escapePointer = "write the slot as a term of gen-algebra's `term` algebra, or, for a closure, the declared escape (`escape`, with its required total emits/binds/suppresses contract) is the sanctioned alternative";
+  # Every refusal names the remedy: a term, or — for a closure — the gen-rules door (spec §2.10,
+  # U3r). The signpost is how the closure's one path is discovered rather than fought.
+  doorPointer = "write the slot as a term of gen-algebra's `term` algebra, or, for a closure, cross the gen-rules door: its lowering (`defunctionalize`) registers the closure and hands gen-program a door clause whose body is `ref r`, which `groundInstances` resolves through the door (`mkApply`)";
 
   refuse = code: witness: message: {
     refused = true;
@@ -143,7 +143,7 @@ let
   fromCore =
     r:
     refuse "policy-body/${r.left.code}" r.left.witness (
-      r.left.witness.message or "the term algebra refused this clause (${r.left.code}); ${escapePointer}"
+      r.left.witness.message or "the term algebra refused this clause (${r.left.code}); ${doorPointer}"
     );
 
   # ── THE INSTANCE ──
@@ -240,10 +240,10 @@ let
     itemScoped: declared: s:
     if !isAttrs s then
       refuse "policy-body/skeleton-malformed" s
-        "a skeleton is an attrset carrying `ctor`, optionally `when`, and its constructor row's fields — this value is not an attrset; ${escapePointer}"
+        "a skeleton is an attrset carrying `ctor`, optionally `when`, and its constructor row's fields — this value is not an attrset; ${doorPointer}"
     else if !(s ? ctor) then
       refuse "policy-body/skeleton-malformed" s
-        "a skeleton carries a `ctor` slot and this one does not; ${escapePointer}"
+        "a skeleton carries a `ctor` slot and this one does not; ${doorPointer}"
     else
       let
         forcedCtor = tryEval (seq s.ctor s.ctor);
@@ -252,7 +252,7 @@ let
       # construction — a function, a non-member string, or anything context-shaped refuses.
       if !forcedCtor.success || !isString forcedCtor.value || !elem forcedCtor.value ctorNames then
         refuse "policy-body/constructor-not-manifest" s.ctor
-          "the `ctor` slot must force to a member of the closed enum ${toString ctorNames} at construction — it is registration data and the firing context is unreachable from it by construction (V1); a computed or context-dependent constructor cannot be admitted, and ${escapePointer}"
+          "the `ctor` slot must force to a member of the closed enum ${toString ctorNames} at construction — it is registration data and the firing context is unreachable from it by construction (V1); a computed or context-dependent constructor cannot be admitted, and ${doorPointer}"
       else
         let
           ctor = forcedCtor.value;
@@ -290,32 +290,32 @@ let
         # F1: field presence is total per the ctor row — out-of-row refused, in-row required.
         if extra != [ ] then
           refuse "policy-body/skeleton-malformed" extra
-            "the `${ctor}` row admits exactly the fields ${toString allowed} and this skeleton also carries ${toString extra} — an out-of-row field is refused, never ignored; ${escapePointer}"
+            "the `${ctor}` row admits exactly the fields ${toString allowed} and this skeleton also carries ${toString extra} — an out-of-row field is refused, never ignored; ${doorPointer}"
         else if missing != [ ] then
           refuse "policy-body/skeleton-malformed" missing
-            "the `${ctor}` row requires the fields ${toString row.fields} and this skeleton is missing ${toString missing} — absence is a decision, and here it is a malformation; ${escapePointer}"
+            "the `${ctor}` row requires the fields ${toString row.fields} and this skeleton is missing ${toString missing} — absence is a decision, and here it is a malformation; ${doorPointer}"
         else if ctor == "member" && !(tryEval (seq s.kind (isString s.kind))).value or false then
           refuse "policy-body/skeleton-malformed" "kind"
-            "the `kind` slot must force to a string at construction; ${escapePointer}"
+            "the `kind` slot must force to a string at construction; ${doorPointer}"
         # V4: dynamic exclude target. The ruled dial D3: suppress targets are ★ LITERAL — a term or
         # a closure here is the computed exclusion target V4 names.
         else if ctor == "suppress" && !(target.success && isString target.value) then
           refuse "policy-body/exclude-target-unfixed" s.target
-            "the `suppress` target must force to a literal policy reference at construction (V4, the ruled D3 dial) — a computed or context-dependent exclusion target cannot be admitted, and ${escapePointer}"
+            "the `suppress` target must force to a literal policy reference at construction (V4, the ruled D3 dial) — a computed or context-dependent exclusion target cannot be admitted, and ${doorPointer}"
         # V3: computed payload keys. The spine either forces to a finite definite name set at
         # construction — a merge over registration-fixed data is ADMITTED (the Q3 reading) — or it
         # does not force, and refuses.
         else if elem "payload" row.fields && !spine.success then
           refuse "policy-body/payload-keys-unfixed" "payload"
-            "the payload spine does not force to a finite definite name set at construction (V3) — the KEYS are ★ registration data even though the values are terms; ${escapePointer}"
+            "the payload spine does not force to a finite definite name set at construction (V3) — the KEYS are ★ registration data even though the values are terms; ${doorPointer}"
         # V2: the `{...}@ctx` pass-through. A bare function at the payload slot re-emits the whole
         # context; an attrset whose values are terms keeps the keys fixed.
         else if elem "payload" row.fields && !isAttrs s.payload then
           refuse "policy-body/payload-not-keyed" s.payload
-            "the payload slot must be an attrset of terms — a bare function here is the context pass-through shape (V2), whose keys nothing can read without firing; ${escapePointer}"
+            "the payload slot must be an attrset of terms — a bare function here is the context pass-through shape (V2), whose keys nothing can read without firing; ${doorPointer}"
         else if fnSlot != [ ] then
           refuse "policy-body/term-function" fnSlot
-            "`${head fnSlot}` holds a function; a rule body is first-order — `when` is a condition term (has/eq/all/any/always/not) and a target is a term; ${escapePointer}"
+            "`${head fnSlot}` holds a function; a rule body is first-order — `when` is a condition term (has/eq/all/any/always/not) and a target is a term; ${doorPointer}"
         else if isCoreRefusal checked then
           fromCore checked
         else if refs != [ ] then
@@ -356,7 +356,7 @@ let
         "a door clause declares its codomain at registration — ${toString required} are REQUIRED (`[ ]` is written, and `null` is the written over-approximation)"
     else if (c ? when) && isFunction c.when then
       refuse "policy-body/term-function" [ "when" ]
-        "a door clause's condition is first-order: `has` over its required formals, or `always`; ${escapePointer}"
+        "a door clause's condition is first-order: `has` over its required formals, or `always`; ${doorPointer}"
     else if !(isTerm c.body && c.body.__bodyTerm == "Ref" && isDoorId c.body.id) then
       refuse "policy-body/door-clause-body" (
         if isTerm c.body then c.body.__bodyTerm else builtins.typeOf c.body
@@ -378,10 +378,10 @@ let
     declared: c:
     if isFunction c then
       refuse "policy-body/constructor-not-manifest" c
-        "a bare lambda is not a clause — a normal-form body is a list of clauses whose constructor the walk can read without firing (V1); ${escapePointer}"
+        "a bare lambda is not a clause — a normal-form body is a list of clauses whose constructor the walk can read without firing (V1); ${doorPointer}"
     else if !isAttrs c then
       refuse "policy-body/skeleton-malformed" c
-        "a clause is an emission skeleton, `{ over, emit }`, or a door clause; ${escapePointer}"
+        "a clause is an emission skeleton, `{ over, emit }`, or a door clause; ${doorPointer}"
     else if isRefusal c then
       c
     else if c ? over then
@@ -408,7 +408,7 @@ let
         refuse "policy-body/skeleton-malformed" c
           "`forEach` needs `emit`, a list of emission skeletons, each of which fires once per item of `over`"
       else if isFunction c.over then
-        refuse "policy-body/term-function" [ "over" ] "`over` is a list-valued term; ${escapePointer}"
+        refuse "policy-body/term-function" [ "over" ] "`over` is a list-valued term; ${doorPointer}"
       else if isCoreRefusal checked then
         fromCore checked
       else if refs != [ ] then
@@ -428,7 +428,7 @@ let
       walkDoor declared c
     else
       refuse "policy-body/skeleton-malformed" (attrNames c)
-        "a clause is discriminated by `ctor` (an emission skeleton), `over` (an iteration) or `body` (a door clause), and this attrset carries none of them; ${escapePointer}";
+        "a clause is discriminated by `ctor` (an emission skeleton), `over` (an iteration) or `body` (a door clause), and this attrset carries none of them; ${doorPointer}";
 
   # ── THE FORMERS ──
   # Each runs the walk at call time under the open world, so a violation refuses at the author's
@@ -471,80 +471,32 @@ let
           }
     );
 
-  # ── THE DECLARED ESCAPE — THE CLOSURE'S PATH UNTIL THE gen-rules DOOR EXISTS ──
-  # Kept in U3a (spec §2.10): retirements come last, once the door exists, so there is no window in
-  # which a closure has no path. NO DEFAULTS on the five fields: `[ ]` is written, not defaulted —
-  # absence is a decision the author makes visibly. The prices, all by construction: five required
-  # total fields; the per-firing contract below; `opaque = true` queryable; and no silent entry.
-  # The `...` opens the formal for `prelude.checkOptions`, so an UNKNOWN field is named and caught
-  # (den-hoag-7gp66 P1, arm (C)); `builtins.functionArgs escape` reads the identical five formals.
-  escape =
-    {
-      name,
-      fn,
-      emits,
-      binds,
-      suppresses,
-      ...
-    }@args:
-    builtins.seq
-      (prelude.checkOptions "gen-program.escape" (builtins.attrNames (builtins.functionArgs escape)) args)
-      {
-        refused = false;
-        __isPolicy = true;
-        opaque = true;
-        inherit
-          name
-          fn
-          emits
-          binds
-          suppresses
-          ;
-      };
+  # ── RETIRED: THE DECLARED ESCAPE (spec §2.10, U3r) ──
+  # The gen-rules door exists, so the escape is no longer the closure's path. Each retired binding
+  # stays, with its original arity, and answers in this library's refusal regime — a tagged value,
+  # never a throw — naming the door (the renamed-export rule, C9; gen-rules spec OQ-9). The
+  # per-firing contract it carried is `codomainBreaches`, which the door applies at every firing.
+  escapeRetired =
+    which:
+    refuse "policy-body/escape-retired" { retired = which; }
+      "`${which}` is retired: gen-program's algebra is terms only, and the only closure crossing in gen is the gen-rules door. ${doorPointer}; the per-firing codomain check is `codomainBreaches`, applied by the door";
+  escape = _: escapeRetired "escape";
 
   # ── THE REGISTRATION DOOR ──
   # The substrate re-runs the walk here when a policy is registered: hand-rolled records pass or
-  # fail exactly as former-built ones do, a marked escape is checked for its total contract, and
-  # a bare v1 lambda without the marker is refused with the signpost.
+  # fail exactly as former-built ones do, a retired escape record (`opaque` or `__isPolicy`) is
+  # refused by name, and a bare v1 lambda is refused with the signpost to the door.
   admit =
     v:
     if isFunction v then
       refuse "policy-body/constructor-not-manifest" v
-        "a bare lambda is not a policy body — its constructors cannot be read without firing (V1); ${escapePointer}"
+        "a bare lambda is not a policy body — its constructors cannot be read without firing (V1); ${doorPointer}"
     else if !isAttrs v then
-      refuse "policy-body/skeleton-malformed" v "a policy body is a record; ${escapePointer}"
+      refuse "policy-body/skeleton-malformed" v "a policy body is a record; ${doorPointer}"
     else if isRefusal v then
       v
-    else if (v.opaque or false) == true then
-      let
-        required = [
-          "name"
-          "fn"
-          "emits"
-          "binds"
-          "suppresses"
-        ];
-        missing = filter (f: !(v ? ${f})) required;
-        extra = filter (
-          f:
-          !elem f (
-            required
-            ++ [
-              "__isPolicy"
-              "opaque"
-              "refused"
-            ]
-          )
-        ) (attrNames v);
-      in
-      if missing != [ ] then
-        refuse "policy-body/skeleton-malformed" missing
-          "an escape declares its whole codomain at the site — ${toString required} are REQUIRED and total (`[ ]` is written, not defaulted), and this one is missing ${toString missing}"
-      else if extra != [ ] then
-        refuse "policy-body/skeleton-malformed" extra
-          "an escape record carries exactly its declared form and this one also carries ${toString extra} — an out-of-row field is refused, never ignored"
-      else
-        v // { refused = false; }
+    else if (v.opaque or false) == true || (v.__isPolicy or false) == true then
+      escapeRetired "escape"
     else if v ? clauses then
       let
         extra = filter (
@@ -574,24 +526,21 @@ let
         }
     else
       refuse "policy-body/skeleton-malformed" (attrNames v)
-        "a policy body is `{ name; clauses; declared; }` in the normal form or an `opaque = true` escape; ${escapePointer}";
+        "a policy body is `{ name; clauses; declared; }` in the normal form; ${doorPointer}";
 
   # ── THE DERIVATIONS ──
   # Three syntactic folds over the clause list, with NO evaluation over any context — the
   # signature has no context parameter. ForEach contributes its skeletons exactly as Emit does:
-  # the folds are invariant under multiplicity — `over` is never read (ADR-0022). A door clause,
-  # like an escape, contributes its DECLARED contract; a `null` (the over-approximation) is never
-  # collapsed into a finite set, so a body's `binds`/`suppresses` is `null` if any clause declares it.
+  # the folds are invariant under multiplicity — `over` is never read (ADR-0022). A door clause
+  # contributes its DECLARED contract; a `null` (the over-approximation) is never collapsed into a
+  # finite set, so a body's `binds`/`suppresses` is `null` if any clause declares it. A retired
+  # escape record handed here directly is refused by name, as `admit` refuses it.
   deriveCodomain =
     b:
     if isRefusal b then
       b
-    else if b.opaque then
-      {
-        emits = sortUnique b.emits;
-        binds = sortUnique b.binds;
-        suppresses = sortUnique b.suppresses;
-      }
+    else if (b.opaque or false) == true || (b.__isPolicy or false) == true then
+      escapeRetired "escape"
     else
       let
         skeletons = concatMap (
@@ -621,13 +570,12 @@ let
         );
       };
 
-  # ── THE ESCAPE'S PER-FIRING CONTRACT ──
-  # Contracted at EVERY FIRING (ADR-0008: the licence is the contract). The firing's actual
-  # declarations are checked against the declared sets; a breach refuses at the firing, naming the
-  # site, the field and the delta. This function IS the escape's firing path.
-  # The per-firing check itself, published so a closure's other path — the gen-rules door — reads
-  # this one row table rather than a copy of it: `contract` is `{ emits; binds; suppresses; }`, and
-  # the result is the list of breaches, `[ ]` when the declarations keep the contract. A `null`
+  # ── THE PER-FIRING CODOMAIN CONTRACT ──
+  # Contracted at EVERY FIRING (ADR-0008: the licence is the contract). A firing's actual
+  # declarations are checked against the declared sets, and each breach names its field and delta.
+  # Published so the closure's one path — the gen-rules door — reads this one row table rather than
+  # a copy of it: `contract` is `{ emits; binds; suppresses; }`, and the result is the list of
+  # breaches, `[ ]` when the declarations keep the contract. A `null`
   # `binds`/`suppresses` is the written over-approximation a door clause may declare: it admits every
   # name, so that field contributes no breach (its refusal belongs to a head analysis, not here).
   admits = names: n: names == null || elem n names;
@@ -663,25 +611,7 @@ let
         }) (if d.ctor == "suppress" && !admits contract.suppresses d.target then [ d.target ] else [ ])
     ) declarations;
 
-  fireEscape =
-    e: ctx:
-    let
-      declarations = e.fn ctx;
-      breaches = codomainBreaches e declarations;
-      renderBreach =
-        br: if br.field == "shape" then "shape: ${br.delta}" else "${br.field} is missing '${br.delta}'";
-    in
-    if breaches != [ ] then
-      refuse "policy-body/codomain-breach"
-        {
-          site = e.name;
-          inherit breaches;
-        }
-        "the escape '${e.name}' breached its declared codomain at this firing: ${
-          prelude.concatMapStringsSep "; " renderBreach breaches
-        } — the declaration at the site must state the whole codomain, and the check at every firing is what keeps it true rather than aspirational"
-    else
-      declarations;
+  fireEscape = _: _: escapeRetired "fireEscape";
 
   # ── THE INTERPRETER ──
   # Resolves an admitted body at a context under the body's own `declared` (one D for checking and
