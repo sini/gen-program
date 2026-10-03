@@ -29,10 +29,7 @@ let
     declarations:
     genProgram.model {
       prior = null;
-      program = genProgram.program {
-        inherit declarations;
-        frozen = [ ];
-      };
+      program = genProgram.program [ ] declarations;
       interpretation = [ ];
       complete = true;
     };

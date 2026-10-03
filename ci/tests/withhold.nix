@@ -33,10 +33,7 @@ let
     declarations: interpretation: complete:
     genProgram.model {
       prior = null;
-      program = genProgram.program {
-        inherit declarations;
-        frozen = [ ];
-      };
+      program = genProgram.program [ ] declarations;
       inherit interpretation complete;
     };
 
@@ -140,10 +137,7 @@ let
   withPrior =
     declarations: prior: complete:
     genProgram.model {
-      program = genProgram.program {
-        inherit declarations;
-        frozen = [ ];
-      };
+      program = genProgram.program [ ] declarations;
       interpretation = [ ];
       inherit prior complete;
     };
@@ -193,10 +187,9 @@ let
     let
       progAt =
         k:
-        genProgram.program {
-          declarations = builtins.concatLists (prelude.genList (i: (builtins.elemAt c.passes i).add) (k + 1));
-          frozen = [ ];
-        };
+        genProgram.program [ ] (
+          builtins.concatLists (prelude.genList (i: (builtins.elemAt c.passes i).add) (k + 1))
+        );
       go =
         k: prior:
         let

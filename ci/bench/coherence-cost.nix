@@ -61,7 +61,11 @@ let
   ci = builtins.getFlake (toString ../.);
   scope = ci.inputs.gen-scope.lib;
   prelude = ci.inputs.gen-scope.inputs.gen-prelude.lib;
-  genProgram = import ../../lib { inherit prelude scope; };
+  genProgram = import ../../lib {
+    inherit prelude scope;
+    algebra = ci.inputs.gen-algebra.lib;
+    identity = ci.inputs.gen-identity.lib;
+  };
 
   # The same constructions, with the gate opened far enough to plot the knee. `headroom` is not a
   # candidate figure and is never read as one — it is the edge of the instrument.
@@ -132,10 +136,7 @@ let
   row =
     { declarations, interpretation }:
     let
-      built = genProgram.program {
-        inherit declarations;
-        frozen = [ ];
-      };
+      built = genProgram.program [ ] declarations;
       m = measuring.model {
         prior = null;
         program = built;

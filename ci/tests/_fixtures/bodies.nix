@@ -86,11 +86,7 @@ let
   observe =
     b: ctx:
     let
-      fired = genProgram.groundInstances {
-        body = b;
-        context = ctx;
-        inherit door;
-      };
+      fired = genProgram.groundInstances { door = door; } ctx b;
       # The firing is real: payload values and targets are forced.
       firedPayload = d: deepSeq (attrValues d.payload) (attrNames d.payload);
       firedTarget = d: deepSeq d.target [ ];

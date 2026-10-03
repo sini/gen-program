@@ -33,10 +33,7 @@ let
     declarations: interpretation:
     genProgram.model {
       prior = null;
-      program = genProgram.program {
-        inherit declarations;
-        frozen = [ ];
-      };
+      program = genProgram.program [ ] declarations;
       inherit interpretation;
       complete = true;
     };

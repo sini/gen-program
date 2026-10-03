@@ -40,7 +40,7 @@ let
 
   build =
     { declarations, frozen }:
-    genProgram.program { inherit declarations frozen; };
+    genProgram.program frozen declarations;
 
   declaring = relata: [
     {
@@ -60,25 +60,25 @@ let
     complete:
     (genProgram.model {
       prior = null;
-      program = genProgram.program {
-        declarations = [
-          {
-            head = "in";
-            relata = [ ];
-          }
-          {
-            head = "x";
-            neg = [ "y" ];
-            relata = [ ];
-          }
-          {
-            head = "y";
-            neg = [ "x" ];
-            relata = [ ];
-          }
-        ];
-        frozen = [ ];
-      };
+      program =
+        genProgram.program
+          [ ]
+          [
+            {
+              head = "in";
+              relata = [ ];
+            }
+            {
+              head = "x";
+              neg = [ "y" ];
+              relata = [ ];
+            }
+            {
+              head = "y";
+              neg = [ "x" ];
+              relata = [ ];
+            }
+          ];
       interpretation = [ ];
       inherit complete;
     });
@@ -91,20 +91,12 @@ let
   modelOf =
     complete: declarations:
     genProgram.model {
-      program = genProgram.program {
-        inherit declarations;
-        frozen = ab;
-      };
+      program = genProgram.program ab declarations;
       interpretation = [ ];
       prior = null;
       inherit complete;
     };
-  edgesAt =
-    complete: declarations:
-    genProgram.ruleEdges {
-      inherit declarations;
-      model = modelOf complete declarations;
-    };
+  edgesAt = complete: declarations: genProgram.ruleEdges (modelOf complete declarations) declarations;
 in
 {
   flake.testsError = {
@@ -116,61 +108,45 @@ in
     # forcing one field.
     test-declaration-refuses-a-record-head = {
       expr =
-        (genProgram.declaration {
-          head = {
-            name = "a";
-          };
-          relata = [ ];
+        (genProgram.declaration { } [ ] {
+          name = "a";
         }).head;
       expectedError.msg = exactly "gen-program.declaration: the head is a set, expected a node identifier (a string)";
     };
     test-declaration-refuses-a-record-relatum = {
-      expr =
-        (genProgram.declaration {
-          head = "h";
-          relata = [ { name = "a"; } ];
-        }).head;
+      expr = (genProgram.declaration { } [ { name = "a"; } ] "h").head;
       expectedError.msg = exactly "gen-program.declaration: an entry of relata is a set, expected a node identifier (a string)";
     };
     test-declaration-refuses-a-record-body-atom = {
-      expr =
-        (genProgram.declaration {
-          head = "h";
-          neg = [ { name = "a"; } ];
-          relata = [ ];
-        }).head;
+      expr = (genProgram.declaration { neg = [ { name = "a"; } ]; } [ ] "h").head;
       expectedError.msg = exactly "gen-program.declaration: an entry of neg is a set, expected a node identifier (a string)";
     };
     test-declaration-refuses-relata-that-are-not-a-list = {
-      expr =
-        (genProgram.declaration {
-          head = "h";
-          relata = "x";
-        }).head;
+      expr = (genProgram.declaration { } "x" "h").head;
       expectedError.msg = exactly "gen-program.declaration: relata is a string, expected a list of node identifiers (strings)";
     };
     test-program-refuses-a-record-relatum-at-the-declaration = {
-      expr = genProgram.program {
-        declarations = [
-          {
-            head = "h";
-            relata = [ { name = "a"; } ];
-          }
-        ];
-        frozen = [ "x" ];
-      };
+      expr =
+        genProgram.program
+          [ "x" ]
+          [
+            {
+              head = "h";
+              relata = [ { name = "a"; } ];
+            }
+          ];
       expectedError.msg = exactly "gen-program.declaration: an entry of relata is a set, expected a node identifier (a string)";
     };
     test-unresolvedRelata-refuses-a-record-in-the-frozen-set = {
-      expr = genProgram.unresolvedRelata {
-        declarations = [
-          {
-            head = "h";
-            relata = [ "x" ];
-          }
-        ];
-        frozen = [ { name = "a"; } ];
-      };
+      expr =
+        genProgram.unresolvedRelata
+          [ { name = "a"; } ]
+          [
+            {
+              head = "h";
+              relata = [ "x" ];
+            }
+          ];
       expectedError.msg = exactly "gen-program.unresolvedRelata: an entry of the frozen set is a set, expected a node identifier (a string)";
     };
 
@@ -217,66 +193,75 @@ in
       expectedError.msg = exactly "gen-program: the membership 'not-derived-here' is not derived at this pass, but the relation is still growing (complete = false), so a NEGATIVE answer is not yet sound — a later pass may derive it. van Antwerpen et al. 2018 §4.3 delays such a query rather than answering it; read `flag` and handle 'P'";
     };
 
-    # ── THE DOOR-CHECK BYTES (den-hoag-7gp66 P1) — R6's naming, pinned per door. `ci/tests/door-
-    # checks.nix` pins that each door's violations are CATCHABLE; a boolean cannot see WHICH
-    # refusal fired, so WHICH is pinned here, one golden per door.
-    test-unresolvedRelata-missing-required-field-message = {
-      expr = genProgram.unresolvedRelata { declarations = [ ]; };
-      expectedError.msg = exactly "gen-program.unresolvedRelata: required field 'frozen' is missing (required: 'declarations', 'frozen') (in prelude.checkRequired)";
-    };
-    test-program-missing-required-field-message = {
-      expr = genProgram.program { declarations = [ ]; };
-      expectedError.msg = exactly "gen-program.program: required field 'frozen' is missing (required: 'declarations', 'frozen') (in prelude.checkRequired)";
-    };
+    # ── THE DOOR-CHECK BYTES (den-hoag-7gp66 P2) — R6's naming, pinned per door. `ci/tests/door-
+    # checks.nix` pins that each door's violations are CATCHABLE at the application; a boolean
+    # cannot see WHICH refusal fired, so WHICH is pinned here, one golden per door and failure mode.
+    # `program`, `unresolvedRelata` and `ruleEdges` are positional (rule 4): their arity is
+    # structural and they carry no field check, so no golden.
     test-body-missing-required-field-message = {
       expr = genProgram.body { name = "x"; };
       expectedError.msg = exactly "gen-program.body: required field 'clauses' is missing (required: 'name', 'clauses', 'declared') (in prelude.checkRequired)";
     };
     test-adjudicate-missing-required-field-message = {
       expr = genProgram.adjudicate {
-        program = genProgram.program {
-          declarations = [ ];
-          frozen = [ ];
-        };
+        program = genProgram.program [ ] [ ];
         model = null;
       };
       expectedError.msg = exactly "gen-program.adjudicate: required field 'interpretation' is missing (required: 'program', 'model', 'interpretation') (in prelude.checkRequired)";
     };
-
-    # ── THE NATIVE-ELLIPSIS DOOR-CHECK BYTES (den-hoag-7gp66 P1, arm (C)) ──
-    # `declaration`, `model` and `mkModel` keep their native required formals — a missing
-    # one still aborts the evaluator's own uncatchable way, untested here — and gain `...` plus
-    # `prelude.checkOptions` over the raw `args`, so an UNKNOWN field is what is named below.
-    test-declaration-unknown-field-message = {
-      expr = genProgram.declaration {
-        head = "h";
-        relata = [ ];
-        zzqran7f = 1;
-      };
-      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'head', 'label', 'neg', 'pos', 'relata', 'when') (in prelude.checkOptions)";
-    };
-    test-model-unknown-field-message = {
+    # den-hoag-ea3j4 landing gate Q4: `prior` is REQUIRED (arm (ii)) and was a native formal, so a
+    # call without it aborted uncatchably. The door names it.
+    test-model-missing-prior-message = {
       expr = genProgram.model {
-        prior = null;
-        program = genProgram.program {
-          declarations = [ ];
-          frozen = [ ];
-        };
+        program = genProgram.program [ ] [ ];
         interpretation = [ ];
         complete = true;
-        zzqran7f = 1;
       };
-      expectedError.msg = exactly "gen-program.model: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'complete', 'interpretation', 'prior', 'program') (in prelude.checkOptions)";
+      expectedError.msg = exactly "gen-program.model: required field 'prior' is missing (required: 'program', 'interpretation', 'complete', 'prior') (in prelude.checkRequired)";
     };
-    test-mkModel-unknown-field-message = {
+    # The same gate's second abort: `mkModel` without `program` (ea3j4 P3).
+    test-mkModel-missing-program-message = {
+      expr = genProgram.mkModel {
+        solved = null;
+        adjudication = null;
+        complete = true;
+      };
+      expectedError.msg = exactly "gen-program.mkModel: required field 'program' is missing (required: 'solved', 'program', 'adjudication', 'complete') (in prelude.checkRequired)";
+    };
+    test-mkModel-missing-adjudication-message = {
       expr = genProgram.mkModel {
         solved = null;
         program = null;
-        adjudication = null;
         complete = true;
-        zzqran7f = 1;
       };
-      expectedError.msg = exactly "gen-program.mkModel: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'adjudication', 'complete', 'program', 'solved') (in prelude.checkOptions)";
+      expectedError.msg = exactly "gen-program.mkModel: required field 'adjudication' is missing (required: 'solved', 'program', 'adjudication', 'complete') (in prelude.checkRequired)";
+    };
+    test-declaration-unknown-option-message = {
+      expr = genProgram.declaration { zzqran7f = 1; };
+      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'pos', 'neg', 'label', 'when') (in prelude.checkOptions)";
+    };
+    # A declaration AS DATA — an entry of `program`'s list — is normalised by the same door's
+    # record core: an unknown field and a missing `head` are refused by the door's name.
+    test-declaration-record-unknown-field-message = {
+      expr =
+        genProgram.program
+          [ ]
+          [
+            {
+              head = "h";
+              relata = [ ];
+              zzqran7f = 1;
+            }
+          ];
+      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'head', 'relata', 'pos', 'neg', 'label', 'when') (in prelude.checkOptions)";
+    };
+    test-declaration-record-missing-head-message = {
+      expr = genProgram.program [ ] [ { relata = [ ]; } ];
+      expectedError.msg = exactly "gen-program.declaration: required field 'head' is missing (required: 'head', 'relata') (in prelude.checkRequired)";
+    };
+    test-groundInstances-unknown-option-message = {
+      expr = genProgram.groundInstances { zzqran7f = 1; };
+      expectedError.msg = exactly "gen-program.groundInstances: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'door', 'sources') (in prelude.checkOptions)";
     };
 
     # den-hoag-ea3j4 — the three refusals the multi-pass protocol names.
@@ -285,21 +270,21 @@ in
         (
           (genProgram.model {
             prior = null;
-            program = genProgram.program {
-              declarations = [
-                {
-                  head = "r";
-                  relata = [ ];
-                }
-                {
-                  head = "a";
-                  pos = [ "r" ];
-                  neg = [ "b" ];
-                  relata = [ ];
-                }
-              ];
-              frozen = [ ];
-            };
+            program =
+              genProgram.program
+                [ ]
+                [
+                  {
+                    head = "r";
+                    relata = [ ];
+                  }
+                  {
+                    head = "a";
+                    pos = [ "r" ];
+                    neg = [ "b" ];
+                    relata = [ ];
+                  }
+                ];
             interpretation = [ ];
             complete = false;
           }).resolve
@@ -309,28 +294,28 @@ in
     };
     test-omitted-prior-declaration-message = {
       expr = genProgram.model {
-        program = genProgram.program {
-          declarations = [
-            {
-              head = "z";
-              relata = [ ];
-            }
-          ];
-          frozen = [ ];
-        };
+        program =
+          genProgram.program
+            [ ]
+            [
+              {
+                head = "z";
+                relata = [ ];
+              }
+            ];
         interpretation = [ ];
         complete = true;
         prior = genProgram.model {
           prior = null;
-          program = genProgram.program {
-            declarations = [
-              {
-                head = "r";
-                relata = [ ];
-              }
-            ];
-            frozen = [ ];
-          };
+          program =
+            genProgram.program
+              [ ]
+              [
+                {
+                  head = "r";
+                  relata = [ ];
+                }
+              ];
           interpretation = [ ];
           complete = false;
         };
@@ -339,10 +324,7 @@ in
     };
     test-prior-not-a-record-message = {
       expr = genProgram.model {
-        program = genProgram.program {
-          declarations = [ ];
-          frozen = [ ];
-        };
+        program = genProgram.program [ ] [ ];
         interpretation = [ ];
         complete = true;
         prior = 1;
@@ -385,78 +367,63 @@ in
     };
     test-rule-edges-refuses-a-model-of-other-declarations = {
       expr =
-        (genProgram.ruleEdges {
-          declarations = [
+        (genProgram.ruleEdges
+          (modelOf true [
+            {
+              head = "s:a:b";
+              relata = ab;
+            }
+          ])
+          [
             {
               head = "r:a:b";
               relata = ab;
               label = "r";
             }
-          ];
-          model = modelOf true [
-            {
-              head = "s:a:b";
-              relata = ab;
-            }
-          ];
-        }).reached;
+          ]
+        ).reached;
       expectedError.msg = exactly "gen-program.ruleEdges: 'r:a:b' is labelled by a declaration that is not a rule of this model; the model was solved from other declarations, so it cannot answer for these";
     };
     # Keyed by head: a conflict is decidable from the declarations, so it refuses in `candidates`
     # with no model at all.
     test-rule-edges-refuses-conflicting-edges-for-one-head = {
       expr =
-        (genProgram.ruleEdges {
-          declarations = [
-            {
-              head = "r:x";
-              relata = ab;
-              label = "r";
-            }
-            {
-              head = "r:x";
-              pos = [ "f" ];
-              relata = [
-                "a"
-                "c"
-              ];
-              label = "r";
-            }
-          ];
-          model = throw "no model was asked for";
-        }).candidates;
+        (genProgram.ruleEdges (throw "no model was asked for") [
+          {
+            head = "r:x";
+            relata = ab;
+            label = "r";
+          }
+          {
+            head = "r:x";
+            pos = [ "f" ];
+            relata = [
+              "a"
+              "c"
+            ];
+            label = "r";
+          }
+        ]).candidates;
       expectedError.msg = exactly "gen-program.ruleEdges: 'r:x' is labelled by declarations naming different edges; an edge is a property of the membership, so its declarations must agree on from, to and label";
     };
     test-rule-edges-refuses-a-labelled-declaration-not-relating-two = {
       expr =
-        (genProgram.ruleEdges {
-          declarations = [
-            {
-              head = "r:x";
-              relata = [
-                "a"
-                "b"
-                "c"
-              ];
-              label = "r";
-            }
-          ];
-          model = throw "no model was asked for";
-        }).candidates;
+        (genProgram.ruleEdges (throw "no model was asked for") [
+          {
+            head = "r:x";
+            relata = [
+              "a"
+              "b"
+              "c"
+            ];
+            label = "r";
+          }
+        ]).candidates;
       expectedError.msg = exactly "gen-program.ruleEdges: 'r:x' (3 relata) carries a label, but an edge relates exactly two relata, from and to";
     };
     test-declaration-refuses-a-label-that-is-not-a-string = {
-      expr =
-        (genProgram.declaration {
-          head = "h";
-          relata = ab;
-          label = 42;
-        }).head;
+      expr = (genProgram.declaration { label = 42; } ab "h").head;
       expectedError.msg = exactly "gen-program.declaration: the label is a int, expected an edge label (a string) or null";
-    };
-    test-rule-edges-missing-field-message = {
-      expr = genProgram.ruleEdges { declarations = [ ]; };
-      expectedError.msg = exactly "gen-program.ruleEdges: required field 'model' is missing (required: 'declarations', 'model') (in prelude.checkRequired)";
     };
   };
 }

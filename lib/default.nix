@@ -99,7 +99,7 @@ let
   # canonical-rule key, so neither is derived twice.
   edging = import ./rule-edges.nix {
     inherit prelude;
-    inherit (rules) declaration;
+    declaration = rules.declarationRecord;
     inherit (modelling) ruleKey;
   };
 in
@@ -124,7 +124,7 @@ in
     ;
 
   # ── THE SOLVED MODEL'S EDGES ──
-  # `ruleEdges { declarations, model }` → `{ candidates, reached }`: the declared edge set of the labelled
+  # `ruleEdges model declarations` → `{ candidates, reached }`: the declared edge set of the labelled
   # declarations, and the part of it the model includes, as plain edge records.
   inherit (edging) ruleEdges;
 

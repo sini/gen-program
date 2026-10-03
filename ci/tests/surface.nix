@@ -103,12 +103,12 @@ in
     # And the result-record constructor no longer takes the formal whose only consumer was the
     # subtraction of this library's own atoms.
     test-mkModel-no-longer-takes-the-authored-formal = {
-      expr = builtins.functionArgs genProgram.mkModel ? authored;
+      expr = prelude.functionArgs genProgram.mkModel ? authored;
       expected = false;
     };
 
     test-control-it-still-takes-the-formals-it-should = {
-      expr = prelude.sort (a: b: a < b) (prelude.attrNames (builtins.functionArgs genProgram.mkModel));
+      expr = prelude.sort (a: b: a < b) (prelude.attrNames (prelude.functionArgs genProgram.mkModel));
       expected = [
         "adjudication"
         "complete"

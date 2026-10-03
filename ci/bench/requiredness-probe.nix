@@ -1,14 +1,11 @@
-# THE PROBE THAT EXHIBITS WHAT NO CELL CAN OBSERVE — the result record's constructor, applied
+# THE PROBE THAT EXHIBITS THE REFUSAL AS AN EXIT STATUS — the result record's constructor, applied
 # without its adjudication field.
 #
-# `ci/tests/adjudication.nix` asserts that `adjudication` is a REQUIRED FORMAL, which is readable
-# in-language through `builtins.functionArgs` and is what a cell can hold. What a cell CANNOT hold
-# is the refusal itself: the evaluator's "called without required argument" is not a thrown value,
-# `tryEval` does not contain it, and a cell whose `expr` provokes one crashes the run rather than
-# failing. gen-scope's `stratify.nix` records the same property of its own argument record.
-#
-# So the refusal is exhibited here instead, where a person or a CI step reads an EXIT STATUS rather
-# than a cell:
+# `ci/tests/adjudication.nix` asserts that `adjudication` is a REQUIRED field of the published
+# contract. Since den-hoag-7gp66 P2 the constructor is a door, so the refusal is a thrown value
+# that `tryEval` contains and `ci/tests-error.nix` pins to the byte
+# (`test-mkModel-missing-adjudication-message`); the native formal before it aborted uncatchably.
+# This probe stays as the same refusal read where a person or a CI step reads an EXIT STATUS:
 #
 #   nix eval --impure -f ci/bench/requiredness-probe.nix dropped   # MUST fail, naming the field
 #   nix eval --impure -f ci/bench/requiredness-probe.nix attached  # MUST succeed
@@ -26,21 +23,30 @@
 # retired `carried` option and read a retired `authored` field, so its CONTROL arm had died):
 #   dropped  ⇒ exit 1, "error: function 'mkModel' called without required argument 'adjudication'"
 #   attached ⇒ exit 0, the record's own attribute names
+# RE-MEASURED, 2026-10-03 (den-hoag-7gp66 P2 L3): at gen-program 8ee37c2 BOTH arms exited 1 with
+# "called without required argument 'algebra'" — the import below predated the library's `algebra`
+# and `identity` formals, so the control arm had died again. With them wired:
+#   dropped  ⇒ exit 1, "gen-program.mkModel: required field 'adjudication' is missing (…)"
+#   attached ⇒ exit 0
 let
   ci = builtins.getFlake (toString ../.);
   scope = ci.inputs.gen-scope.lib;
   prelude = ci.inputs.gen-scope.inputs.gen-prelude.lib;
-  genProgram = import ../../lib { inherit prelude scope; };
-
-  program = genProgram.program {
-    declarations = [
-      {
-        head = "a";
-        relata = [ ];
-      }
-    ];
-    frozen = [ ];
+  genProgram = import ../../lib {
+    inherit prelude scope;
+    algebra = ci.inputs.gen-algebra.lib;
+    identity = ci.inputs.gen-identity.lib;
   };
+
+  program =
+    genProgram.program
+      [ ]
+      [
+        {
+          head = "a";
+          relata = [ ];
+        }
+      ];
 
   solved = scope.solve [ ] program;
 
@@ -52,8 +58,7 @@ let
   };
 in
 {
-  # MUST NOT EVALUATE. The refusal is the evaluator's, it names the field, and nothing in the
-  # language can catch it — which is the strongest form the requiredness can take.
+  # MUST NOT EVALUATE. The door refuses by name, naming the field.
   dropped = builtins.attrNames (genProgram.mkModel withoutTheStatement);
 
   # THE CONTROL: the identical application with the one field restored.

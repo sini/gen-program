@@ -41,12 +41,7 @@ let
   undef = carry "undefined";
   true' = carry "true";
 
-  programOf =
-    declarations:
-    genProgram.program {
-      inherit declarations;
-      frozen = [ ];
-    };
+  programOf = declarations: genProgram.program [ ] declarations;
 
   modelOf =
     { declarations, interpretation }:
