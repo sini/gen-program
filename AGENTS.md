@@ -106,13 +106,16 @@ document's prose in one cell, so neither side can drift onto the other.
   which fields are required rather than discovering it from a crash: a door whose `__contract`
   (read by `prelude.functionArgs`) marks every field required, `adjudication` in particular.
 
-★ **Every entry refusal is CATCHABLE** (den-hoag-7gp66 P2). `model`, `mkModel`, `adjudicate` and
+★ **Every MISSING-FIELD refusal is CATCHABLE** (den-hoag-7gp66 P2). `model`, `mkModel`, `adjudicate` and
 `body` are doors over one open keyed record: a call without `prior`, or a `mkModel` call without
 `program` — the two the ea3j4 landing gate named, once the evaluator's own uncatchable "called
 without required argument" — is refused by the door's name, and `ci/tests-error.nix` pins each to
 the byte. The formal-set cells (`relation.nix`, `adjudication.nix`, `surface.nix`) read the
 published contract through `prelude.functionArgs`. The omission refusal, the non-record `prior`
 refusal and the withholding refusal are ordinary throws, and `tryEval` catches them.
+Two further doors are NOT catchable: `mkModel` called with an EMPTY `solved` and `adjudicate` called
+with an EMPTY `model` abort with "attribute missing" (rc 1,
+`condensationDepth` and `undefinedAtoms` respectively); carried by den-hoag-l3cwb.
 
 The record carries `trueAtoms` / `withheldAtoms` / `undefinedAtoms` / `falseAtoms`, which partition
 **gen-scope's extended base, `program.atoms ∪ dom(interpretation)`**, in its order: on a growing
