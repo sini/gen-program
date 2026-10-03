@@ -41,7 +41,7 @@ in
 {
   flake.tests.bodyEscape = {
     # ── THE THREE SEEDED BREACHES, EACH NAMED WITH ITS FIELD AND DELTA ──
-    test-o4-an-emission-outside-emits-is-refused-at-the-firing = {
+    test-o4-an-emission-outside-emits-is-a-codomain-breach = {
       expr =
         breaches
           {
@@ -63,7 +63,7 @@ in
         }
       ];
     };
-    test-o4-a-member-binding-key-outside-binds-is-refused-at-the-firing = {
+    test-o4-a-member-binding-key-outside-binds-is-a-codomain-breach = {
       expr = breaches {
         emits = [ "host" ];
         binds = [ "host" ];
@@ -76,7 +76,7 @@ in
         }
       ];
     };
-    test-o4-an-exclusion-outside-suppresses-is-refused-at-the-firing = {
+    test-o4-an-exclusion-outside-suppresses-is-a-codomain-breach = {
       expr =
         breaches
           {
