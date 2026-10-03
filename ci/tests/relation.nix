@@ -32,30 +32,30 @@ let
     complete:
     genProgram.model {
       prior = null;
-      program = genProgram.program {
-        declarations = [
-          {
-            head = "settled:in";
-            relata = [ ];
-          }
-          {
-            head = "contested:x";
-            neg = [ "contested:y" ];
-            relata = [ ];
-          }
-          {
-            head = "contested:y";
-            neg = [ "contested:x" ];
-            relata = [ ];
-          }
-          {
-            head = "reader";
-            pos = [ "settled:out" ];
-            relata = [ ];
-          }
-        ];
-        frozen = [ ];
-      };
+      program =
+        genProgram.program
+          [ ]
+          [
+            {
+              head = "settled:in";
+              relata = [ ];
+            }
+            {
+              head = "contested:x";
+              neg = [ "contested:y" ];
+              relata = [ ];
+            }
+            {
+              head = "contested:y";
+              neg = [ "contested:x" ];
+              relata = [ ];
+            }
+            {
+              head = "reader";
+              pos = [ "settled:out" ];
+              relata = [ ];
+            }
+          ];
       interpretation = [ ];
       inherit complete;
     };
@@ -188,7 +188,7 @@ in
     # record cannot make on its caller's behalf — and a defaulted `false` would withhold every
     # negative answer forever.
     test-completeness-is-a-required-argument-of-the-entry = {
-      expr = builtins.functionArgs genProgram.model;
+      expr = prelude.functionArgs genProgram.model;
       expected = {
         complete = false;
         interpretation = false;

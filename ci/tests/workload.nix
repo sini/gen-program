@@ -38,10 +38,7 @@ let
     declarations:
     genProgram.model {
       prior = null;
-      program = genProgram.program {
-        inherit declarations;
-        frozen = [ ];
-      };
+      program = genProgram.program [ ] declarations;
       # These cells are about the un-interpreted case; the interpreted boundary is
       # ci/tests/carry.nix, where the interpretation is the subject rather than a constant.
       interpretation = [ ];

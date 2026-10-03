@@ -22,15 +22,9 @@
 let
   fixtures = import ./_fixtures/workload.nix { };
 
-  built = genProgram.program {
-    declarations = fixtures.growingInclude;
-    frozen = [ ];
-  };
+  built = genProgram.program [ ] fixtures.growingInclude;
 
-  mutant = genProgram.program {
-    declarations = fixtures.growingIncludeWithoutNegation;
-    frozen = [ ];
-  };
+  mutant = genProgram.program [ ] fixtures.growingIncludeWithoutNegation;
 
   # The encoding the spec states, written out rather than computed from the thing under test: a
   # fixture derived from the construction agrees with it by construction and asserts nothing.

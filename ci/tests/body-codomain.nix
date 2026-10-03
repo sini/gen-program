@@ -135,15 +135,13 @@ in
     test-control-the-armed-body-refuses-when-resolved = {
       expr =
         (genProgram.groundInstances {
-          body = armed;
-          context.env = { };
           door = _: {
             left = {
               code = "armed-door";
               witness = { };
             };
           };
-        }).code;
+        } { env = { }; } armed).code;
       expected = "policy-body/projection-path-missing";
     };
 

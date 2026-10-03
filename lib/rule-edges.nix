@@ -55,23 +55,12 @@ let
     inherit (d) label;
   };
 
-  # RECORD class, closed: both fields required and named when missing (`checkRequired`), and an
-  # unknown one named (`checkOptions`) — the prelude's own composition for a door with no options.
+  # POSITIONAL (den-hoag-7gp66 P2, rule 4): `ruleEdges model declarations`. The declarations are
+  # what is read, so they are the subject and go last; the model they are read against is
+  # configuration. Positional arity is structural, so the P1 record check retires.
   ruleEdges =
-    args:
+    model: declarations:
     let
-      fields = [
-        "declarations"
-        "model"
-      ];
-      inherit
-        (prelude.checkOptions "gen-program.ruleEdges" fields (
-          prelude.checkRequired "gen-program.ruleEdges" fields args
-        ))
-        declarations
-        model
-        ;
-
       labelled = builtins.filter (d: d.label != null) (map declaration declarations);
 
       misArity = builtins.filter (d: builtins.length d.relata != 2) labelled;

@@ -56,9 +56,13 @@ document's prose in one cell, so neither side can drift onto the other.
 
 ### The translation
 
-- **`declaration`** — normalises one declaration. A **strict pattern**: `head` and `relata` carry
-  no default, `pos` and `neg` default to empty because a declaration with neither body is a FACT
-  (ADR-0020's own base case). An unknown field is refused by name at application. An optional
+- **`declaration`** — `declaration { pos?; neg?; label?; when?; } relata head` → one normalised
+  declaration. A door (den-hoag-7gp66 P2): the defaulted fields are one closed options set, first,
+  published as `__contract`; `relata` and `head` are positional and carry no default. `pos` and
+  `neg` default to empty because a declaration with neither body is a FACT (ADR-0020's own base
+  case). An unknown option is refused by name at the options application. A declaration AS DATA —
+  an entry of `program`'s list, or `rule`'s argument — is the record `{ head; relata; pos?; neg?; label?; when?; }`, normalised by the same door's record core: an unknown field and a missing
+  `head` or `relata` are refused by name, catchably. An optional
   `label` (a string, or `null`, the default) names the edge the head denotes when included; a
   declaration is labelled exactly when `label != null`, and a non-string label is refused by name.
   An optional **`when`** is the **literal tier** (fuci G1): a condition term lowered to `pos`/`neg`
@@ -70,15 +74,17 @@ document's prose in one cell, so neither side can drift onto the other.
 - **`rule`** — one declaration's rule, through gen-scope's `mkRule`. The relata do not appear:
   they are IDENTIFIERS resolved against the frozen set, and a rule's atoms are MEMBERSHIP FACTS.
   Two universes; collapsing them would make an identifier derivable.
-- **`program`** — `{ declarations, frozen }` → gen-scope's own program value, **unchanged and
+- **`program`** — `program frozen declarations` → gen-scope's own program value, **unchanged and
   unwrapped**. It refuses one thing by name: a relatum no strictly-earlier pass settled.
-- **`unresolvedRelata`** — the refusal's CONTENT, as data. `tryEval` discards message text, so a
+- **`unresolvedRelata`** — `unresolvedRelata frozen declarations`: the refusal's CONTENT, as data. `tryEval` discards message text, so a
   suite that could only assert THAT something refused would be equally satisfied by a construction
   with one refusal in it. This is what the throw renders.
 
 ### The call
 
-- **`model`** — `{ program, interpretation, complete, prior }` → the result record. It drives
+- **`model`** — `{ program, interpretation, complete, prior }` → the result record: one keyed
+  record, open (R5), because its four fields have no natural order (den-hoag-7gp66 P2, the
+  keyed-record ruling); a missing field is refused by name at the application. It drives
   `engine.solve` over THIS pass's program and interpretation, from scratch: no verdict of a prior
   pass is carried (den-hoag-ea3j4, owner-ruled arm (ii)). **`prior`** is the previous pass's result
   record, and it is the **omission guard** only: the entry **refuses by name, catchably,** when any
@@ -88,7 +94,7 @@ document's prose in one cell, so neither side can drift onto the other.
   `{ atom, verdict }` a caller states of atoms at THIS pass, restated at a later pass if it is to
   hold there — and it carries **no default**. `complete` carries none either: a defaulted `true`
   would silently claim the pass sequence had closed.
-- **`ruleEdges`** — `{ declarations, model }` → `{ candidates, reached }`, plain lists of
+- **`ruleEdges`** — `ruleEdges model declarations` → `{ candidates, reached }`, plain lists of
   `{ from, to, label }` edge records, one per labelled head (`from`/`to` are the declaration's two
   relata). `candidates` is every labelled edge whatever it resolves to and never forces `model`;
   `reached` is the candidates whose head the model includes. Declarations of one head that agree
@@ -97,17 +103,16 @@ document's prose in one cell, so neither side can drift onto the other.
   head, on a relation still growing (`complete = false`), and on a labelled declaration that is not
   a rule of `model`. Linear in the labelled declarations.
 - **`mkModel`** — the result record's constructor, published so a consumer (and a cell) can READ
-  which fields are required rather than discovering it from a crash. Every formal is required;
-  `adjudication` in particular.
+  which fields are required rather than discovering it from a crash: a door whose `__contract`
+  (read by `prelude.functionArgs`) marks every field required, `adjudication` in particular.
 
-★ **Two entry refusals are UNCATCHABLE, and both are the evaluator's own "called without required
-argument":** a `model` call without `prior`, and a `mkModel` call without `program` (both added at
-den-hoag-ea3j4, the same class as every other required formal of both). `tryEval` does not contain
-them, so no cell can provoke one; each is held by a formal-set cell reading `builtins.functionArgs`
-(`relation.nix`, `adjudication.nix`, `surface.nix`). Neither is exhibited as an exit status:
-`ci/bench/requiredness-probe.nix` drops `mkModel`'s `adjudication` only. Both stay native aborts
-until gen-program's P2 level makes a missing formal a catchable door refusal (den-hoag-7gp66). The omission refusal, the non-record `prior` refusal and the
-withholding refusal are ordinary throws, and `tryEval` catches them.
+★ **Every entry refusal is CATCHABLE** (den-hoag-7gp66 P2). `model`, `mkModel`, `adjudicate` and
+`body` are doors over one open keyed record: a call without `prior`, or a `mkModel` call without
+`program` — the two the ea3j4 landing gate named, once the evaluator's own uncatchable "called
+without required argument" — is refused by the door's name, and `ci/tests-error.nix` pins each to
+the byte. The formal-set cells (`relation.nix`, `adjudication.nix`, `surface.nix`) read the
+published contract through `prelude.functionArgs`. The omission refusal, the non-record `prior`
+refusal and the withholding refusal are ordinary throws, and `tryEval` catches them.
 
 The record carries `trueAtoms` / `withheldAtoms` / `undefinedAtoms` / `falseAtoms`, which partition
 **gen-scope's extended base, `program.atoms ∪ dom(interpretation)`**, in its order: on a growing
@@ -152,7 +157,8 @@ carries the oracle, quantified over every served answer at every pass.
 
 ### The coherence criterion
 
-- **`adjudicate`** — `{ program, model }` → the adjudication record.
+- **`adjudicate`** — `{ program, model, interpretation }` → the adjudication record (one open
+  keyed record, a door: a missing field is refused by name).
 - **`stableModelCriterion`** / **`adjudicationOutcomes`** — the criterion's name, and the closed
   outcome vocabulary `admitted` · `refused` · `not-evaluated`.
 - **`stableModelBudget`** — the derived figure with its `derivation`, `fixtures`, `environment`
@@ -200,7 +206,7 @@ never recovered by firing.
   context. On a door clause it reads the declared contract, so every policy has a codomain at
   registration (ADR-0008 §3's precondition); a `null` stays `null`. A retired escape record handed
   to it is refused `policy-body/escape-retired`.
-- **`groundInstances`** — `{ body, context, sources ? { }, door ? null }` → the list of fired
+- **`groundInstances`** — `groundInstances { door ? null; sources ? { }; } context body` → the list of fired
   declarations, data only, or a refusal. It resolves an admitted body at `context` under the body's
   own `declared`, and a door clause's `ref r` through `door { id; context; sources; captured; }`,
   which answers `{ output; scope; }`; a nested door clause in the output passes the same walk and

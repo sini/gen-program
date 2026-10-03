@@ -11,16 +11,17 @@ library is that consumer. It implements no semantics of its own.
 genProgram = import gen-program/lib {
   prelude = gen-prelude.lib;
   scope = gen-scope.lib;
+  algebra = gen-algebra.lib;
+  identity = gen-identity.lib;
 };
 
-program = genProgram.program {
-  declarations = [
-    { head = "guard:B"; relata = [ ]; }
-    { head = "member:X"; pos = [ "guard:B" ]; relata = [ ]; }
-    { head = "guard:A"; pos = [ "member:X" ]; neg = [ "excluded:X" ]; relata = [ ]; }
-  ];
-  frozen = [ ];   # what strictly earlier passes settled
-};
+# `program frozen declarations`: the frozen set (what strictly earlier passes settled), then the
+# declarations it is read against.
+program = genProgram.program [ ] [
+  { head = "guard:B"; relata = [ ]; }
+  { head = "member:X"; pos = [ "guard:B" ]; relata = [ ]; }
+  { head = "guard:A"; pos = [ "member:X" ]; neg = [ "excluded:X" ]; relata = [ ]; }
+];
 
 model = genProgram.model {
   inherit program;
@@ -92,7 +93,7 @@ support lies outside this program, and it enters by being exempt from the greate
 ```nix
 model = genProgram.model {
   prior = null;
-  program = genProgram.program { declarations = …; frozen = …; };
+  program = genProgram.program frozen declarations;
   interpretation = [ { atom = "member:X"; verdict = "undefined"; } ];
   complete = false;
 };
@@ -232,7 +233,7 @@ other.
 A declaration may carry a **`label`**. It then asserts that its head, when included, **is** the
 edge `{ from = relata[0]; to = relata[1]; label; }` — the label is the rule's own, never parsed out
 of the atom, and the endpoints are relata that already passed the frozen-set check.
-`ruleEdges { declarations, model }` returns two plain edge lists:
+`ruleEdges model declarations` returns two plain edge lists:
 
 - **`candidates`** — every labelled edge, whatever it resolves to. A function of the declarations
   alone: it never forces `model`, so a gate over the declared edges reads it at registration.
@@ -275,7 +276,7 @@ same walk the formers run, and a bare lambda is refused with the signpost to the
 The declared escape is retired: `escape` and `fireEscape` stay as aliases that refuse
 `policy-body/escape-retired`, naming the door, and `admit` refuses an escape record the same way.
 
-A declaration can also write its body as a condition term: `declaration { head; relata; when = all [ (has "a") (not (has "b")) ]; }` is `pos = [ "a" ]; neg = [ "b" ];`, solved by the same
+A declaration can also write its body as a condition term: `declaration { when = all [ (has "a") (not (has "b")) ]; } relata head` is `pos = [ "a" ]; neg = [ "b" ];`, solved by the same
 well-founded engine.
 
 ## The budget, and the curve it is derived from
@@ -381,7 +382,7 @@ nix-unit --flake ./ci#testsError             # the error cells, unguarded
 # name, `_`-prefixed included); `git add` it or move it. The unguarded forms read a git-filtered
 # copy of the tree, so an untracked cell is silently absent and the run stays green.
 
-# The requiredness the language refuses uncatchably, exhibited as an exit status.
+# The constructor's refusal of an omitted `adjudication`, exhibited as an exit status.
 # Read it UNPIPED — under zsh a pipeline's per-stage status is `$pipestatus`, lowercase.
 nix eval --impure -f ci/bench/requiredness-probe.nix dropped    # MUST fail, naming the field
 nix eval --impure -f ci/bench/requiredness-probe.nix attached   # MUST succeed — the control

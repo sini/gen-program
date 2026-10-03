@@ -153,39 +153,29 @@ let
   # something refused would be equally satisfied by a construction with one refusal in it, so the
   # CONTENT is computed by a function a caller can call and a cell can assert. The throw renders
   # what this returns; it does not re-derive it.
-  # RECORD class (den-hoag-7gp66 P1, R5): `declarations`/`frozen` were a native closed formal, so a
-  # missing one aborted uncatchably past `tryEval` (ADR-0025 item 1). `checkRequired` (gate C3)
-  # makes that refusal NAMED and CATCHABLE; R5's stated price is that the door is now OPEN — an
-  # extra field is admitted, never refused. `declaration` keeps its native formal, unlike this
-  # door, because den-hoag-bkdkg rules that a WRAPPER here would erase what `builtins.functionArgs`
-  # reads — but the owner's arm (C) ruling (den-hoag-7gp66, 2026-09-27) is not a wrapper: an
-  # ellipsis formal (`{ …, ... }@args:`) keeps `functionArgs` exact while the body runs
-  # `prelude.checkOptions` over the raw `args`, so `declaration` takes it below.
+  # POSITIONAL (den-hoag-7gp66 P2, rule 4): `unresolvedRelata frozen declarations`. The
+  # declarations are what is read, so they are the subject and go last; the frozen set is what
+  # they are read against, which is configuration. Positional arity is structural, so the P1
+  # `checkRequired` retires.
   unresolvedRelata =
-    args:
+    frozen: declarations:
     let
-      inherit (prelude.checkRequired "gen-program.unresolvedRelata" [ "declarations" "frozen" ] args)
-        declarations
-        frozen
-        ;
       settled = builtins.seq (identifiers "unresolvedRelata" "the frozen set" frozen) (
         prelude.genAttrs frozen (_: true)
       );
     in
     prelude.unique (
       prelude.filter (id: !(settled ? ${id})) (
-        prelude.concatMap (d: d.relata) (map declaration declarations)
+        prelude.concatMap (d: d.relata) (map declarationRecord declarations)
       )
     );
 
   # ── THE DECLARATION ──
-  # AN ELLIPSIS PATTERN (den-hoag-7gp66 P1, arm (C)): `relata` and `head` still refuse a MISSING
-  # value the evaluator's own way — uncatchable past `tryEval`, which is O6's stated requirement —
-  # because neither carries a default. An UNKNOWN field used to refuse the identical uncatchable
-  # way (a native closed formal draws no distinction between the two failure modes); the `...` opens
-  # that formal and `prelude.checkOptions`, run over the raw `args` at application, now names and
-  # catches it instead. The accepted set is read off the pattern itself
-  # (`builtins.functionArgs declaration`) rather than hand-copied, so the two cannot drift.
+  # A declaration AS DATA is a record, `{ head; relata; pos ? [ ]; neg ? [ ]; label ? null; when ?
+  # null; }`, and that is the shape `program`'s list, `rule` and `ruleEdges` take. `declarationRecord`
+  # is its normaliser: an unknown field and a missing `head` or `relata` are both refused by name and
+  # catchably (`checkOptions` over `checkRequired`), where the native formal of P1 aborted
+  # uncatchably on a missing one.
   # `pos` and `neg` default because ADR-0020's own base case says a declaration with neither body is
   # a fact; `relata` does NOT, because a defaulted empty relatum list is a decision nobody made and
   # nobody can see — it would silently assert "this declaration relates nothing" and skip the
@@ -196,58 +186,80 @@ let
   # parsed out of the atom — an atom is a string the caller wrote. A declaration is labelled exactly
   # when `label != null`, so an explicit `null` is the omission and never a null-labelled edge. The
   # rule ignores it: `rule` builds from `head`, `pos` and `neg` alone.
-  declaration =
-    {
-      head,
-      pos ? [ ],
-      neg ? [ ],
-      relata,
-      label ? null,
-      when ? null,
-      ...
-    }@args:
+  declarationOptions = [
+    "pos"
+    "neg"
+    "label"
+    "when"
+  ];
+  declarationRecord =
+    args:
     let
+      a = prelude.checkOptions "gen-program.declaration" (
+        [
+          "head"
+          "relata"
+        ]
+        ++ declarationOptions
+      ) (prelude.checkRequired "gen-program.declaration" [ "head" "relata" ] args);
+      inherit (a) head relata;
+      pos = a.pos or [ ];
+      neg = a.neg or [ ];
+      label = a.label or null;
+      when = a.when or null;
       lowered =
         if when == null then
           { inherit pos neg; }
-        else if args ? pos || args ? neg then
+        else if a ? pos || a ? neg then
           throw "gen-program.declaration: `when` and `pos`/`neg` are two writings of one body; write one"
         else
           lowerWhen when;
     in
-    builtins.seq
-      (prelude.checkOptions "gen-program.declaration" (builtins.attrNames (
-        builtins.functionArgs declaration
-      )) args)
-      (
-        builtins.seq
-          (
-            identifier "declaration" "the head" head
-            && identifiers "declaration" "pos" lowered.pos
-            && identifiers "declaration" "neg" lowered.neg
-            && identifiers "declaration" "relata" relata
-            && (
-              label == null
-              || builtins.isString label
-              || throw "gen-program.declaration: the label is a ${builtins.typeOf label}, expected an edge label (a string) or null"
-            )
+    builtins.seq a (
+      builtins.seq
+        (
+          identifier "declaration" "the head" head
+          && identifiers "declaration" "pos" lowered.pos
+          && identifiers "declaration" "neg" lowered.neg
+          && identifiers "declaration" "relata" relata
+          && (
+            label == null
+            || builtins.isString label
+            || throw "gen-program.declaration: the label is a ${builtins.typeOf label}, expected an edge label (a string) or null"
           )
-          {
-            inherit (lowered) pos neg;
-            inherit
-              head
-              relata
-              label
-              ;
-          }
+        )
+        {
+          inherit (lowered) pos neg;
+          inherit
+            head
+            relata
+            label
+            ;
+        }
+    );
+
+  # The published door (den-hoag-7gp66 P2, rules 1, 2 and 4; OQ14 (β)): `declaration { pos?; neg?;
+  # label?; when?; } relata head`. The defaulted fields are one closed options set, first, and its
+  # contract is published as data (`__contract`, read by `prelude.functionArgs`). `head` is the
+  # subject — the fact the declaration asserts, as `scope.mkRule { … } head` takes its own — and
+  # `relata`, the identifiers it is resolved against, is configuration before it.
+  declaration =
+    prelude.door
+      {
+        name = "gen-program.declaration";
+        optional = declarationOptions;
+      }
+      (
+        o: relata: head:
+        declarationRecord (o // { inherit head relata; })
       );
 
-  # One declaration's rule. The relata do not appear: they are IDENTIFIERS resolved against the
-  # frozen set, and the rule's atoms are MEMBERSHIP FACTS.
+  # One declaration's rule, from the declaration as data. The relata do not appear: they are
+  # IDENTIFIERS resolved against the frozen set, and the rule's atoms are MEMBERSHIP FACTS.
   rule =
     d:
     let
-      normalized = declaration d;
+      normalized = declarationRecord d;
     in
     scope.mkRule {
       inherit (normalized) pos neg;
@@ -259,15 +271,11 @@ let
   # them — and with no minted atoms there is nothing to carry, so the wrapper goes too. A program
   # is plain data by its own module's statement, so handing it back as itself re-exports no build
   # (ADR-0014) and puts no second shape in front of a consumer.
-  # RECORD class (den-hoag-7gp66 P1, R5) — same rationale as `unresolvedRelata` above.
+  # POSITIONAL (den-hoag-7gp66 P2, rule 4): `program frozen declarations`, as `unresolvedRelata`.
   program =
-    args:
+    frozen: declarations:
     let
-      inherit (prelude.checkRequired "gen-program.program" [ "declarations" "frozen" ] args)
-        declarations
-        frozen
-        ;
-      unresolved = unresolvedRelata { inherit declarations frozen; };
+      unresolved = unresolvedRelata frozen declarations;
     in
     if unresolved != [ ] then
       throw "gen-program: ${quoteAll unresolved} is not in the frozen set of relata that strictly earlier passes settled, so it does not resolve — a same-pass reference and a root relatum both reach this refusal by that one path, and neither is named as a cycle because a stratum's in-flight output is not nameable from inside it"
@@ -279,6 +287,7 @@ in
     rule
     program
     declaration
+    declarationRecord
     unresolvedRelata
     ;
 }

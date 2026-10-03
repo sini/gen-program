@@ -160,17 +160,19 @@ let
   # ── THE ADJUDICATION ──
   # Total: every branch returns a NAMED outcome with its ground. There is no path that returns
   # nothing, and none that returns an outcome without saying what decided it.
-  # RECORD class (den-hoag-7gp66 P1, R5): `program`/`model`/`interpretation` were a native closed
-  # formal, so a missing one aborted uncatchably past `tryEval`. `checkRequired` (gate C3) makes
-  # that refusal NAMED and CATCHABLE; the price is an extra field is admitted, never refused (R5).
-  adjudicate =
-    args:
+  # ONE KEYED RECORD, OPEN (den-hoag-7gp66 P2, rule 5 and the keyed-record ruling): the model is
+  # what is judged, and `program` and `interpretation` are two configuration operands with no
+  # natural order, so the three stay one record named at the call site. A missing field is refused
+  # by name and catchably at the door; an extra one is admitted (R5). `adjudicateCore` is the
+  # unchecked core `model` calls.
+  adjudicateCore =
+    {
+      program,
+      model,
+      interpretation,
+      ...
+    }:
     let
-      inherit (prelude.checkRequired "gen-program.adjudicate" [ "program" "model" "interpretation" ] args)
-        program
-        model
-        interpretation
-        ;
       undefined = model.undefinedAtoms;
       contested = prelude.length undefined;
       trueSet = prelude.genAttrs model.trueAtoms (_: true);
@@ -260,9 +262,18 @@ let
         searched = true;
         candidatesTested = final.tested;
       };
+  adjudicate = prelude.door {
+    name = "gen-program.adjudicate";
+    required = [
+      "program"
+      "model"
+      "interpretation"
+    ];
+    open = true;
+  } adjudicateCore;
 in
 {
-  inherit adjudicate;
+  inherit adjudicate adjudicateCore;
   # Published under names that say WHICH budget and WHICH criterion. A bare `budget` on a library
   # surface is a number whose axis a reader has to go and find, and this one prices the contested
   # count and nothing else.

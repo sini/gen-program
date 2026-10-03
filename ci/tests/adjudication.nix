@@ -14,11 +14,11 @@
 # ★★ SO THE CONTROLS DISCRIMINATE THE CHANNEL, NOT THE PROGRAM, ON THREE AXES:
 #   (i)   INDEPENDENCE — the field is present on a result whose `provenance` is EMPTY and on one
 #         whose `provenance` is POPULATED, proving it is not `provenance` under another name.
-#   (ii)  REQUIREDNESS — the formal carries no default, so a construction that omits it does not
-#         apply. ★ The evaluator's refusal for a missing required argument is UNCATCHABLE —
-#         `tryEval` does not contain it, which `ci/bench/requiredness-probe.nix` exhibits and the
-#         README records — so what a CELL can read is the formal itself, through
-#         `builtins.functionArgs`. The mutant beside it is a constructor with the field DEFAULTED,
+#   (ii)  REQUIREDNESS — the field carries no default, so a construction that omits it does not
+#         apply. The constructor is a door (den-hoag-7gp66 P2, OQ14 (β)) that publishes its
+#         contract as data, so what a CELL reads is that contract, through the functor-aware
+#         `prelude.functionArgs`; the door's refusal of an omitted field is caught and named
+#         (`ci/tests-error.nix`). The mutant beside it is a constructor with the field DEFAULTED,
 #         which reads `true` in the same call: without it the cell would pass against any reading
 #         at all.
 #   (iii) NOT A SIDE CHANNEL — the statement survives being carried across an evaluation boundary
@@ -38,10 +38,7 @@ let
     declarations:
     genProgram.model {
       prior = null;
-      program = genProgram.program {
-        inherit declarations;
-        frozen = [ ];
-      };
+      program = genProgram.program [ ] declarations;
       # These cells are about the un-interpreted case; the interpreted boundary is
       # ci/tests/carry.nix, where the interpretation is the subject rather than a constant.
       interpretation = [ ];
@@ -385,7 +382,7 @@ in
 
     # ── AXIS (ii): REQUIREDNESS ──
     test-the-adjudication-formal-carries-no-default = {
-      expr = (builtins.functionArgs genProgram.mkModel).adjudication;
+      expr = (prelude.functionArgs genProgram.mkModel).adjudication;
       expected = false;
     };
 
@@ -397,7 +394,7 @@ in
     # Every formal of the real constructor is required, so there is no field of the result record
     # a construction can silently omit.
     test-control-no-formal-of-the-constructor-carries-a-default = {
-      expr = builtins.functionArgs genProgram.mkModel;
+      expr = prelude.functionArgs genProgram.mkModel;
       expected = {
         adjudication = false;
         complete = false;

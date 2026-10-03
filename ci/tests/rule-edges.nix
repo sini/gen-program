@@ -13,17 +13,12 @@ let
       prior ? null,
     }:
     genProgram.model {
-      program = genProgram.program { inherit declarations frozen; };
+      program = genProgram.program frozen declarations;
       interpretation = [ ];
       inherit complete prior;
     };
 
-  edgesOf =
-    args:
-    genProgram.ruleEdges {
-      inherit (args) declarations;
-      model = solve args;
-    };
+  edgesOf = args: genProgram.ruleEdges (solve args) args.declarations;
 
   # A conditional edge and an unlabelled conditional promotion over the same guard: the edge holds
   # while `snag:loom` is not derived.
@@ -78,10 +73,7 @@ let
     frozen = weaveFrozen;
   };
 
-  noModel = genProgram.ruleEdges {
-    declarations = weave;
-    model = throw "no model was asked for";
-  };
+  noModel = genProgram.ruleEdges (throw "no model was asked for") weave;
   forces = v: (builtins.tryEval (builtins.deepSeq v true)).success;
 
   ab = [

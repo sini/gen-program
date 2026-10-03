@@ -26,15 +26,12 @@ let
 
   build =
     relata:
-    genProgram.program {
-      declarations = [
-        {
-          head = "promotes:${builtins.head (relata ++ [ "nothing" ])}";
-          inherit relata;
-        }
-      ];
-      inherit frozen;
-    };
+    genProgram.program frozen [
+      {
+        head = "promotes:${builtins.head (relata ++ [ "nothing" ])}";
+        inherit relata;
+      }
+    ];
 
   refused = expr: !(builtins.tryEval (builtins.deepSeq expr expr)).success;
 
@@ -44,15 +41,12 @@ let
   # equally satisfied by a construction with one refusal in it.
   unresolvedFor =
     relata:
-    genProgram.unresolvedRelata {
-      declarations = [
-        {
-          head = "h";
-          inherit relata;
-        }
-      ];
-      inherit frozen;
-    };
+    genProgram.unresolvedRelata frozen [
+      {
+        head = "h";
+        inherit relata;
+      }
+    ];
 in
 {
   flake.tests.staging = {
@@ -127,23 +121,24 @@ in
       expected = [ "promotes:earlier:node" ];
     };
 
-    # A declaration relating nothing must SAY so: `relata` carries no default, so a construction
-    # that omits it does not apply. The refusal is the evaluator's and is uncatchable, so what is
-    # asserted here is the formal's requiredness, which is readable in-language.
+    # A declaration relating nothing must SAY so: `relata` carries no default. At the door it is a
+    # positional operand (den-hoag-7gp66 P2, rule 4), so it is not among the published options, and
+    # as data a record without it is refused by name (`ci/tests-error.nix`).
     test-relata-is-a-required-field-of-a-declaration = {
-      expr = (builtins.functionArgs genProgram.declaration).relata;
+      expr = builtins.elem "relata" genProgram.declaration.__contract.optional;
       expected = false;
     };
 
     test-control-the-body-fields-are-optional-in-the-same-reading = {
-      expr = {
-        inherit (builtins.functionArgs genProgram.declaration) pos neg head;
-      };
-      expected = {
-        pos = true;
-        neg = true;
-        head = false;
-      };
+      expr = builtins.filter (f: builtins.elem f genProgram.declaration.__contract.optional) [
+        "pos"
+        "neg"
+        "head"
+      ];
+      expected = [
+        "pos"
+        "neg"
+      ];
     };
   };
 }

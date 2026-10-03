@@ -1,269 +1,317 @@
-# THE CLOSED-DOOR CHECKS (den-hoag-7gp66 P1) — every published door catches its own violations.
+# THE DOOR CHECKS (den-hoag-7gp66 P2 — `prelude.door`, R7 argument structure / R5 field closure) —
+# every published step of gen-program that takes a RECORD catches its own violations, at its own
+# application, catchably.
 #
-# A native closed formal (`{ declarations, frozen }:` and its siblings) aborts UNCATCHABLY on a
-# missing argument — not even `builtins.tryEval` sees it, which is ADR-0025 item 1's named defect.
-# `unresolvedRelata`, `program`, `body` and `adjudicate` now take a bare positional formal and
-# apply gen-prelude's shared `checkRequired` (0ac7b66) instead, so the same violation is NAMED and
-# CATCHABLE.
-#
-# ★ THE FIRST FOUR ARE RECORD-CLASS DOORS: every field is required, so `checkRequired` runs alone
-# and R5's stated price applies uniformly — the door is OPEN, an extra field is admitted, never
-# refused.
-#
-# ★★ `declaration`, `model` and `mkModel` ARE NATIVE-ELLIPSIS CLASS DOORS instead
-# (den-hoag-7gp66 P1, owner-ruled arm (C)): each is read by `builtins.functionArgs` from an ORACLE
-# this repository already ships (O6, `identifier-doors.nix`, `relation.nix`, `staging.nix`,
-# `surface.nix`, `adjudication.nix`), and den-hoag-bkdkg rules that a WRAPPER
-# around the door is detectable — it erases the formals a caller reads. The ruled resolution is not
-# a wrapper: the pattern stays native (so a MISSING required field still aborts the evaluator's own
-# uncatchable way, undisturbed and untested here — that is O6's requirement, not this suite's
-# subject) and gains an `...` formal, and the body runs `prelude.checkOptions` over the raw `args`
-# so an UNKNOWN field is what moves — named and caught instead of aborting the identical uncatchable
-# way a missing one still does. `builtins.functionArgs` reads the same named formals either way,
-# which is what keeps the oracle assertions above unmoved. (`escape` was the fourth; it is retired,
-# den-hoag-lwbb1 unit 3 U3r, and refuses every argument by name — `terms-only.nix`'s
-# `test-escape-retired`, including an unknown field.)
+# After P2 a door step is one of two kinds (spec §p2.3.1):
+#   · an OPTIONS step — one closed set, first in the call: `declaration { pos?; neg?; label?;
+#     when?; } relata head` and `groundInstances { door?; sources?; } context body`;
+#   · a KEYED RECORD — open (R5), every field required, kept as one record because its fields are
+#     two or more configuration operands with no natural order (the keyed-record ruling,
+#     2026-09-28): `model`, `mkModel`, `adjudicate`, `body`.
+# `program frozen declarations`, `unresolvedRelata frozen declarations` and `ruleEdges model
+# declarations` are positional (rule 4): their arity is structural and they carry no row. No record
+# step sits behind an options step here, so no door carries `optionsStep` (G10 has no row).
 #
 # WHICH refusal fired is a claim about the message and `tryEval` yields only `success`; the byte
 # goldens naming each door (R6) live in `ci/tests-error.nix`'s `flake.testsError`.
 {
   genProgram,
   scope,
+  prelude,
   ...
 }:
 let
-  inherit (genProgram)
-    unresolvedRelata
-    program
-    body
-    adjudicate
-    declaration
-    model
-    mkModel
-    ;
-
-  # `success == false` pins catchability, not the message — the byte goldens are the message's own
-  # test. Forced with `deepSeq null` so a lazily-returned attrset's unread check still runs.
-  refusesCatchably = e: !(builtins.tryEval (builtins.deepSeq e null)).success;
+  # `firesAtApplication` forces the door's application to WHNF only — never `deepSeq` — so a check
+  # that ran only behind a later field read reads `false` (spec §p2.5, premise 5).
+  firesAtApplication = e: !(builtins.tryEval (builtins.seq e null)).success;
   answers = e: (builtins.tryEval (builtins.deepSeq e null)).success;
 
-  # ★ `firesAtApplication` (den-hoag-7gp66 P1 strictness sweep) is `refusesCatchably`'s WHNF-only
-  # twin: a bare `builtins.seq`, matching what merely APPLYING a door forces, with no later field
-  # read. This is the distinct defect the sweep measured on `body`: `refusesCatchably` above passed
-  # for a missing required field there even before the strictness fix, because `deepSeq` reached the
-  # refusal's `culprit` field and re-triggered a check that a bare `seq` on the door's own return
-  # never touched. `answers`'s WHNF twin is not needed — an admitted RECORD-class extra field is a
-  # data question (does it construct), not a strictness one.
-  firesAtApplication = e: !(builtins.tryEval (builtins.seq e null)).success;
-
-  validProgram = program {
-    declarations = [ ];
-    frozen = [ ];
+  validProgram = genProgram.program [ ] [ ];
+  validSolved = scope.solve [ ] validProgram;
+  adjudication = genProgram.adjudicate {
+    program = validProgram;
+    model = validSolved;
+    interpretation = [ ];
   };
-  validInterpretation = [ ];
-  validSolved = scope.solve validInterpretation validProgram;
+
+  # The options rows: the door, its options, and one non-default option whose value the door's
+  # own result carries (G3). `apply` supplies the operands after the options step.
+  optionsRows = {
+    declaration = {
+      optional = [
+        "pos"
+        "neg"
+        "label"
+        "when"
+      ];
+      apply = f: f [ "x" ] "h";
+      observe = r: r.neg;
+      opt = {
+        neg = [ "q" ];
+      };
+    };
+    groundInstances = {
+      optional = [
+        "door"
+        "sources"
+      ];
+      # A body with one door clause: the `door` option is what resolves it, so the result reads
+      # the option (G3); with `{ }` the door clause resolves to nothing.
+      apply =
+        f:
+        f { } (
+          genProgram.body {
+            name = "g3";
+            declared = null;
+            clauses = [ ];
+          }
+        );
+      observe = r: r;
+      opt = null;
+    };
+  };
+
+  # The keyed-record rows: the door, its required fields, and a `good` record that answers (each
+  # row's live control, so a refusal below is the check firing, not a broken fixture).
+  recordRows = {
+    model = {
+      required = [
+        "program"
+        "interpretation"
+        "complete"
+        "prior"
+      ];
+      good = {
+        program = validProgram;
+        interpretation = [ ];
+        complete = true;
+        prior = null;
+      };
+    };
+    mkModel = {
+      required = [
+        "solved"
+        "program"
+        "adjudication"
+        "complete"
+      ];
+      good = {
+        solved = validSolved;
+        program = validProgram;
+        inherit adjudication;
+        complete = true;
+      };
+    };
+    adjudicate = {
+      required = [
+        "program"
+        "model"
+        "interpretation"
+      ];
+      good = {
+        program = validProgram;
+        model = validSolved;
+        interpretation = [ ];
+      };
+    };
+    body = {
+      required = [
+        "name"
+        "clauses"
+        "declared"
+      ];
+      good = {
+        name = "x";
+        clauses = [ ];
+        declared = null;
+      };
+    };
+  };
+
+  # A field name no door declares, generated per evaluation from the door names themselves, so it is
+  # never a name any contract below lists.
+  stranger = "not-a-field-of-" + builtins.concatStringsSep "-" (builtins.attrNames recordRows);
+
+  perOptions = f: builtins.mapAttrs f optionsRows;
+  perRecord = f: builtins.mapAttrs f recordRows;
+  allTrue = rows: builtins.all (x: x) (builtins.attrValues rows);
+
+  # Every published value that is a door (a functor carrying `__contract`).
+  surfaceDoors = builtins.attrNames (
+    prelude.filterAttrs (_: v: builtins.isAttrs v && v ? __functor && v ? __contract) genProgram
+  );
 in
 {
   flake.tests.door-checks = {
-    # ★ LIVE CONTROL FOR THE WHOLE SUITE, first: `tryEval` catches an ORDINARY throw, and a
-    # non-throwing value answers. Without this, every `refusesCatchably`/`answers` cell below is
-    # equally consistent with a broken helper that reads `false` no matter what it is handed.
-    test-control-tryeval-catches-an-ordinary-throw = {
-      expr = refusesCatchably (throw "control probe, not this suite's subject");
-      expected = true;
-    };
-    test-control-tryeval-answers-a-non-throwing-value = {
-      expr = answers 1;
-      expected = true;
-    };
-
-    # ★★ LIVE CONTROL FOR `firesAtApplication`, BOTH ARMS: a throw hidden behind an unread field
-    # reads `false` — the predicate does not mistake a merely-`deepSeq`-reachable check for a
-    # WHNF-strict one — and a bare throw reads `true`. This is `body`'s own pre-fix shape (a throw
-    # reachable only through a field nothing here forces) in miniature, so a `false` on the door
-    # cells below is attributable to the SAME mechanism this control exercises, not a fluke.
-    test-control-firesAtApplication-is-false-for-a-throw-behind-an-unread-field = {
-      expr = firesAtApplication { culprit = throw "control probe, not this suite's subject"; };
-      expected = false;
-    };
+    # ── LIVE CONTROLS, first: the predicates are not dead ──
     test-control-firesAtApplication-is-true-for-an-ordinary-throw = {
       expr = firesAtApplication (throw "control probe, not this suite's subject");
       expected = true;
     };
-
-    # unresolvedRelata — RECORD class.
-    test-unresolvedRelata-missing-required-field-refused-catchably = {
-      expr = refusesCatchably (unresolvedRelata {
-        declarations = [ ];
-      });
-      expected = true;
-    };
-    test-unresolvedRelata-extra-field-on-a-record-is-admitted = {
-      expr = answers (unresolvedRelata {
-        declarations = [ ];
-        frozen = [ ];
-        zzqran7f = 1;
-      });
-      expected = true;
-    };
-    test-unresolvedRelata-valid-call-is-unchanged = {
-      expr = unresolvedRelata {
-        declarations = [ ];
-        frozen = [ ];
-      };
-      expected = [ ];
+    test-control-firesAtApplication-is-false-for-a-throw-behind-an-unread-field = {
+      expr = firesAtApplication { culprit = throw "control probe, not this suite's subject"; };
+      expected = false;
     };
 
-    # program — RECORD class.
-    test-program-missing-required-field-refused-catchably = {
-      expr = refusesCatchably (program {
-        declarations = [ ];
-      });
-      expected = true;
+    # ── THE TABLE IS THE SURFACE ──
+    # Every published door has a row and every row is a published door, so a door added without a
+    # row — or a row whose door reverted to a lambda — reds here.
+    test-the-door-table-equals-the-surface-doors = {
+      expr = surfaceDoors;
+      expected = builtins.sort (a: b: a < b) (
+        builtins.attrNames optionsRows ++ builtins.attrNames recordRows
+      );
     };
-    test-program-extra-field-on-a-record-is-admitted = {
-      expr = answers (program {
-        declarations = [ ];
-        frozen = [ ];
-        zzqran7f = 1;
-      });
-      expected = true;
-    };
-
-    # body — RECORD class.
-    test-body-missing-required-field-refused-catchably = {
-      expr = refusesCatchably (body {
-        name = "x";
-      });
-      expected = true;
-    };
-    # ★ den-hoag-7gp66 P1 strictness fix, 2026-09-27: RED on the pre-fix door — `refusesCatchably`
-    # above already passed on the unfixed door, because `deepSeq` reached the returned refusal's
-    # `culprit` field and re-triggered `checkRequired`'s cached throw; a bare `builtins.seq` on the
-    # door's own return did not, so the check ran only behind a field read nothing at application
-    # forces. `builtins.seq checked (…)` at the return is what makes this cell strict.
-    test-body-missing-required-field-fires-at-application = {
-      expr = firesAtApplication (body {
-        name = "x";
-      });
-      expected = true;
-    };
-    test-body-extra-field-on-a-record-is-admitted = {
-      expr = answers (body {
-        name = "x";
-        clauses = [ ];
-        declared = null;
-        zzqran7f = 1;
-      });
-      expected = true;
-    };
-    test-body-valid-call-is-unchanged = {
-      expr = body {
-        name = "x";
-        clauses = [ ];
-        declared = null;
-      };
-      expected = {
-        refused = false;
-        opaque = false;
-        name = "x";
-        clauses = [ ];
-        declared = null;
-      };
+    test-the-positional-entries-are-plain-lambdas = {
+      expr = map (n: builtins.isFunction genProgram.${n}) [
+        "program"
+        "unresolvedRelata"
+        "ruleEdges"
+      ];
+      expected = [
+        true
+        true
+        true
+      ];
     };
 
-    # adjudicate — RECORD class.
-    test-adjudicate-missing-required-field-refused-catchably = {
-      expr = refusesCatchably (adjudicate {
-        program = validProgram;
-        model = validSolved;
-      });
-      expected = true;
+    # ── OPTIONS STEPS ──
+    # G1/G4: an unknown option is refused at `f opts`'s WHNF, before any operand.
+    test-an-unknown-option-is-refused-at-the-options-application = {
+      expr = perOptions (n: _: firesAtApplication (genProgram.${n} { ${stranger} = 1; }));
+      expected = perOptions (_: _: true);
     };
-    test-adjudicate-extra-field-on-a-record-is-admitted = {
-      expr = answers (adjudicate {
-        program = validProgram;
-        model = validSolved;
-        interpretation = validInterpretation;
-        zzqran7f = 1;
-      });
-      expected = true;
+    test-a-non-set-options-argument-is-refused-at-the-application = {
+      expr = perOptions (n: _: firesAtApplication (genProgram.${n} 1));
+      expected = perOptions (_: _: true);
     };
-    test-adjudicate-valid-call-is-unchanged = {
+    # The live control: `{ }` forms the door and the operands answer.
+    test-control-the-empty-options-answer = {
+      expr = perOptions (n: r: answers (r.apply (genProgram.${n} { })));
+      expected = perOptions (_: _: true);
+    };
+    # D3: the published contract and the functor-aware reader agree with the row.
+    test-each-options-door-publishes-its-contract = {
+      expr = perOptions (
+        n: _: {
+          inherit (genProgram.${n}.__contract) optional open required;
+          args = prelude.functionArgs genProgram.${n};
+        }
+      );
+      expected = perOptions (
+        _: r: {
+          inherit (r) optional;
+          open = false;
+          required = [ ];
+          args = builtins.listToAttrs (map (f: prelude.nameValuePair f true) r.optional);
+        }
+      );
+    };
+    # G3: a non-default option reaches the result, and agrees with the full call. `groundInstances`
+    # has no option whose value its own result carries over a closed body — `door` and `sources` are
+    # read only by a door clause's firing — so G4 alone stands for it, named here.
+    test-a-non-default-option-reaches-the-result = {
       expr =
-        (adjudicate {
-          program = validProgram;
-          model = validSolved;
-          interpretation = validInterpretation;
-        }).outcome;
-      expected = "admitted";
+        let
+          r = optionsRows.declaration;
+          f1 = genProgram.declaration r.opt;
+        in
+        {
+          agree = r.observe (r.apply f1) == r.observe (genProgram.declaration r.opt [ "x" ] "h");
+          differ = r.observe (r.apply f1) != r.observe (r.apply (genProgram.declaration { }));
+        };
+      expected = {
+        agree = true;
+        differ = true;
+      };
+    };
+    test-g3-names-the-door-whose-result-carries-no-option = {
+      expr = builtins.attrNames (prelude.filterAttrs (_: r: r.opt == null) optionsRows);
+      expected = [ "groundInstances" ];
     };
 
-    # declaration/model/mkModel — NATIVE-ELLIPSIS class (arm (C)). A MISSING required field
-    # is not tested here: it is still the evaluator's own uncatchable abort, untouched by this
-    # landing (O6's requirement) — `ci/tests/staging.nix` and its siblings already pin that the
-    # formal stays required. What is new is that an UNKNOWN field, which used to abort the
-    # identical uncatchable way, is now named and caught by `prelude.checkOptions`.
-    test-declaration-unknown-field-refused-catchably = {
-      expr = refusesCatchably (declaration {
-        head = "h";
-        relata = [ ];
-        zzqran7f = 1;
-      });
-      expected = true;
+    # ── KEYED RECORDS ──
+    # The live control: each row's `good` record answers through its door.
+    test-control-each-good-record-answers = {
+      expr = perRecord (n: r: answers (genProgram.${n} r.good));
+      expected = perRecord (_: _: true);
     };
-    test-model-unknown-field-refused-catchably = {
-      expr = refusesCatchably (model {
-        program = validProgram;
-        interpretation = validInterpretation;
-        complete = true;
-        prior = null;
-        zzqran7f = 1;
-      });
-      expected = true;
+    # D2: EVERY required field, dropped alone, is refused at the application — including the two the
+    # ea3j4 landing gate named (`model` without `prior`, `mkModel` without `program`).
+    test-each-missing-field-is-refused-at-the-application = {
+      expr = perRecord (
+        n: r:
+        allTrue (
+          prelude.genAttrs r.required (f: firesAtApplication (genProgram.${n} (removeAttrs r.good [ f ])))
+        )
+      );
+      expected = perRecord (_: _: true);
     };
-    test-mkModel-unknown-field-refused-catchably = {
-      expr = refusesCatchably (mkModel {
-        solved = validSolved;
-        program = validProgram;
-        adjudication = null;
-        complete = true;
-        zzqran7f = 1;
-      });
-      expected = true;
+    test-a-non-set-record-is-refused-at-the-application = {
+      expr = perRecord (n: _: firesAtApplication (genProgram.${n} 1));
+      expected = perRecord (_: _: true);
+    };
+    # G2: R5's price — an extra field is admitted, and the answer is unchanged.
+    test-an-extra-field-is-admitted = {
+      expr = perRecord (n: r: answers (genProgram.${n} (r.good // { ${stranger} = 1; })));
+      expected = perRecord (_: _: true);
+    };
+    # D3.
+    test-each-record-door-publishes-its-contract = {
+      expr = perRecord (
+        n: _: {
+          inherit (genProgram.${n}.__contract) required optional open;
+          args = prelude.functionArgs genProgram.${n};
+        }
+      );
+      expected = perRecord (
+        _: r: {
+          inherit (r) required;
+          optional = [ ];
+          open = true;
+          args = builtins.listToAttrs (map (f: prelude.nameValuePair f false) r.required);
+        }
+      );
     };
 
-    # ★ den-hoag-7gp66 P1 strictness sweep, 2026-09-27: the three cells above already used
-    # `refusesCatchably` (`deepSeq`); these re-assert the identical calls with `firesAtApplication`
-    # (a bare `seq`) to pin that each door's `checkOptions` runs unconditionally at the top of its
-    # own body — `builtins.seq (checkOptions …) (…)` — rather than only behind a later field read,
-    # which is the defect class `body` had (see above) and these three doors never did.
-    test-declaration-unknown-field-fires-at-application = {
-      expr = firesAtApplication (declaration {
-        head = "h";
-        relata = [ ];
-        zzqran7f = 1;
-      });
+    # ── A DECLARATION AS DATA ──
+    # An entry of `program`'s list is normalised by the declaration door's record core: an unknown
+    # field and a missing `head` or `relata` are refused catchably, where the native formal aborted.
+    test-a-declaration-record-with-an-unknown-field-is-refused = {
+      expr = firesAtApplication (
+        genProgram.program
+          [ ]
+          [
+            {
+              head = "h";
+              relata = [ ];
+              ${stranger} = 1;
+            }
+          ]
+      );
       expected = true;
     };
-    test-model-unknown-field-fires-at-application = {
-      expr = firesAtApplication (model {
-        program = validProgram;
-        interpretation = validInterpretation;
-        complete = true;
-        prior = null;
-        zzqran7f = 1;
-      });
-      expected = true;
+    test-a-declaration-record-missing-a-required-field-is-refused = {
+      expr = map (r: firesAtApplication (genProgram.program [ ] [ r ])) [
+        { relata = [ ]; }
+        { head = "h"; }
+      ];
+      expected = [
+        true
+        true
+      ];
     };
-    test-mkModel-unknown-field-fires-at-application = {
-      expr = firesAtApplication (mkModel {
-        solved = validSolved;
-        program = validProgram;
-        adjudication = null;
-        complete = true;
-        zzqran7f = 1;
-      });
+    test-control-a-whole-declaration-record-answers = {
+      expr = answers (
+        genProgram.program
+          [ ]
+          [
+            {
+              head = "h";
+              relata = [ ];
+            }
+          ]
+      );
       expected = true;
     };
   };

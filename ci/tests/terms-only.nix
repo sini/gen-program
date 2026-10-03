@@ -71,11 +71,7 @@ let
   tuckBody = bodyOf D [ tuck ];
   fire =
     b: ctx: srcs:
-    gp.groundInstances {
-      body = b;
-      context = ctx;
-      sources = srcs;
-    };
+    gp.groundInstances { sources = srcs; } ctx b;
   doorClause = {
     when = t.has "host";
     body = t.ref rDoor;
@@ -128,14 +124,11 @@ let
       scope = { };
     };
   };
-  decl = d: gp.declaration ({ relata = [ "bolt" ]; } // d);
+  decl = d: gp.declaration (removeAttrs d [ "head" ]) [ "bolt" ] d.head;
   modelOf =
     ds:
     gp.model {
-      program = gp.program {
-        frozen = [ "bolt" ];
-        declarations = map (d: { relata = [ "bolt" ]; } // d) ds;
-      };
+      program = gp.program [ "bolt" ] (map (d: { relata = [ "bolt" ]; } // d) ds);
       interpretation = [ ];
       prior = null;
       complete = true;
@@ -278,14 +271,11 @@ in
     test-a-body-without-declared-is-refused-at-firing = {
       expr =
         let
-          r = gp.groundInstances {
-            body = {
-              refused = false;
-              opaque = false;
-              name = "hand-rolled";
-              clauses = [ (builtins.head tuckBody.clauses) ];
-            };
-            context = { };
+          r = gp.groundInstances { } { } {
+            refused = false;
+            opaque = false;
+            name = "hand-rolled";
+            clauses = [ (builtins.head tuckBody.clauses) ];
           };
         in
         {
@@ -315,13 +305,7 @@ in
       expected = "admitted";
     };
     test-door-fires-nested-scope = {
-      expr = strip (
-        gp.groundInstances {
-          body = hostBody;
-          context.host = "h";
-          door = stubDoor;
-        }
-      );
+      expr = strip (gp.groundInstances { door = stubDoor; } { host = "h"; } hostBody);
       expected = [
         {
           ctor = "suppress";
@@ -335,13 +319,7 @@ in
       ];
     };
     test-door-not-fired-when-absent = {
-      expr = strip (
-        gp.groundInstances {
-          body = hostBody;
-          context = { };
-          door = stubDoor;
-        }
-      );
+      expr = strip (gp.groundInstances { door = stubDoor; } { } hostBody);
       expected = [ ];
     };
     # P7: a nested door clause from the door's output passes the same walk as a written one, under
@@ -351,11 +329,7 @@ in
         map
           (
             nested:
-            (gp.groundInstances {
-              body = hostBody;
-              context.host = "h";
-              door = doorAnswering nested;
-            }).code or "fired"
+            (gp.groundInstances { door = doorAnswering nested; } { host = "h"; } hostBody).code or "fired"
           )
           [
             (doorClause // { body = t.lit 1; })
@@ -766,16 +740,16 @@ in
         let
           rulesOf =
             w:
-            (gp.program {
-              frozen = [ "bolt" ];
-              declarations = [
+            (gp.program
+              [ "bolt" ]
+              [
                 {
                   head = "h:bolt";
                   relata = [ "bolt" ];
                   when = w;
                 }
-              ];
-            }).rules;
+              ]
+            ).rules;
           canon = map (
             r:
             r

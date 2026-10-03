@@ -438,13 +438,15 @@ let
 
   isDeclaredSet = d: d == null || (isList d && all isString d);
 
-  # RECORD class (den-hoag-7gp66 P1, R5): `checkRequired` makes a missing field NAMED and CATCHABLE,
-  # and `builtins.seq checked (…)` forces it at application. `declared` is REQUIRED: `null` is
-  # written for the open world, because absence is a decision (spec §4 OQ-D).
-  body =
-    args:
+  # ONE KEYED RECORD, OPEN (den-hoag-7gp66 P2, rule 5 and the keyed-record ruling): the clauses are
+  # what is admitted, and `name` and `declared` are two configuration operands with no natural
+  # order, so the three stay one record. The door refuses a missing field by name and catchably at
+  # the application, and admits an extra one (R5). `declared` is REQUIRED: `null` is written for
+  # the open world, because absence is a decision (spec §4 OQ-D). `bodyCore` is the unchecked core
+  # `admit` calls.
+  bodyCore =
+    checked:
     let
-      checked = prelude.checkRequired "gen-program.body" [ "name" "clauses" "declared" ] args;
       inherit (checked) name clauses declared;
       lst = tryEval (seq clauses (isList clauses));
     in
@@ -470,6 +472,16 @@ let
             clauses = walked;
           }
     );
+
+  body = prelude.door {
+    name = "gen-program.body";
+    required = [
+      "name"
+      "clauses"
+      "declared"
+    ];
+    open = true;
+  } bodyCore;
 
   # ── RETIRED: THE DECLARED ESCAPE (spec §2.10, U3r) ──
   # The gen-rules door exists, so the escape is no longer the closure's path. Each retired binding
@@ -520,7 +532,7 @@ let
         refuse "policy-body/skeleton-malformed" [ "declared" ]
           "a body states its declared coordinate set — absence is a decision, so `null` (the open world) is written"
       else
-        body {
+        bodyCore {
           name = v.name or "(unnamed)";
           inherit (v) clauses declared;
         }
@@ -620,10 +632,28 @@ let
   # spec §2.8). The result is the list of fired declarations, data only, or a refusal. No closure is
   # held or applied: `captured` is handed back to the door unopened (G5). Validating the door's
   # output against its declared codomain is the door's (design Section 4), so it is not re-checked.
+  #
+  # OPTIONS FIRST, THEN POSITIONAL (den-hoag-7gp66 P2, rules 2 and 4): `groundInstances { door ?
+  # null; sources ? { }; } context body`. The two defaulted fields are one closed options set; the
+  # body is what is interpreted, so it is the subject and goes last, and the context it is resolved
+  # at is environment, which is configuration (rule 4).
   groundInstances =
+    prelude.door
+      {
+        name = "gen-program.groundInstances";
+        optional = [
+          "door"
+          "sources"
+        ];
+      }
+      (
+        o: context: body:
+        groundInstancesCore (o // { inherit body context; })
+      );
+  groundInstancesCore =
     args:
     let
-      a = prelude.checkRequired "gen-program.groundInstances" [ "body" "context" ] args;
+      a = args;
       b = a.body;
       door = args.door or null;
 

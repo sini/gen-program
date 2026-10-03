@@ -91,19 +91,18 @@ let
 
   # ── THE RESULT RECORD'S CONSTRUCTOR ──
   # `adjudication` STILL CARRIES NO DEFAULT. A construction that does not attach the field does not
-  # construct: the evaluator refuses the application by name, and that refusal is UNCATCHABLE —
-  # `tryEval` does not contain it — so there is no path on which a result exists without the
-  # statement. That is O6's stated requirement and an ELLIPSIS formal does not touch it.
+  # construct: the door refuses the application by name, so there is no path on which a result
+  # exists without the statement. That is O6's stated requirement. The refusal is a `throw`, so
+  # `tryEval` contains it (ADR-0025 item 1); no result exists on either reading.
   #
   # ★ THE REQUIREDNESS IS READABLE IN-LANGUAGE, WHICH IS WHY THIS CONSTRUCTOR IS PUBLISHED.
-  # `builtins.functionArgs mkModel` reports each formal against whether it has a default, so a
-  # consumer — and a cell — can assert that `adjudication` is required rather than discovering it
-  # from a crash. AN ELLIPSIS FORMAL DOES NOT CHANGE THAT READING (den-hoag-7gp66 P1, arm (C)):
-  # `functionArgs` reports the same three named formals whether or not `...` is present, so the
-  # ORACLE-tested contract (`ci/tests/adjudication.nix`) stays exact while an unknown field — which
-  # a native closed formal used to refuse the same uncatchable way as a missing one — is now named
-  # and caught by `prelude.checkOptions`, run over the raw `args` at application. The accepted set
-  # is read off the pattern itself (`builtins.functionArgs mkModel`) rather than hand-copied.
+  # The door publishes its contract as data (den-hoag-7gp66 P2, rule 1, OQ14 (β)): `__contract`,
+  # and the map `prelude.functionArgs mkModel` reads, which marks each field required (`false`), so
+  # a consumer — and a cell — can assert that `adjudication` is required rather than discovering it
+  # from a crash (`ci/tests/adjudication.nix`). The four fields are configuration with no natural
+  # order among them, so they stay ONE keyed record (rule 5; the keyed-record ruling, 2026-09-28),
+  # OPEN under R5: a missing field is refused by name and CATCHABLY, at the application, and an
+  # extra one is admitted. The native formal it replaces refused a missing one uncatchably.
   #
   # ★★ `authored` IS GONE, AND IT DIED WITH THE FILTER RATHER THAN BEING TIDIED AWAY. Its only
   # consumer was the subtraction of the gadget's own atoms; with no minted atoms there is nothing
@@ -112,139 +111,146 @@ let
   # ★ `program` IS A FORMAL BECAUSE THE POSITIVE ANSWER'S SOUNDNESS IS A FACT ABOUT THE RULES, not
   # about the model: whether a derived atom's support is negation-free is read off the program, and
   # `solved` does not carry it.
-  mkModel =
+  # The unchecked core, which `model` calls with a record it built itself.
+  mkModelCore =
     {
       solved,
       program,
       adjudication,
       complete,
       ...
-    }@args:
-    builtins.seq
-      (prelude.checkOptions "gen-program.mkModel" (builtins.attrNames (
-        builtins.functionArgs mkModel
-      )) args)
-      (
-        let
-          # ── WHICH DERIVED ATOMS A GROWING RELATION MAY SERVE ──
-          # The atoms derivable with no negative literal ANYWHERE in their support: gen-scope's own
-          # least fixpoint over the negation-free rules alone. Both of its arms read only `pos`, so
-          # dropping every rule with a `neg` leaves exactly the positive fragment, and an atom whose
-          # support passes through such a rule at ANY depth is unreachable in it — transitively, not
-          # by inspecting the atom's own rule body. The positive fragment is monotone, so no later
-          # pass retracts what it derives; that, and not the frozen set (ADR-0016 ruling 7 freezes
-          # IDENTIFIERS, never verdicts), is what makes a positive answer sound before the relation
-          # closes. Nothing is seeded from the interpretation: a carried verdict's own support is not
-          # visible to this pass, so it cannot license a positive serve.
-          #
-          # Demand-driven: forced only under `complete = false`, and only for a derived atom.
-          negationFree =
-            (scope.leastModel { } (scope.mkProgram (builtins.filter (r: r.neg == [ ]) program.rules))).derived;
+    }:
+    (
+      let
+        # ── WHICH DERIVED ATOMS A GROWING RELATION MAY SERVE ──
+        # The atoms derivable with no negative literal ANYWHERE in their support: gen-scope's own
+        # least fixpoint over the negation-free rules alone. Both of its arms read only `pos`, so
+        # dropping every rule with a `neg` leaves exactly the positive fragment, and an atom whose
+        # support passes through such a rule at ANY depth is unreachable in it — transitively, not
+        # by inspecting the atom's own rule body. The positive fragment is monotone, so no later
+        # pass retracts what it derives; that, and not the frozen set (ADR-0016 ruling 7 freezes
+        # IDENTIFIERS, never verdicts), is what makes a positive answer sound before the relation
+        # closes. Nothing is seeded from the interpretation: a carried verdict's own support is not
+        # visible to this pass, so it cannot license a positive serve.
+        #
+        # Demand-driven: forced only under `complete = false`, and only for a derived atom.
+        negationFree =
+          (scope.leastModel { } (scope.mkProgram (builtins.filter (r: r.neg == [ ]) program.rules))).derived;
 
-          withheld = atom: !complete && solved.verdict atom == "true" && !(negationFree ? ${atom});
+        withheld = atom: !complete && solved.verdict atom == "true" && !(negationFree ? ${atom});
 
-          withholding =
-            atom:
-            "gen-program: the membership '${atom}' is derived at this pass, but its support rests on negation and the relation is still growing (complete = false), so a later pass may still falsify it. van Antwerpen et al. 2018 §4.3 delays such a query rather than answering it; read `flag` and handle 'P'";
+        withholding =
+          atom:
+          "gen-program: the membership '${atom}' is derived at this pass, but its support rests on negation and the relation is still growing (complete = false), so a later pass may still falsify it. van Antwerpen et al. 2018 §4.3 delays such a query rather than answering it; read `flag` and handle 'P'";
 
-          # ── THE RESOLVED RELATION, WITH THE THIRD VALUE EVERY CONSUMER HANDLES ──
-          # Total on every string, and every answer carries its flag. There is no shape of this record
-          # from which a consumer can take a bare boolean.
-          #
-          # ★ UNDER `P` ONLY A NEGATION-FREE POSITIVE ANSWER IS GIVEN, AND THAT IS van Antwerpen 2018
-          # §4.3's DISCIPLINE RATHER THAN CAUTION. vA2018's own statement of the problem: "Invoking the
-          # resolution algorithm on an intermediate, incomplete graph may yield a different result
-          # than invoking it on the final graph. This is potentially unsound" (archived
-          # transcription, file lines 1861–1863); its answer is that "resolution is aborted, and the
-          # query constraint delayed" (lines 1925–1926 — the quote is split across the two). Two
-          # answers are unsound before the relation closes, and both are delayed by NAME:
-          # `included = false` for an atom no pass has yet derived (a later pass may derive it), and
-          # `included = true` for a derived atom whose support rests on `not q` at any depth (a later
-          # pass may derive `q`). van Antwerpen et al. 2016's Lemma 2 is what licenses serving the
-          # remaining one — a derived atom with negation-free support — while the graph still grows.
-          #
-          # ★ THE WITHHELD ANSWERS ARE FIELDS THAT REFUSE, NOT FIELDS THAT ARE ABSENT. An absent
-          # field is a missing-attribute error naming nothing a consumer can act on, and `null` would
-          # be worse — every `if r.included` in the world reads `null` as false, which is the silent
-          # collapse this fork was ruled to end.
-          resolve =
-            atom:
-            let
-              v = solved.verdict atom;
-            in
-            if v == "undefined" then
-              {
-                flag = "U";
-                included = throw "gen-program: the membership '${atom}' is UNDEFINED — the well-founded model's third truth value, neither true nor false, which this relation carries rather than collapsing. Read `flag` and handle 'U'; `included` has no answer to give here";
-              }
-            else if withheld atom then
-              {
-                flag = "P";
-                included = throw (withholding atom);
-              }
-            else if v == "true" then
-              {
-                flag = if complete then "T" else "P";
-                included = true;
-              }
-            else if complete then
-              {
-                flag = "T";
-                included = false;
-              }
-            else
-              {
-                flag = "P";
-                included = throw "gen-program: the membership '${atom}' is not derived at this pass, but the relation is still growing (complete = false), so a NEGATIVE answer is not yet sound — a later pass may derive it. van Antwerpen et al. 2018 §4.3 delays such a query rather than answering it; read `flag` and handle 'P'";
-              };
-        in
-        {
-          inherit resolve complete;
+        # ── THE RESOLVED RELATION, WITH THE THIRD VALUE EVERY CONSUMER HANDLES ──
+        # Total on every string, and every answer carries its flag. There is no shape of this record
+        # from which a consumer can take a bare boolean.
+        #
+        # ★ UNDER `P` ONLY A NEGATION-FREE POSITIVE ANSWER IS GIVEN, AND THAT IS van Antwerpen 2018
+        # §4.3's DISCIPLINE RATHER THAN CAUTION. vA2018's own statement of the problem: "Invoking the
+        # resolution algorithm on an intermediate, incomplete graph may yield a different result
+        # than invoking it on the final graph. This is potentially unsound" (archived
+        # transcription, file lines 1861–1863); its answer is that "resolution is aborted, and the
+        # query constraint delayed" (lines 1925–1926 — the quote is split across the two). Two
+        # answers are unsound before the relation closes, and both are delayed by NAME:
+        # `included = false` for an atom no pass has yet derived (a later pass may derive it), and
+        # `included = true` for a derived atom whose support rests on `not q` at any depth (a later
+        # pass may derive `q`). van Antwerpen et al. 2016's Lemma 2 is what licenses serving the
+        # remaining one — a derived atom with negation-free support — while the graph still grows.
+        #
+        # ★ THE WITHHELD ANSWERS ARE FIELDS THAT REFUSE, NOT FIELDS THAT ARE ABSENT. An absent
+        # field is a missing-attribute error naming nothing a consumer can act on, and `null` would
+        # be worse — every `if r.included` in the world reads `null` as false, which is the silent
+        # collapse this fork was ruled to end.
+        resolve =
+          atom:
+          let
+            v = solved.verdict atom;
+          in
+          if v == "undefined" then
+            {
+              flag = "U";
+              included = throw "gen-program: the membership '${atom}' is UNDEFINED — the well-founded model's third truth value, neither true nor false, which this relation carries rather than collapsing. Read `flag` and handle 'U'; `included` has no answer to give here";
+            }
+          else if withheld atom then
+            {
+              flag = "P";
+              included = throw (withholding atom);
+            }
+          else if v == "true" then
+            {
+              flag = if complete then "T" else "P";
+              included = true;
+            }
+          else if complete then
+            {
+              flag = "T";
+              included = false;
+            }
+          else
+            {
+              flag = "P";
+              included = throw "gen-program: the membership '${atom}' is not derived at this pass, but the relation is still growing (complete = false), so a NEGATIVE answer is not yet sound — a later pass may derive it. van Antwerpen et al. 2018 §4.3 delays such a query rather than answering it; read `flag` and handle 'P'";
+            };
+      in
+      {
+        inherit resolve complete;
 
-          # The rules this record was solved over, as plain data KEYED by the canonical rule's key
-          # (`ruleKey` above) — an index, so a NEXT pass handed this record as its `prior` checks it
-          # resubmitted every one by attribute lookup rather than a list scan per rule (quadratic at
-          # thousands of rules). The same index is this record's side of that check. A resubmission
-          # that writes `a :- y, x` for `a :- x, y`, or repeats a literal, is the same rule and is not
-          # an omission. The value is the canonical rule too, so every key is the rendering of its
-          # own value. gen-scope's program value itself is not carried: it holds more than the rules,
-          # and not all of it crosses an evaluation boundary.
-          rules = builtins.listToAttrs (
-            map (r: {
-              name = ruleKey r;
-              value = canonicalRule r;
-            }) program.rules
-          );
+        # The rules this record was solved over, as plain data KEYED by the canonical rule's key
+        # (`ruleKey` above) — an index, so a NEXT pass handed this record as its `prior` checks it
+        # resubmitted every one by attribute lookup rather than a list scan per rule (quadratic at
+        # thousands of rules). The same index is this record's side of that check. A resubmission
+        # that writes `a :- y, x` for `a :- x, y`, or repeats a literal, is the same rule and is not
+        # an omission. The value is the canonical rule too, so every key is the rendering of its
+        # own value. gen-scope's program value itself is not carried: it holds more than the rules,
+        # and not all of it crosses an evaluation boundary.
+        rules = builtins.listToAttrs (
+          map (r: {
+            name = ruleKey r;
+            value = canonicalRule r;
+          }) program.rules
+        );
 
-          # gen-scope's own enumerations, over its own extended base, in its order. Nothing is
-          # removed: a WITHHELD atom moves from `trueAtoms` to `withheldAtoms`, so the four lists
-          # still partition the base and a withheld answer cannot be read back out of `trueAtoms`.
-          # On a closed relation `withheldAtoms` is empty and `trueAtoms` is gen-scope's own.
-          inherit (solved) undefinedAtoms falseAtoms;
-          trueAtoms = builtins.filter (atom: !(withheld atom)) solved.trueAtoms;
-          withheldAtoms = builtins.filter withheld solved.trueAtoms;
+        # gen-scope's own enumerations, over its own extended base, in its order. Nothing is
+        # removed: a WITHHELD atom moves from `trueAtoms` to `withheldAtoms`, so the four lists
+        # still partition the base and a withheld answer cannot be read back out of `trueAtoms`.
+        # On a closed relation `withheldAtoms` is empty and `trueAtoms` is gen-scope's own.
+        inherit (solved) undefinedAtoms falseAtoms;
+        trueAtoms = builtins.filter (atom: !(withheld atom)) solved.trueAtoms;
+        withheldAtoms = builtins.filter withheld solved.trueAtoms;
 
-          # THE REQUIRED FIELD. It names ADR-0020's criterion, records the criterion's outcome on this
-          # program, and names what decided it. It is plain data and crosses an evaluation boundary as
-          # itself — never a `builtins.trace`, never a warn emission, because a channel a consumer can
-          # drop is a channel on which silence reads as admission.
-          inherit adjudication;
+        # THE REQUIRED FIELD. It names ADR-0020's criterion, records the criterion's outcome on this
+        # program, and names what decided it. It is plain data and crosses an evaluation boundary as
+        # itself — never a `builtins.trace`, never a warn emission, because a channel a consumer can
+        # drop is a channel on which silence reads as admission.
+        inherit adjudication;
 
-          # gen-scope's own, cited apart. `verdict` is TOTAL on a closed relation. On a growing one it
-          # refuses a WITHHELD atom by the same name `resolve` does, and answers every other atom as
-          # gen-scope does: a consumer reading `verdict` instead of `resolve` — and carrying that
-          # forward — would otherwise route the served `P:in` around the withholding. The raw model
-          # stays the adjudication's input, inside this library, and is not republished.
-          verdict = atom: if withheld atom then throw (withholding atom) else solved.verdict atom;
-          inherit (solved) converged;
+        # gen-scope's own, cited apart. `verdict` is TOTAL on a closed relation. On a growing one it
+        # refuses a WITHHELD atom by the same name `resolve` does, and answers every other atom as
+        # gen-scope does: a consumer reading `verdict` instead of `resolve` — and carrying that
+        # forward — would otherwise route the served `P:in` around the withholding. The raw model
+        # stays the adjudication's input, inside this library, and is not republished.
+        verdict = atom: if withheld atom then throw (withholding atom) else solved.verdict atom;
+        inherit (solved) converged;
 
-          # The engine's stamp, carried as the engine emits it: empty inside the benchmark-verified
-          # condensation depth and populated past it, which is what makes a stamped result say
-          # something about the input that produced it. ★ Carried atoms contribute no edges, so the
-          # stamp reads the same quantity it read before the parameter existed.
-          inherit (solved) provenance condensationDepth;
-        }
-      );
+        # The engine's stamp, carried as the engine emits it: empty inside the benchmark-verified
+        # condensation depth and populated past it, which is what makes a stamped result say
+        # something about the input that produced it. ★ Carried atoms contribute no edges, so the
+        # stamp reads the same quantity it read before the parameter existed.
+        inherit (solved) provenance condensationDepth;
+      }
+    );
+  mkModel = prelude.door {
+    name = "gen-program.mkModel";
+    required = [
+      "solved"
+      "program"
+      "adjudication"
+      "complete"
+    ];
+    open = true;
+  } mkModelCore;
 
   # ── THE ENTRY ──
   # `complete` carries NO DEFAULT. A defaulted `true` would silently claim the pass sequence had
@@ -268,45 +274,58 @@ let
   # first or single pass states `prior = null`, and that is the base case: nothing to have
   # resubmitted.
   #
-  # AN ELLIPSIS PATTERN (den-hoag-7gp66 P1, arm (C)), same as `mkModel` above: the four required
-  # formals still refuse a MISSING value the evaluator's own uncatchable way, and `...` +
-  # `prelude.checkOptions` over the raw `args` now names and catches an UNKNOWN one instead of the
-  # native closed formal's identical uncatchable abort.
+  # ONE KEYED RECORD, OPEN (den-hoag-7gp66 P2, rule 5 and the keyed-record ruling, as `mkModel`
+  # above): `program` is the subject, but `interpretation`, `complete` and `prior` are three
+  # configuration operands with no natural order, so the four stay one record whose fields are
+  # named at the call site. A missing field — `prior` above all, which has no default — is refused
+  # by name and CATCHABLY at the application; the native formal it replaces aborted uncatchably
+  # (den-hoag-ea3j4 landing gate Q4). An extra field is admitted (R5).
   model =
-    {
-      program,
-      interpretation,
-      complete,
-      prior,
-      ...
-    }@args:
-    builtins.seq
-      (prelude.checkOptions "gen-program.model" (builtins.attrNames (builtins.functionArgs model)) args)
+    prelude.door
+      {
+        name = "gen-program.model";
+        required = [
+          "program"
+          "interpretation"
+          "complete"
+          "prior"
+        ];
+        open = true;
+      }
       (
-        let
-          priorKeys =
-            if prior == null then
-              [ ]
-            else if builtins.isAttrs prior && builtins.isAttrs (prior.rules or null) then
-              builtins.attrNames prior.rules
-            else
-              throw "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or `prior = null` on the first pass";
-          solved = scope.solve interpretation program;
-          result = mkModel {
-            inherit solved program complete;
-            adjudication = stableModel.adjudicate {
-              inherit program interpretation;
-              model = solved;
+        {
+          program,
+          interpretation,
+          complete,
+          prior,
+          ...
+        }:
+        (
+          let
+            priorKeys =
+              if prior == null then
+                [ ]
+              else if builtins.isAttrs prior && builtins.isAttrs (prior.rules or null) then
+                builtins.attrNames prior.rules
+              else
+                throw "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or `prior = null` on the first pass";
+            solved = scope.solve interpretation program;
+            result = mkModelCore {
+              inherit solved program complete;
+              adjudication = stableModel.adjudicateCore {
+                inherit program interpretation;
+                model = solved;
+              };
             };
-          };
-          omitted = builtins.filter (k: !(result.rules ? ${k})) priorKeys;
-        in
-        if omitted != [ ] then
-          throw "gen-program.model: this pass's program drops ${toString (builtins.length omitted)} rule(s) of the prior pass, headed ${
-            builtins.concatStringsSep ", " (map (k: "'${prior.rules.${k}.head}'") omitted)
-          } — every pass resubmits every earlier pass's declarations, because a prior pass's verdicts are not rules and a dropped declaration re-derives nothing it settled"
-        else
-          result
+            omitted = builtins.filter (k: !(result.rules ? ${k})) priorKeys;
+          in
+          if omitted != [ ] then
+            throw "gen-program.model: this pass's program drops ${toString (builtins.length omitted)} rule(s) of the prior pass, headed ${
+              builtins.concatStringsSep ", " (map (k: "'${prior.rules.${k}.head}'") omitted)
+            } — every pass resubmits every earlier pass's declarations, because a prior pass's verdicts are not rules and a dropped declaration re-derives nothing it settled"
+          else
+            result
+        )
       );
 in
 {
