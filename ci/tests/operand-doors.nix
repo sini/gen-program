@@ -36,7 +36,7 @@ let
   };
 in
 {
-  flake.tests = {
+  flake.tests.operandDoors = {
     # ── G1: the context is a map ──
     test-ground-instances-refuses-a-null-context = {
       expr = with (ground { } null); [
