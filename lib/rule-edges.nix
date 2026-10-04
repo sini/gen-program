@@ -21,6 +21,24 @@
 # Neither is a graph and neither is a resolver: the caller appends `reached` to its declared edges,
 # one edge list, one graph (ADR-0012).
 #
+# ── A PROMOTED HEAD IS A NODE, AND ITS NODE IS THE MINT'S ──
+# A declaration carrying `promote` asserts that its head, when included, denotes a reified relation:
+# a node identified by the labelled tuple of its relata (ADR-0016 rulings 2-4). Two more fields:
+# · `promotions` — one PROMOTION RECORD per promoted head, model-free like `candidates`. It is
+#   gen-scope's emitter MINUS `pass`, `{ identifier = head; kind; relata; content = { }; site; }`,
+#   and it carries NO identity: an identity is a hash over the relata's MINTED identities (ruling
+#   4), which exist only inside a mint run, and this library holds identifiers. ⇒ A promotion
+#   record is not a node. Only the mint makes one, so the caller hands `promoted` to `mintStrata`
+#   beside its relata's emitters, at a pass of its own that is strictly later than theirs (ruling 7).
+# · `promoted` — the promotion records whose head the model includes, under the same refusals and
+#   off the same verdict map as `reached`. So the two REFUSE TOGETHER: an unsettled answer on any
+#   edge or promoted head refuses both reads.
+# `candidates` carries each promotion's incident edges, head -> relatum labelled by role, in label
+# order, which is the mint's own edge rule: the declared edge set is complete at registration
+# (ADR-0008 §3), and a promoted head adds edges when it is included. `reached` does NOT: the node
+# and its incident edges come from one construction, the mint, and a second derivation of the
+# edges here would double them in a caller that appended both.
+#
 # ★ AN EDGE IS A PROPERTY OF THE ATOM, NOT OF THE RULE. A head with several rules is an ordinary
 # disjunction, so the labelled set is built KEYED BY HEAD: agreeing claims collapse to one edge and
 # conflicting ones refuse by name — gen-scope's mint rule (identical collapses, conflicting refuses)
@@ -37,10 +55,11 @@
 #   · a labelled declaration that is not a rule of this model — the model was solved from other
 #     declarations and would answer about the wrong program. Keyed by the same canonical-rule index
 #     the `prior` omission guard reads.
-# One membership's own answer stays available through `model.resolve` in every case.
+# One membership's own answer stays available through `model.resolve` in every case. Each refusal
+# names an edge head as an edge and a promoted head as a node.
 #
-# COST: linear in the labelled declarations — one keyed grouping by head, one rule-index lookup per
-# declaration and one `resolve` per head.
+# COST: linear in the labelled and promoted declarations — one keyed grouping by head per kind, one
+# rule-index lookup per declaration and one `resolve` per head.
 {
   prelude,
   declaration,
@@ -62,7 +81,9 @@ let
   ruleEdges =
     model: declarations:
     let
-      labelled = builtins.filter (d: d.label != null) (map declaration declarations);
+      normalized = map declaration declarations;
+      labelled = builtins.filter (d: d.label != null) normalized;
+      promotedDecls = builtins.filter (d: d.promote != null) normalized;
 
       misArity = builtins.filter (d: builtins.length d.relata != 2) labelled;
       byHead = builtins.groupBy (d: d.head) labelled;
@@ -83,34 +104,112 @@ let
         else
           keyed;
 
-      candidates = builtins.attrValues settledKeyed;
+      # The promotion records, keyed by head under the same construction: agreeing declarations of
+      # one head collapse, disagreeing ones refuse, and a head that is labelled by one declaration
+      # and promoted by another refuses, all model-free.
+      recordOf = d: {
+        identifier = d.head;
+        kind = d.promote;
+        inherit (d) relata;
+        content = { };
+        site = "gen-program.ruleEdges:${d.head}";
+      };
+      pByHead = builtins.groupBy (d: d.head) promotedDecls;
+      pKeyed = builtins.mapAttrs (_: ds: recordOf (builtins.head ds)) pByHead;
+      pConflicting = builtins.filter (h: builtins.any (d: recordOf d != pKeyed.${h}) pByHead.${h}) (
+        builtins.attrNames pByHead
+      );
+      bothWays = builtins.attrNames (builtins.intersectAttrs pByHead byHead);
+      settledPromotions =
+        if bothWays != [ ] then
+          throw "gen-program.ruleEdges: ${quoteAll bothWays} is labelled by one declaration and promoted by another; an included head is an edge or a node, not both"
+        else if pConflicting != [ ] then
+          throw "gen-program.ruleEdges: ${quoteAll pConflicting} is promoted by declarations naming different nodes; a promotion is a property of the membership, so its declarations must agree on kind and relata"
+        else
+          pKeyed;
 
-      unsolved = builtins.filter (d: !(model.rules ? ${ruleKey d})) labelled;
-      verdicts = builtins.mapAttrs (h: _: model.resolve h) settledKeyed;
-      undefined = builtins.filter (h: verdicts.${h}.flag == "U") (builtins.attrNames verdicts);
+      promotions = builtins.attrValues settledPromotions;
+      incidentEdges =
+        p:
+        map (l: {
+          from = p.identifier;
+          to = p.relata.${l};
+          label = l;
+        }) (builtins.attrNames p.relata);
 
-      # The model is checked where it is READ, not before: with nothing labelled `reached` never reads
-      # it, and a degenerate subject that carries no model of its own (gen-inspect's, gen-demo's C25)
-      # is a legitimate caller of that read-free path.
-      reached =
-        if labelled == [ ] then
-          [ ]
+      candidates = builtins.attrValues settledKeyed ++ builtins.concatMap incidentEdges promotions;
+
+      # ONE verdict map over both keyed sets, so `reached` and `promoted` refuse together. Each
+      # refusal names the edge heads as edges and the promoted heads as nodes.
+      verdicts = builtins.mapAttrs (h: _: model.resolve h) (settledKeyed // settledPromotions);
+      undefinedIn = keyed: builtins.filter (h: verdicts.${h}.flag == "U") (builtins.attrNames keyed);
+      unsolvedIn =
+        ds: prelude.unique (map (d: d.head) (builtins.filter (d: !(model.rules ? ${ruleKey d})) ds));
+      clauses = parts: builtins.concatStringsSep "; " (builtins.filter (p: p != null) parts);
+      unsolvedClause =
+        heads: verb:
+        if heads == [ ] then
+          null
+        else
+          "${quoteAll heads} is ${verb} by a declaration that is not a rule of this model";
+      undefinedClause =
+        heads: what:
+        if heads == [ ] then
+          null
+        else
+          "${quoteAll heads} is UNDEFINED (U); ${what} has no third value, so the membership can be carried into the graph neither as ${what} nor as its absence, and is refused rather than collapsed";
+      unsolved = [
+        (unsolvedClause (unsolvedIn labelled) "labelled")
+        (unsolvedClause (unsolvedIn promotedDecls) "promoted")
+      ];
+      undefined = [
+        (undefinedClause (undefinedIn settledKeyed) "an edge")
+        (undefinedClause (undefinedIn settledPromotions) "a node")
+      ];
+      growingSet =
+        if promotedDecls == [ ] then
+          "an edge set"
+        else if labelled == [ ] then
+          "a node set"
+        else
+          "an edge or node set";
+      growingRead =
+        if promotedDecls == [ ] then
+          "`reached`"
+        else if labelled == [ ] then
+          "`promoted`"
+        else
+          "`reached` and `promoted`";
+
+      # The model is checked where it is READ, not before: with nothing labelled or promoted the
+      # reads never touch it, and a degenerate subject that carries no model of its own
+      # (gen-inspect's, gen-demo's C25) is a legitimate caller of that read-free path.
+      included =
+        if labelled == [ ] && promotedDecls == [ ] then
+          verdicts
         else
           builtins.seq (checkModelRecord "gen-program.ruleEdges" model) (
-            if unsolved != [ ] then
-              throw "gen-program.ruleEdges: ${
-                quoteAll (prelude.unique (map (d: d.head) unsolved))
-              } is labelled by a declaration that is not a rule of this model; the model was solved from other declarations, so it cannot answer for these"
+            if clauses unsolved != "" then
+              throw "gen-program.ruleEdges: ${clauses unsolved}; the model was solved from other declarations, so it cannot answer for these"
             else if !model.complete then
-              throw "gen-program.ruleEdges: the relation is still growing (complete = false), so an edge set read from it would assert a negative for every absent candidate that a later pass may still falsify; read `reached` from the pass that closes the relation, or one membership's answer through the model's `resolve`"
-            else if undefined != [ ] then
-              throw "gen-program.ruleEdges: ${quoteAll undefined} is UNDEFINED (U); an edge has no third value, so the membership can be carried into the graph neither as an edge nor as its absence, and is refused rather than collapsed. Read its answer through the model's `resolve` and handle 'U'"
+              throw "gen-program.ruleEdges: the relation is still growing (complete = false), so ${growingSet} read from it would assert a negative for every absent candidate that a later pass may still falsify; read ${growingRead} from the pass that closes the relation, or one membership's answer through the model's `resolve`"
+            else if clauses undefined != "" then
+              throw "gen-program.ruleEdges: ${clauses undefined}. Read its answer through the model's `resolve` and handle 'U'"
             else
-              builtins.attrValues (prelude.filterAttrs (h: _: verdicts.${h}.included) settledKeyed)
+              verdicts
           );
+      reached = builtins.attrValues (prelude.filterAttrs (h: _: included.${h}.included) settledKeyed);
+      promoted = builtins.attrValues (
+        prelude.filterAttrs (h: _: included.${h}.included) settledPromotions
+      );
     in
     {
-      inherit candidates reached;
+      inherit
+        candidates
+        reached
+        promotions
+        promoted
+        ;
     };
 in
 {

@@ -98,6 +98,55 @@ let
       inherit complete;
     };
   edgesAt = complete: declarations: genProgram.ruleEdges (modelOf complete declarations) declarations;
+  # ── the promotion fixtures (den-hoag-2quxu) ──
+  # `u:a` is a promoted head on a negative cycle, so the well-founded model leaves it UNDEFINED;
+  # `r:a:b` is a labelled fact beside it, T. One verdict map serves both reads, so each refuses.
+  promoting = relata: {
+    head = "s:a:b";
+    inherit relata;
+    promote = "s";
+  };
+  undefinedNode = [
+    {
+      head = "u:a";
+      relata = {
+        left = "a";
+      };
+      promote = "u";
+      neg = [ "v:a" ];
+    }
+    {
+      head = "v:a";
+      relata = [ "a" ];
+      neg = [ "u:a" ];
+    }
+    {
+      head = "r:a:b";
+      relata = ab;
+      label = "r";
+    }
+  ];
+  # The same with the cycle on the EDGE head and the promoted head a fact.
+  undefinedEdge = [
+    {
+      head = "r:a:b";
+      relata = ab;
+      label = "r";
+      neg = [ "h:a:b" ];
+    }
+    {
+      head = "h:a:b";
+      relata = ab;
+      neg = [ "r:a:b" ];
+    }
+    (promoting {
+      left = "a";
+      right = "b";
+    })
+  ];
+  nodeUndefinedMsg = "gen-program.ruleEdges: 'u:a' is UNDEFINED (U); a node has no third value, so the membership can be carried into the graph neither as a node nor as its absence, and is refused rather than collapsed. Read its answer through the model's `resolve` and handle 'U'";
+  edgeUndefinedMsg = "gen-program.ruleEdges: 'r:a:b' is UNDEFINED (U); an edge has no third value, so the membership can be carried into the graph neither as an edge nor as its absence, and is refused rather than collapsed. Read its answer through the model's `resolve` and handle 'U'";
+
   # ── the operand-door fixtures: ONE good value per operand, so each cell breaks exactly one ──
   opDecls = [
     {
@@ -273,7 +322,7 @@ in
     };
     test-declaration-unknown-option-message = {
       expr = genProgram.declaration { zzqran7f = 1; };
-      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'pos', 'neg', 'label', 'when') (in prelude.checkOptions)";
+      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'pos', 'neg', 'label', 'promote', 'when') (in prelude.checkOptions)";
     };
     # A declaration AS DATA — an entry of `program`'s list — is normalised by the same door's
     # record core: an unknown field and a missing `head` are refused by the door's name.
@@ -288,7 +337,7 @@ in
               zzqran7f = 1;
             }
           ];
-      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'head', 'relata', 'pos', 'neg', 'label', 'when') (in prelude.checkOptions)";
+      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'head', 'relata', 'pos', 'neg', 'label', 'promote', 'when') (in prelude.checkOptions)";
     };
     test-declaration-record-missing-head-message = {
       expr = genProgram.program [ ] [ { relata = [ ]; } ];
@@ -461,6 +510,117 @@ in
       expectedError.msg = exactly "gen-program.declaration: the label is a int, expected an edge label (a string) or null";
     };
     # ── OPERAND DOORS (den-hoag-l3cwb): a wrong-shaped configuration operand is refused by name ──
+    # ── PROMOTION (den-hoag-2quxu): every refusal names its head and its ground ──
+    test-declaration-refuses-a-promote-that-is-not-a-string = {
+      expr = (genProgram.declaration { promote = 42; } { left = "a"; } "h").head;
+      expectedError.msg = exactly "gen-program.declaration: promote is a int, expected a relation kind (a string) or null";
+    };
+    test-declaration-refuses-a-label-and-promote-on-one-declaration = {
+      expr =
+        (genProgram.declaration {
+          label = "r";
+          promote = "s";
+        } { left = "a"; } "h").head;
+      expectedError.msg = exactly "gen-program.declaration: 'h' carries both a label and promote; an included head is an edge or a node, not both";
+    };
+    test-declaration-refuses-promoted-relata-that-are-a-list = {
+      expr = (genProgram.declaration { promote = "s"; } ab "h").head;
+      expectedError.msg = exactly "gen-program.declaration: 'h' is promoted, so its relata are a labelled tuple (an attrset label -> identifier), not a list";
+    };
+    test-declaration-refuses-a-promotion-with-no-relata = {
+      expr = (genProgram.declaration { promote = "s"; } { } "h").head;
+      expectedError.msg = exactly "gen-program.declaration: 'h' is promoted with no relata; a relation with no relata is not a relation (ADR-0016)";
+    };
+    # The mint reserves `identifier` for the node's own identifier; refused there, the message
+    # would name neither the head nor this door.
+    test-declaration-refuses-the-reserved-identifier-relatum-label = {
+      expr =
+        (genProgram.declaration { promote = "s"; } {
+          identifier = "a";
+          right = "b";
+        } "h").head;
+      expectedError.msg = exactly "gen-program.declaration: 'h' is promoted with a relatum labelled 'identifier', the label the mint reserves for the node's own identifier; label the relatum otherwise";
+    };
+    test-declaration-refuses-a-record-relatum-of-a-promoted-head = {
+      expr =
+        (genProgram.declaration { promote = "s"; } {
+          left = {
+            name = "a";
+          };
+        } "h").head;
+      expectedError.msg = exactly "gen-program.declaration: a relatum of a promoted head is a set, expected a node identifier (a string)";
+    };
+    # A promoted relatum outside the frozen set reaches the one unresolved-relatum refusal.
+    test-a-promoted-relatum-outside-the-frozen-set-is-unresolved = {
+      expr = build {
+        declarations = [ (promoting { left = "zz"; }) ];
+        frozen = [ ];
+      };
+      expectedError.msg = exactly (unresolvedRefusal "'zz'");
+    };
+    # Keyed by head and decidable from the declarations, so both refuse model-free.
+    test-rule-edges-refuses-a-head-labelled-and-promoted = {
+      expr =
+        (genProgram.ruleEdges (throw "no model was asked for") [
+          {
+            head = "s:a:b";
+            relata = ab;
+            label = "r";
+          }
+          (promoting { left = "a"; })
+        ]).candidates;
+      expectedError.msg = exactly "gen-program.ruleEdges: 's:a:b' is labelled by one declaration and promoted by another; an included head is an edge or a node, not both";
+    };
+    test-rule-edges-refuses-disagreeing-promotions-of-one-head = {
+      expr =
+        (genProgram.ruleEdges (throw "no model was asked for") [
+          (promoting { left = "a"; })
+          (promoting { left = "b"; })
+        ]).promotions;
+      expectedError.msg = exactly "gen-program.ruleEdges: 's:a:b' is promoted by declarations naming different nodes; a promotion is a property of the membership, so its declarations must agree on kind and relata";
+    };
+    # The U refusal names a promoted head as a NODE, and `promoted` and `reached` refuse TOGETHER:
+    # an undefined promoted head refuses `reached` beside a T edge, and an undefined edge head
+    # refuses `promoted` beside a T promotion.
+    test-rule-edges-refuses-an-undefined-promoted-membership = {
+      expr = (edgesAt true undefinedNode).promoted;
+      expectedError.msg = exactly nodeUndefinedMsg;
+    };
+    test-reached-refuses-on-an-undefined-promoted-membership = {
+      expr = (edgesAt true undefinedNode).reached;
+      expectedError.msg = exactly nodeUndefinedMsg;
+    };
+    test-promoted-refuses-on-an-undefined-labelled-membership = {
+      expr = (edgesAt true undefinedEdge).promoted;
+      expectedError.msg = exactly edgeUndefinedMsg;
+    };
+    test-rule-edges-refuses-promoted-at-a-growing-relation = {
+      expr = (edgesAt false [ (promoting { left = "a"; }) ]).promoted;
+      expectedError.msg = exactly "gen-program.ruleEdges: the relation is still growing (complete = false), so a node set read from it would assert a negative for every absent candidate that a later pass may still falsify; read `promoted` from the pass that closes the relation, or one membership's answer through the model's `resolve`";
+    };
+    test-rule-edges-refuses-reached-and-promoted-at-a-growing-relation = {
+      expr =
+        (edgesAt false [
+          (promoting { left = "a"; })
+          {
+            head = "r:a:b";
+            relata = ab;
+            label = "r";
+          }
+        ]).reached;
+      expectedError.msg = exactly "gen-program.ruleEdges: the relation is still growing (complete = false), so an edge or node set read from it would assert a negative for every absent candidate that a later pass may still falsify; read `reached` and `promoted` from the pass that closes the relation, or one membership's answer through the model's `resolve`";
+    };
+    test-rule-edges-refuses-a-promotion-of-other-declarations = {
+      expr =
+        (genProgram.ruleEdges (modelOf true [
+          {
+            head = "t:a:b";
+            relata = ab;
+          }
+        ]) [ (promoting { left = "a"; }) ]).promoted;
+      expectedError.msg = exactly "gen-program.ruleEdges: 's:a:b' is promoted by a declaration that is not a rule of this model; the model was solved from other declarations, so it cannot answer for these";
+    };
+
     test-rule-edges-refuses-an-empty-model-operand = {
       expr = (genProgram.ruleEdges { } opLabelled).reached;
       expectedError.msg = exactly "gen-program.ruleEdges: the `model` operand (a gen-program result record): required field 'complete' is missing (required: 'complete', 'resolve', 'rules') (in prelude.checkRequired)";

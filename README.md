@@ -233,7 +233,7 @@ other.
 A declaration may carry a **`label`**. It then asserts that its head, when included, **is** the
 edge `{ from = relata[0]; to = relata[1]; label; }` — the label is the rule's own, never parsed out
 of the atom, and the endpoints are relata that already passed the frozen-set check.
-`ruleEdges model declarations` returns two plain edge lists:
+`ruleEdges model declarations` returns two plain edge lists (and two promotion lists, below):
 
 - **`candidates`** — every labelled edge, whatever it resolves to. A function of the declarations
   alone: it never forces `model`, so a gate over the declared edges reads it at registration.
@@ -245,6 +245,25 @@ head collapse and conflicting ones refuse. An edge list has no third value and n
 `reached` refuses by name on a `U` head, on a relation still growing (`complete = false`: its
 absences are the negatives that relation withholds), and on a model solved from other
 declarations. One membership's answer stays readable through `resolve`.
+
+A declaration may instead carry **`promote`**, a relation kind. Its head, when included, then
+denotes a **node**: a reified relation over its relata (ADR-0016), so its `relata` are a labelled
+tuple, an attrset label → identifier. Edge or node is declared on the rule, never read off the
+relata count, and a declaration carrying both `label` and `promote` is refused. Two more fields:
+
+- **`promotions`** — one **promotion record** per promoted head, model-free:
+  `{ identifier = head; kind; relata; content = { }; site; }`, gen-scope's emitter without `pass`.
+- **`promoted`** — the promotion records whose head the model includes. It reads the same verdicts
+  as `reached` under the same refusals, so the two refuse together, and a refusal names a promoted
+  head as a node.
+
+★ **A promotion record is not a node.** It carries no identity, because the identity is a hash over
+the relata's minted identities and only the mint holds those. Only the mint makes the node: the
+caller hands `promoted` to gen-scope's `mintStrata` beside its relata's emitters, at a pass strictly
+later than theirs —
+`mintStrata kinds (relataEmitters ++ map (p: p // { pass = N; }) r.promoted)`. `candidates` carries
+each promotion's incident edges (head → relatum, labelled by role); `reached` does not, because the
+mint publishes the node and its edges together.
 
 ### The policy-body algebra
 

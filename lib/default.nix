@@ -125,8 +125,10 @@ in
     ;
 
   # ── THE SOLVED MODEL'S EDGES ──
-  # `ruleEdges model declarations` → `{ candidates, reached }`: the declared edge set of the labelled
-  # declarations, and the part of it the model includes, as plain edge records.
+  # `ruleEdges model declarations` → `{ candidates, reached, promotions, promoted }`: the declared
+  # edge set of the labelled declarations, and the part of it the model includes, as plain edge
+  # records; and the promoted heads' promotion records, all of them and the included ones, which
+  # the caller mints.
   inherit (edging) ruleEdges;
 
   # ── THE RESOLVED RELATION'S VOCABULARY ──

@@ -56,15 +56,19 @@ document's prose in one cell, so neither side can drift onto the other.
 
 ### The translation
 
-- **`declaration`** — `declaration { pos?; neg?; label?; when?; } relata head` → one normalised
+- **`declaration`** — `declaration { pos?; neg?; label?; promote?; when?; } relata head` → one normalised
   declaration. A door (den-hoag-7gp66 P2): the defaulted fields are one closed options set, first,
   published as `__contract`; `relata` and `head` are positional and carry no default. `pos` and
   `neg` default to empty because a declaration with neither body is a FACT (ADR-0020's own base
   case). An unknown option is refused by name at the options application. A declaration AS DATA —
-  an entry of `program`'s list, or `rule`'s argument — is the record `{ head; relata; pos?; neg?; label?; when?; }`, normalised by the same door's record core: an unknown field and a missing
+  an entry of `program`'s list, or `rule`'s argument — is the record `{ head; relata; pos?; neg?; label?; promote?; when?; }`, normalised by the same door's record core: an unknown field and a missing
   `head` or `relata` are refused by name, catchably. An optional
   `label` (a string, or `null`, the default) names the edge the head denotes when included; a
   declaration is labelled exactly when `label != null`, and a non-string label is refused by name.
+  An optional **`promote`** (a relation kind, or `null`) makes the included head a NODE instead: its
+  `relata` are then a labelled tuple, an attrset label → identifier, and a list, an empty tuple, a
+  relatum labelled `identifier` (the mint's reserved key), a non-string kind and `label` beside
+  `promote` are each refused by name.
   An optional **`when`** is the **literal tier** (fuci G1): a condition term lowered to `pos`/`neg`
   — `has a` ↦ `a ∈ pos`, `not (has a)` ↦ `a ∈ neg`, `all` conjoins, `always` is the empty body. `any`,
   `eq`, `not` over a compound and a function are refused by name (a rule body is a conjunction of
@@ -94,14 +98,21 @@ document's prose in one cell, so neither side can drift onto the other.
   `{ atom, verdict }` a caller states of atoms at THIS pass, restated at a later pass if it is to
   hold there — and it carries **no default**. `complete` carries none either: a defaulted `true`
   would silently claim the pass sequence had closed.
-- **`ruleEdges`** — `ruleEdges model declarations` → `{ candidates, reached }`, plain lists of
+- **`ruleEdges`** — `ruleEdges model declarations` → `{ candidates, reached, promotions, promoted }`, plain lists of
   `{ from, to, label }` edge records, one per labelled head (`from`/`to` are the declaration's two
   relata). `candidates` is every labelled edge whatever it resolves to and never forces `model`;
   `reached` is the candidates whose head the model includes. Declarations of one head that agree
   collapse to one edge and ones that conflict refuse, as does a labelled declaration not relating
   exactly two. `reached` refuses by name, naming every offending head, on an undefined (`U`)
   head, on a relation still growing (`complete = false`), and on a labelled declaration that is not
-  a rule of `model`. Linear in the labelled declarations.
+  a rule of `model`. `promotions` is one promotion record per promoted head,
+  `{ identifier = head; kind; relata; content = { }; site; }` (gen-scope's emitter without `pass`),
+  model-free and keyed by head like the edges (a head both labelled and promoted refuses);
+  `promoted` is the records whose head the model includes, off the same verdict map, so it and
+  `reached` refuse together, and a promoted head is named as a node. A promotion record carries no
+  identity and is not a node: the caller mints it with `mintStrata` beside its relata's emitters at
+  a later pass. `candidates` also holds each promotion's incident edges; `reached` does not.
+  Linear in the labelled and promoted declarations.
 - **`mkModel`** — the result record's constructor, published so a consumer (and a cell) can READ
   which fields are required rather than discovering it from a crash: a door whose `__contract`
   (read by `prelude.functionArgs`) marks every field required, `adjudication` in particular.

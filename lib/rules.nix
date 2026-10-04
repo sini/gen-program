@@ -166,13 +166,15 @@ let
     in
     prelude.unique (
       prelude.filter (id: !(settled ? ${id})) (
-        prelude.concatMap (d: d.relata) (map declarationRecord declarations)
+        prelude.concatMap (d: if d.promote == null then d.relata else builtins.attrValues d.relata) (
+          map declarationRecord declarations
+        )
       )
     );
 
   # ── THE DECLARATION ──
-  # A declaration AS DATA is a record, `{ head; relata; pos ? [ ]; neg ? [ ]; label ? null; when ?
-  # null; }`, and that is the shape `program`'s list, `rule` and `ruleEdges` take. `declarationRecord`
+  # A declaration AS DATA is a record, `{ head; relata; pos ? [ ]; neg ? [ ]; label ? null; promote ?
+  # null; when ? null; }`, and that is the shape `program`'s list, `rule` and `ruleEdges` take. `declarationRecord`
   # is its normaliser: an unknown field and a missing `head` or `relata` are both refused by name and
   # catchably (`checkOptions` over `checkRequired`), where the native formal of P1 aborted
   # uncatchably on a missing one.
@@ -186,10 +188,22 @@ let
   # parsed out of the atom — an atom is a string the caller wrote. A declaration is labelled exactly
   # when `label != null`, so an explicit `null` is the omission and never a null-labelled edge. The
   # rule ignores it: `rule` builds from `head`, `pos` and `neg` alone.
+  #
+  # `promote` names the relation KIND the head denotes when it is included, and it is the other half
+  # of that choice: an included head is an edge or a node, never both, so a declaration carrying both
+  # is refused. A promoted head is a reified relation (ADR-0016 rulings 2-4), so its `relata` are the
+  # LABELLED TUPLE, an attrset label -> identifier, which is gen-scope's emitter shape: a
+  # label/relatum mismatch has no expression. Edge or node is DECLARED and never inferred from the
+  # relata count, because a two-relatum binding is a node exactly when its rule says so. Two tuples
+  # are refused here rather than at the mint: the empty one, because a relation with no relata is
+  # not a relation and the mint would mint it; and one labelling a relatum `identifier`, the key the
+  # mint reserves for the node's own identifier, whose refusal there would name neither the head nor
+  # this door. The rule ignores `promote` too.
   declarationOptions = [
     "pos"
     "neg"
     "label"
+    "promote"
     "when"
   ];
   declarationRecord =
@@ -206,6 +220,7 @@ let
       pos = a.pos or [ ];
       neg = a.neg or [ ];
       label = a.label or null;
+      promote = a.promote or null;
       when = a.when or null;
       lowered =
         if when == null then
@@ -221,11 +236,32 @@ let
           identifier "declaration" "the head" head
           && identifiers "declaration" "pos" lowered.pos
           && identifiers "declaration" "neg" lowered.neg
-          && identifiers "declaration" "relata" relata
           && (
             label == null
             || builtins.isString label
             || throw "gen-program.declaration: the label is a ${builtins.typeOf label}, expected an edge label (a string) or null"
+          )
+          && (
+            promote == null
+            || builtins.isString promote
+            || throw "gen-program.declaration: promote is a ${builtins.typeOf promote}, expected a relation kind (a string) or null"
+          )
+          && (
+            promote == null
+            || label == null
+            || throw "gen-program.declaration: '${head}' carries both a label and promote; an included head is an edge or a node, not both"
+          )
+          && (
+            if promote == null then
+              identifiers "declaration" "relata" relata
+            else if !builtins.isAttrs relata then
+              throw "gen-program.declaration: '${head}' is promoted, so its relata are a labelled tuple (an attrset label -> identifier), not a ${builtins.typeOf relata}"
+            else if relata == { } then
+              throw "gen-program.declaration: '${head}' is promoted with no relata; a relation with no relata is not a relation (ADR-0016)"
+            else if relata ? identifier then
+              throw "gen-program.declaration: '${head}' is promoted with a relatum labelled 'identifier', the label the mint reserves for the node's own identifier; label the relatum otherwise"
+            else
+              builtins.all (identifier "declaration" "a relatum of a promoted head") (builtins.attrValues relata)
           )
         )
         {
@@ -234,12 +270,13 @@ let
             head
             relata
             label
+            promote
             ;
         }
     );
 
   # The published door (den-hoag-7gp66 P2, rules 1, 2 and 4; OQ14 (β)): `declaration { pos?; neg?;
-  # label?; when?; } relata head`. The defaulted fields are one closed options set, first, and its
+  # label?; promote?; when?; } relata head`. The defaulted fields are one closed options set, first, and its
   # contract is published as data (`__contract`, read by `prelude.functionArgs`). `head` is the
   # subject — the fact the declaration asserts, as `scope.mkRule { … } head` takes its own — and
   # `relata`, the identifiers it is resolved against, is configuration before it.

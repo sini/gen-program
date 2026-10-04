@@ -4,7 +4,7 @@
 #
 # After P2 a door step is one of two kinds (spec §p2.3.1):
 #   · an OPTIONS step — one closed set, first in the call: `declaration { pos?; neg?; label?;
-#     when?; } relata head` and `groundInstances { door?; sources?; } context body`;
+#     promote?; when?; } relata head` and `groundInstances { door?; sources?; } context body`;
 #   · a KEYED RECORD — open (R5), every field required, kept as one record because its fields are
 #     two or more configuration operands with no natural order (the keyed-record ruling,
 #     2026-09-28): `model`, `mkModel`, `adjudicate`, `body`.
@@ -42,6 +42,7 @@ let
         "pos"
         "neg"
         "label"
+        "promote"
         "when"
       ];
       apply = f: f [ "x" ] "h";
