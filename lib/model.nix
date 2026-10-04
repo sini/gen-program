@@ -241,16 +241,55 @@ let
         inherit (solved) provenance condensationDepth;
       }
     );
-  mkModel = prelude.door {
-    name = "gen-program.mkModel";
-    required = [
-      "solved"
-      "program"
-      "adjudication"
-      "complete"
-    ];
-    open = true;
-  } mkModelCore;
+  # What `mkModelCore` reads of `solved` (gen-scope's solve record) and what `ruleEdges` reads of a
+  # result record (`model`'s answer). Each refuses a wrong shape by name (den-hoag-l3cwb); the core
+  # `model` calls with a record it built itself stays unchecked.
+  solvedFields = {
+    trueAtoms = "stringList";
+    undefinedAtoms = "stringList";
+    falseAtoms = "stringList";
+    verdict = "function";
+    converged = "any";
+    provenance = "any";
+    condensationDepth = "any";
+  };
+  modelFields = {
+    rules = "set";
+    resolve = "function";
+    complete = "bool";
+  };
+  checkModelRecord =
+    door:
+    stableModel.checkOperand "${door}: the `model` operand (a gen-program result record)" modelFields;
+  mkModel =
+    prelude.door
+      {
+        name = "gen-program.mkModel";
+        required = [
+          "solved"
+          "program"
+          "adjudication"
+          "complete"
+        ];
+        open = true;
+      }
+      (
+        a:
+        builtins.seq (stableModel.checkProgram "gen-program.mkModel" a.program) (
+          builtins.seq
+            (stableModel.checkOperand "gen-program.mkModel: the `solved` operand (a gen-scope solved record)"
+              solvedFields
+              a.solved
+            )
+            (
+              builtins.seq (stableModel.checkKind "gen-program.mkModel" "adjudication" "set" a.adjudication) (
+                builtins.seq (stableModel.checkKind "gen-program.mkModel" "complete" "bool" a.complete) (
+                  mkModelCore a
+                )
+              )
+            )
+        )
+      );
 
   # ── THE ENTRY ──
   # `complete` carries NO DEFAULT. A defaulted `true` would silently claim the pass sequence had
@@ -293,40 +332,47 @@ let
         open = true;
       }
       (
-        {
-          program,
-          interpretation,
-          complete,
-          prior,
-          ...
-        }:
-        (
-          let
-            priorKeys =
-              if prior == null then
-                [ ]
-              else if builtins.isAttrs prior && builtins.isAttrs (prior.rules or null) then
-                builtins.attrNames prior.rules
-              else
-                throw "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or `prior = null` on the first pass";
-            solved = scope.solve interpretation program;
-            result = mkModelCore {
-              inherit solved program complete;
-              adjudication = stableModel.adjudicateCore {
-                inherit program interpretation;
-                model = solved;
-              };
-            };
-            omitted = builtins.filter (k: !(result.rules ? ${k})) priorKeys;
-          in
-          if omitted != [ ] then
-            throw "gen-program.model: this pass's program drops ${toString (builtins.length omitted)} rule(s) of the prior pass, headed ${
-              builtins.concatStringsSep ", " (map (k: "'${prior.rules.${k}.head}'") omitted)
-            } — every pass resubmits every earlier pass's declarations, because a prior pass's verdicts are not rules and a dropped declaration re-derives nothing it settled"
-          else
-            result
+        a:
+        builtins.seq (stableModel.checkProgram "gen-program.model" a.program) (
+          builtins.seq (stableModel.checkKind "gen-program.model" "interpretation" "list" a.interpretation) (
+            builtins.seq (stableModel.checkKind "gen-program.model" "complete" "bool" a.complete) (modelCore a)
+          )
         )
       );
+  modelCore =
+    {
+      program,
+      interpretation,
+      complete,
+      prior,
+      ...
+    }:
+    (
+      let
+        priorKeys =
+          if prior == null then
+            [ ]
+          else if builtins.isAttrs prior && builtins.isAttrs (prior.rules or null) then
+            builtins.attrNames prior.rules
+          else
+            throw "gen-program.model: `prior` is not a gen-program result record — pass the previous pass's `model` result, or `prior = null` on the first pass";
+        solved = scope.solve interpretation program;
+        result = mkModelCore {
+          inherit solved program complete;
+          adjudication = stableModel.adjudicateCore {
+            inherit program interpretation;
+            model = solved;
+          };
+        };
+        omitted = builtins.filter (k: !(result.rules ? ${k})) priorKeys;
+      in
+      if omitted != [ ] then
+        throw "gen-program.model: this pass's program drops ${toString (builtins.length omitted)} rule(s) of the prior pass, headed ${
+          builtins.concatStringsSep ", " (map (k: "'${prior.rules.${k}.head}'") omitted)
+        } — every pass resubmits every earlier pass's declarations, because a prior pass's verdicts are not rules and a dropped declaration re-derives nothing it settled"
+      else
+        result
+    );
 in
 {
   inherit
@@ -335,5 +381,6 @@ in
     flagNames
     flags
     ruleKey
+    checkModelRecord
     ;
 }

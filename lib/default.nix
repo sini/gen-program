@@ -81,12 +81,6 @@ let
   # The one term algebra (gen-algebra), applied to the one minting authority (gen-identity).
   T = algebra.term identity.hashIdentity;
   rules = import ./rules.nix { inherit prelude scope; };
-  # The authoring surface and its interpreter. It touches no substrate: it takes the prelude, the
-  # term instance, and the mint the rule and firing identities go through (ADR-0034's one authority).
-  bodyAlgebra = import ./policy-body.nix {
-    inherit prelude T;
-    inherit (identity) hashIdentity;
-  };
   # The ONE recorded budget, wired here. The coherence module takes it as a parameter so a
   # derivation run can reach the construction past the figure — but this is the only wiring the
   # published surface has, so a consumer can read the budget and cannot select one.
@@ -94,13 +88,20 @@ let
     inherit prelude scope;
     budget = import ./budget.nix;
   };
+  # The authoring surface and its interpreter. It touches no substrate: it takes the prelude, the
+  # term instance, and the mint the rule and firing identities go through (ADR-0034's one authority).
+  bodyAlgebra = import ./policy-body.nix {
+    inherit prelude T;
+    inherit (identity) hashIdentity;
+    inherit (stableModel) checkOperand;
+  };
   modelling = import ./model.nix { inherit prelude scope stableModel; };
   # The model's edges read declarations through the one door and rules through the model's own
   # canonical-rule key, so neither is derived twice.
   edging = import ./rule-edges.nix {
     inherit prelude;
     declaration = rules.declarationRecord;
-    inherit (modelling) ruleKey;
+    inherit (modelling) ruleKey checkModelRecord;
   };
 in
 {
