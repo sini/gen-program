@@ -402,6 +402,11 @@ cell is silently absent and the run stays green.
 Count ❌ **and** ☢️ in the output; a run with zero of the first and some of the second has not
 passed.
 
+A value cell sits under a suite, `flake.tests.<suite>.<cell>`: the batch gate behind `checks.default`
+maps over suites, so a cell placed directly under `flake.tests` passes `nix-unit` and then crashes
+`nix flake check` with "expected a set but found a list". The error plane (`flake.testsError`) is
+flat by its own convention.
+
 ## Formatting
 
 `nix fmt -- --ci` REWRITES the tree, so a second run is green regardless of what the first found.
