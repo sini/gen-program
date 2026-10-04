@@ -31,6 +31,7 @@
 {
   genProgram,
   prelude,
+  scope,
   ...
 }:
 let
@@ -97,6 +98,40 @@ let
       inherit complete;
     };
   edgesAt = complete: declarations: genProgram.ruleEdges (modelOf complete declarations) declarations;
+  # ── the operand-door fixtures: ONE good value per operand, so each cell breaks exactly one ──
+  opDecls = [
+    {
+      head = "r:x";
+      relata = ab;
+      label = "r";
+    }
+  ];
+  opLabelled = opDecls;
+  opProgram = genProgram.program ab opDecls;
+  opModel = genProgram.model {
+    program = opProgram;
+    interpretation = [ ];
+    complete = true;
+    prior = null;
+  };
+  opSolved = scope.solve [ ] opProgram;
+  opAdj = {
+    program = opProgram;
+    model = opSolved;
+    interpretation = [ ];
+  };
+  opMk = {
+    solved = opSolved;
+    program = opProgram;
+    adjudication = opModel.adjudication;
+    complete = true;
+  };
+  opModelArgs = {
+    program = opProgram;
+    interpretation = [ ];
+    complete = true;
+    prior = null;
+  };
 in
 {
   flake.testsError = {
@@ -424,6 +459,138 @@ in
     test-declaration-refuses-a-label-that-is-not-a-string = {
       expr = (genProgram.declaration { label = 42; } ab "h").head;
       expectedError.msg = exactly "gen-program.declaration: the label is a int, expected an edge label (a string) or null";
+    };
+    # ── OPERAND DOORS (den-hoag-l3cwb): a wrong-shaped configuration operand is refused by name ──
+    test-rule-edges-refuses-an-empty-model-operand = {
+      expr = (genProgram.ruleEdges { } opLabelled).reached;
+      expectedError.msg = exactly "gen-program.ruleEdges: the `model` operand (a gen-program result record): required field 'complete' is missing (required: 'complete', 'resolve', 'rules') (in prelude.checkRequired)";
+    };
+    test-rule-edges-refuses-a-non-attrset-model-operand = {
+      expr = (genProgram.ruleEdges 5 opLabelled).reached;
+      expectedError.msg = exactly "gen-program.ruleEdges: the `model` operand (a gen-program result record): the argument must be an attrset, not a int (required: 'complete', 'resolve', 'rules') (in prelude.checkRequired)";
+    };
+    test-rule-edges-refuses-a-model-whose-rules-is-not-a-set = {
+      expr = (genProgram.ruleEdges (opModel // { rules = [ ]; }) opLabelled).reached;
+      expectedError.msg = exactly "gen-program.ruleEdges: the `model` operand (a gen-program result record): field 'rules' must be an attrset, not a list";
+    };
+    test-adjudicate-refuses-an-empty-model-operand = {
+      expr = (genProgram.adjudicate (opAdj // { model = { }; })).outcome;
+      expectedError.msg = exactly "gen-program.adjudicate: the `model` operand (a gen-scope solved record): required field 'trueAtoms' is missing (required: 'trueAtoms', 'undefinedAtoms') (in prelude.checkRequired)";
+    };
+    test-adjudicate-refuses-a-model-whose-undefined-atoms-is-not-a-list = {
+      expr =
+        (genProgram.adjudicate (
+          opAdj
+          // {
+            model = opSolved // {
+              undefinedAtoms = "s";
+            };
+          }
+        )).outcome;
+      expectedError.msg = exactly "gen-program.adjudicate: the `model` operand (a gen-scope solved record): field 'undefinedAtoms' must be a list of strings, not a string";
+    };
+    test-adjudicate-refuses-an-empty-program-operand = {
+      expr = (genProgram.adjudicate (opAdj // { program = { }; })).outcome;
+      expectedError.msg = exactly "gen-program.adjudicate: the `program` operand (a gen-scope program value, as `program` returns): required field 'atoms' is missing (required: 'atoms', 'bodyArity', 'dependency', 'rules', 'signs', 'unaryBodies') (in prelude.checkRequired)";
+    };
+    test-adjudicate-refuses-a-non-list-interpretation-operand = {
+      expr = (genProgram.adjudicate (opAdj // { interpretation = null; })).outcome;
+      expectedError.msg = exactly "gen-program.adjudicate: the `interpretation` operand must be a list, not a null";
+    };
+    test-mk-model-refuses-an-empty-solved-operand = {
+      expr = (genProgram.mkModel (opMk // { solved = { }; })).condensationDepth;
+      expectedError.msg = exactly "gen-program.mkModel: the `solved` operand (a gen-scope solved record): required field 'condensationDepth' is missing (required: 'condensationDepth', 'converged', 'falseAtoms', 'provenance', 'trueAtoms', 'undefinedAtoms', 'verdict') (in prelude.checkRequired)";
+    };
+    test-mk-model-refuses-a-solved-without-a-verdict = {
+      expr =
+        (genProgram.mkModel (opMk // { solved = removeAttrs opSolved [ "verdict" ]; })).condensationDepth;
+      expectedError.msg = exactly "gen-program.mkModel: the `solved` operand (a gen-scope solved record): required field 'verdict' is missing (required: 'condensationDepth', 'converged', 'falseAtoms', 'provenance', 'trueAtoms', 'undefinedAtoms', 'verdict') (in prelude.checkRequired)";
+    };
+    test-mk-model-refuses-an-empty-program-operand = {
+      expr = (genProgram.mkModel (opMk // { program = { }; })).condensationDepth;
+      expectedError.msg = exactly "gen-program.mkModel: the `program` operand (a gen-scope program value, as `program` returns): required field 'atoms' is missing (required: 'atoms', 'bodyArity', 'dependency', 'rules', 'signs', 'unaryBodies') (in prelude.checkRequired)";
+    };
+    test-mk-model-refuses-a-non-set-adjudication-operand = {
+      expr = (genProgram.mkModel (opMk // { adjudication = null; })).condensationDepth;
+      expectedError.msg = exactly "gen-program.mkModel: the `adjudication` operand must be an attrset, not a null";
+    };
+    test-mk-model-refuses-a-non-boolean-complete-operand = {
+      expr = (genProgram.mkModel (opMk // { complete = "s"; })).condensationDepth;
+      expectedError.msg = exactly "gen-program.mkModel: the `complete` operand must be a boolean, not a string";
+    };
+    test-model-refuses-an-empty-program-operand = {
+      expr = (genProgram.model (opModelArgs // { program = { }; })).complete;
+      expectedError.msg = exactly "gen-program.model: the `program` operand (a gen-scope program value, as `program` returns): required field 'atoms' is missing (required: 'atoms', 'bodyArity', 'dependency', 'rules', 'signs', 'unaryBodies') (in prelude.checkRequired)";
+    };
+    test-model-refuses-a-non-list-interpretation-operand = {
+      expr = (genProgram.model (opModelArgs // { interpretation = "s"; })).complete;
+      expectedError.msg = exactly "gen-program.model: the `interpretation` operand must be a list, not a string";
+    };
+    test-model-refuses-a-non-boolean-complete-operand = {
+      expr = (genProgram.model (opModelArgs // { complete = null; })).complete;
+      expectedError.msg = exactly "gen-program.model: the `complete` operand must be a boolean, not a null";
+    };
+    test-codomain-breaches-refuses-an-empty-contract-operand = {
+      expr = genProgram.codomainBreaches { } [ ];
+      expectedError.msg = exactly "gen-program.codomainBreaches: the `contract` operand (a codomain `{ emits; binds; suppresses; }`): required field 'binds' is missing (required: 'binds', 'emits', 'suppresses') (in prelude.checkRequired)";
+    };
+    test-codomain-breaches-refuses-a-binds-that-is-not-a-list-or-null = {
+      expr = genProgram.codomainBreaches {
+        emits = [ ];
+        binds = "s";
+        suppresses = [ ];
+      } [ ];
+      expectedError.msg = exactly "gen-program.codomainBreaches: the `contract` operand (a codomain `{ emits; binds; suppresses; }`): field 'binds' must be a list or null, not a string";
+    };
+    # ── the element form of an atom list (C-C): a non-string atom aborts the evaluator uncatchably, so it is refused here ──
+    test-adjudicate-refuses-a-true-atom-that-is-not-a-string = {
+      expr =
+        (genProgram.adjudicate (
+          opAdj
+          // {
+            model = opSolved // {
+              trueAtoms = [ 5 ];
+            };
+          }
+        )).outcome;
+      expectedError.msg = exactly "gen-program.adjudicate: the `model` operand (a gen-scope solved record): field 'trueAtoms' must be a list of strings, not a list holding a int";
+    };
+    test-adjudicate-refuses-an-undefined-atom-that-is-not-a-string = {
+      expr =
+        (genProgram.adjudicate (
+          opAdj
+          // {
+            model = opSolved // {
+              undefinedAtoms = [ 5 ];
+            };
+          }
+        )).outcome;
+      expectedError.msg = exactly "gen-program.adjudicate: the `model` operand (a gen-scope solved record): field 'undefinedAtoms' must be a list of strings, not a list holding a int";
+    };
+    test-mk-model-refuses-a-true-atom-that-is-not-a-string-while-growing = {
+      expr =
+        (genProgram.mkModel (
+          opMk
+          // {
+            complete = false;
+            solved = opSolved // {
+              trueAtoms = [ 5 ];
+            };
+          }
+        )).condensationDepth;
+      expectedError.msg = exactly "gen-program.mkModel: the `solved` operand (a gen-scope solved record): field 'trueAtoms' must be a list of strings, not a list holding a int";
+    };
+    test-mk-model-refuses-a-false-atom-that-is-not-a-string-when-complete = {
+      expr =
+        (genProgram.mkModel (
+          opMk
+          // {
+            solved = opSolved // {
+              falseAtoms = [ 5 ];
+            };
+          }
+        )).condensationDepth;
+      expectedError.msg = exactly "gen-program.mkModel: the `solved` operand (a gen-scope solved record): field 'falseAtoms' must be a list of strings, not a list holding a int";
     };
   };
 }

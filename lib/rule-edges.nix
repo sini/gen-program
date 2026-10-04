@@ -45,6 +45,7 @@
   prelude,
   declaration,
   ruleKey,
+  checkModelRecord,
 }:
 let
   quoteAll = names: prelude.concatMapStringsSep ", " (n: "'${n}'") names;
@@ -88,19 +89,25 @@ let
       verdicts = builtins.mapAttrs (h: _: model.resolve h) settledKeyed;
       undefined = builtins.filter (h: verdicts.${h}.flag == "U") (builtins.attrNames verdicts);
 
+      # The model is checked where it is READ, not before: with nothing labelled `reached` never reads
+      # it, and a degenerate subject that carries no model of its own (gen-inspect's, gen-demo's C25)
+      # is a legitimate caller of that read-free path.
       reached =
         if labelled == [ ] then
           [ ]
-        else if unsolved != [ ] then
-          throw "gen-program.ruleEdges: ${
-            quoteAll (prelude.unique (map (d: d.head) unsolved))
-          } is labelled by a declaration that is not a rule of this model; the model was solved from other declarations, so it cannot answer for these"
-        else if !model.complete then
-          throw "gen-program.ruleEdges: the relation is still growing (complete = false), so an edge set read from it would assert a negative for every absent candidate that a later pass may still falsify; read `reached` from the pass that closes the relation, or one membership's answer through the model's `resolve`"
-        else if undefined != [ ] then
-          throw "gen-program.ruleEdges: ${quoteAll undefined} is UNDEFINED (U); an edge has no third value, so the membership can be carried into the graph neither as an edge nor as its absence, and is refused rather than collapsed. Read its answer through the model's `resolve` and handle 'U'"
         else
-          builtins.attrValues (prelude.filterAttrs (h: _: verdicts.${h}.included) settledKeyed);
+          builtins.seq (checkModelRecord "gen-program.ruleEdges" model) (
+            if unsolved != [ ] then
+              throw "gen-program.ruleEdges: ${
+                quoteAll (prelude.unique (map (d: d.head) unsolved))
+              } is labelled by a declaration that is not a rule of this model; the model was solved from other declarations, so it cannot answer for these"
+            else if !model.complete then
+              throw "gen-program.ruleEdges: the relation is still growing (complete = false), so an edge set read from it would assert a negative for every absent candidate that a later pass may still falsify; read `reached` from the pass that closes the relation, or one membership's answer through the model's `resolve`"
+            else if undefined != [ ] then
+              throw "gen-program.ruleEdges: ${quoteAll undefined} is UNDEFINED (U); an edge has no third value, so the membership can be carried into the graph neither as an edge nor as its absence, and is refused rather than collapsed. Read its answer through the model's `resolve` and handle 'U'"
+            else
+              builtins.attrValues (prelude.filterAttrs (h: _: verdicts.${h}.included) settledKeyed)
+          );
     in
     {
       inherit candidates reached;

@@ -262,18 +262,132 @@ let
         searched = true;
         candidatesTested = final.tested;
       };
-  adjudicate = prelude.door {
-    name = "gen-program.adjudicate";
-    required = [
-      "program"
-      "model"
-      "interpretation"
-    ];
-    open = true;
-  } adjudicateCore;
+  # ── A CONFIGURATION OPERAND'S FORM (den-hoag-l3cwb, ADR-0025 item 1) ──
+  # A record operand is read field by field, so a wrong shape reaches the evaluator's own
+  # "attribute missing" / "expected a set" — an abort `tryEval` cannot contain. `checkOperand door
+  # fields v` refuses it by name instead: `v` must be an attrset carrying every field of `fields`
+  # (`prelude.checkRequired`, R5 open: an extra field is admitted) and each at its stated kind.
+  # Kinds are tested at WHNF, so the check is O(fields) and never walks an element.
+  kinds = {
+    list = {
+      holds = builtins.isList;
+      article = "a list";
+    };
+    set = {
+      holds = builtins.isAttrs;
+      article = "an attrset";
+    };
+    function = {
+      holds = prelude.isFunction;
+      article = "a function";
+    };
+    bool = {
+      holds = builtins.isBool;
+      article = "a boolean";
+    };
+    int = {
+      holds = builtins.isInt;
+      article = "an integer";
+    };
+    # An atom list: strings all, because an element that is not one aborts the evaluator in the first
+    # string operation that meets it, and `tryEval` does not contain that (ADR-0025 item 1).
+    stringList = {
+      holds = v: builtins.isList v && builtins.all builtins.isString v;
+      article = "a list of strings";
+    };
+    listOrNull = {
+      holds = v: v == null || builtins.isList v;
+      article = "a list or null";
+    };
+    functionOrNull = {
+      holds = v: v == null || prelude.isFunction v;
+      article = "a function or null";
+    };
+    any = {
+      holds = _: true;
+      article = "a value";
+    };
+  };
+  # What the value was, for the refusal: a list that fails `stringList` names its first stray element.
+  found =
+    kind: v:
+    if kind == "stringList" && builtins.isList v then
+      "a list holding a ${builtins.typeOf (builtins.head (builtins.filter (e: !builtins.isString e) v))}"
+    else
+      "a ${builtins.typeOf v}";
+  # A bare operand (a list or a boolean, no fields): refused by name at its kind.
+  checkKind =
+    door: operand: kind: v:
+    if kinds.${kind}.holds v then
+      v
+    else
+      throw "${door}: the `${operand}` operand must be ${kinds.${kind}.article}, not a ${builtins.typeOf v}";
+  # What the cores read of gen-scope's program value (`scope.mkProgram`'s own six fields).
+  programFields = {
+    atoms = "list";
+    rules = "list";
+    bodyArity = "int";
+    unaryBodies = "bool";
+    dependency = "set";
+    signs = "function";
+  };
+  checkProgram =
+    door:
+    checkOperand "${door}: the `program` operand (a gen-scope program value, as `program` returns)" programFields;
+  checkOperand =
+    door: fields: v:
+    let
+      names = builtins.attrNames fields;
+      a = prelude.checkRequired door names v;
+      wrong = prelude.filter (f: !kinds.${fields.${f}}.holds a.${f}) names;
+    in
+    if wrong == [ ] then
+      a
+    else
+      throw "${door}: field '${builtins.head wrong}' must be ${
+        kinds.${fields.${builtins.head wrong}}.article
+      }, not ${found fields.${builtins.head wrong} a.${builtins.head wrong}}";
+
+  # What `adjudicateCore` reads of its `model`: the two partitions it searches over.
+  adjudicateModelFields = {
+    undefinedAtoms = "stringList";
+    trueAtoms = "stringList";
+  };
+  adjudicate =
+    prelude.door
+      {
+        name = "gen-program.adjudicate";
+        required = [
+          "program"
+          "model"
+          "interpretation"
+        ];
+        open = true;
+      }
+      (
+        a:
+        builtins.seq (checkProgram "gen-program.adjudicate" a.program) (
+          builtins.seq
+            (checkOperand "gen-program.adjudicate: the `model` operand (a gen-scope solved record)"
+              adjudicateModelFields
+              a.model
+            )
+            (
+              builtins.seq (checkKind "gen-program.adjudicate" "interpretation" "list" a.interpretation) (
+                adjudicateCore a
+              )
+            )
+        )
+      );
 in
 {
-  inherit adjudicate adjudicateCore;
+  inherit
+    adjudicate
+    adjudicateCore
+    checkOperand
+    checkKind
+    checkProgram
+    ;
   # Published under names that say WHICH budget and WHICH criterion. A bare `budget` on a library
   # surface is a number whose axis a reader has to go and find, and this one prices the contested
   # count and nothing else.

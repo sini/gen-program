@@ -49,6 +49,7 @@
   prelude,
   T,
   hashIdentity,
+  checkOperand,
 }:
 let
   inherit (builtins)
@@ -593,35 +594,47 @@ let
   admits = names: n: names == null || elem n names;
   codomainBreaches =
     contract: declarations:
-    concatMap (
-      d:
-      # The shape arm (P-2, exec gate): a declaration outside the skeleton shape is a contract
-      # breach at the author's door, not an internal crash blaming this module.
-      if !(isAttrs d && d ? ctor && isString d.ctor && rows ? ${d.ctor}) then
-        [
-          {
-            field = "shape";
-            delta =
-              if isAttrs d && d ? ctor then
-                "a declaration whose ctor is not a known constructor"
-              else
-                "a declaration without a ctor";
-          }
-        ]
-      else
-        map (k: {
-          field = "emits";
-          delta = k;
-        }) (filter (k: !elem k contract.emits) (rows.${d.ctor}.emitted d))
-        ++ map (k: {
-          field = "binds";
-          delta = k;
-        }) (if d.ctor == "member" then filter (k: !admits contract.binds k) (attrNames d.payload) else [ ])
-        ++ map (n: {
-          field = "suppresses";
-          delta = n;
-        }) (if d.ctor == "suppress" && !admits contract.suppresses d.target then [ d.target ] else [ ])
-    ) declarations;
+    builtins.seq
+      (checkOperand
+        "gen-program.codomainBreaches: the `contract` operand (a codomain `{ emits; binds; suppresses; }`)"
+        {
+          emits = "list";
+          binds = "listOrNull";
+          suppresses = "listOrNull";
+        }
+        contract
+      )
+      concatMap
+      (
+        d:
+        # The shape arm (P-2, exec gate): a declaration outside the skeleton shape is a contract
+        # breach at the author's door, not an internal crash blaming this module.
+        if !(isAttrs d && d ? ctor && isString d.ctor && rows ? ${d.ctor}) then
+          [
+            {
+              field = "shape";
+              delta =
+                if isAttrs d && d ? ctor then
+                  "a declaration whose ctor is not a known constructor"
+                else
+                  "a declaration without a ctor";
+            }
+          ]
+        else
+          map (k: {
+            field = "emits";
+            delta = k;
+          }) (filter (k: !elem k contract.emits) (rows.${d.ctor}.emitted d))
+          ++ map (k: {
+            field = "binds";
+            delta = k;
+          }) (if d.ctor == "member" then filter (k: !admits contract.binds k) (attrNames d.payload) else [ ])
+          ++ map (n: {
+            field = "suppresses";
+            delta = n;
+          }) (if d.ctor == "suppress" && !admits contract.suppresses d.target then [ d.target ] else [ ])
+      )
+      declarations;
 
   fireEscape = _: _: escapeRetired "fireEscape";
 
@@ -886,6 +899,19 @@ let
       else if !(b ? declared) then
         refuse "policy-body/skeleton-malformed" [ "declared" ]
           "`groundInstances` resolves under the body's own declared set, and this body carries none — admit it through `body`/`admit`, which require `declared` (`null` is the written open world)"
+      # The context is a map of coordinate names to values, and the options are as `groundInstances`
+      # documents them: `sources` a map, `door` a function or null. A wrong shape would otherwise be
+      # read as "no coordinates" / "no sources" and answer silently (`[ ]`, or a firing with no
+      # source identities), or abort in `attrNames`.
+      else if !isAttrs a.context then
+        refuse "policy-body/context-malformed" (builtins.typeOf a.context)
+          "`groundInstances` resolves a body at a context, a map of coordinate names to values, and this one is a ${builtins.typeOf a.context}"
+      else if !isAttrs (args.sources or { }) then
+        refuse "policy-body/option-malformed" [ "sources" ]
+          "`groundInstances`' option `sources` is a map from coordinate name to source identity, and this one is a ${builtins.typeOf args.sources}"
+      else if !(door == null || prelude.isFunction door) then
+        refuse "policy-body/option-malformed" [ "door" ]
+          "`groundInstances`' option `door` is a function (the framework's door) or null, and this one is a ${builtins.typeOf door}"
       else
         collect (map (fireClause (envOf a.context b.declared (args.sources or { }) { }) { }) b.clauses)
     );

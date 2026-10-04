@@ -113,9 +113,19 @@ without required argument" — is refused by the door's name, and `ci/tests-erro
 the byte. The formal-set cells (`relation.nix`, `adjudication.nix`, `surface.nix`) read the
 published contract through `prelude.functionArgs`. The omission refusal, the non-record `prior`
 refusal and the withholding refusal are ordinary throws, and `tryEval` catches them.
-Two further doors are NOT catchable: `mkModel` called with an EMPTY `solved` and `adjudicate` called
-with an EMPTY `model` abort with "attribute missing" (rc 1,
-`condensationDepth` and `undefinedAtoms` respectively); carried by den-hoag-l3cwb.
+★ **Every operand a door READS is checked at its application** (den-hoag-l3cwb). A wrong shape is a
+catchable refusal by name that states the operand and the form expected, never the evaluator's own
+"attribute missing": `ruleEdges`' `model` is a gen-program result record (`rules`, `resolve`,
+`complete`) and is checked WHERE IT IS READ, so a call with nothing labelled reads no model and
+answers `[ ]`; `adjudicate`'s `model` and `mkModel`'s `solved` are gen-scope solved records (their
+atom lists lists of strings); `program`, `interpretation`, `complete` and `adjudication` are checked
+on `model`, `mkModel` and `adjudicate`; `codomainBreaches`' `contract` is `{ emits; binds; suppresses; }`; `groundInstances` returns the tagged refusals `policy-body/context-malformed` (the
+context is not a map) and `policy-body/option-malformed` (`sources` not a map, `door` neither a
+function nor null). The checks read each field at WHNF and each atom list's elements, and the cores
+`model` calls on records it built stay unchecked. **The one stated exception** (ADR-0025 item 1):
+what a closure ANSWERS cannot be checked, so a `verdict`/`resolve` handed over in `solved` or `model`
+that aborts on an atom (`resolve 5` aborts "expected a string") aborts uncatchably when read; the
+caller owns those closures.
 
 The record carries `trueAtoms` / `withheldAtoms` / `undefinedAtoms` / `falseAtoms`, which partition
 **gen-scope's extended base, `program.atoms ∪ dom(interpretation)`**, in its order: on a growing
