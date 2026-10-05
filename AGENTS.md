@@ -133,10 +133,12 @@ atom lists lists of strings); `program`, `interpretation`, `complete` and `adjud
 on `model`, `mkModel` and `adjudicate`; `codomainBreaches`' `contract` is `{ emits; binds; suppresses; }`; `groundInstances` returns the tagged refusals `policy-body/context-malformed` (the
 context is not a map) and `policy-body/option-malformed` (`sources` not a map, `door` neither a
 function nor null). The checks read each field at WHNF and each atom list's elements, and the cores
-`model` calls on records it built stay unchecked. **The one stated exception** (ADR-0025 item 1):
-what a closure ANSWERS cannot be checked, so a `verdict`/`resolve` handed over in `solved` or `model`
+`model` calls on records it built stay unchecked. **Two stated exceptions** (ADR-0025 item 1). What
+a closure ANSWERS cannot be checked, so a `verdict`/`resolve` handed over in `solved` or `model`
 that aborts on an atom (`resolve 5` aborts "expected a string") aborts uncatchably when read; the
-caller owns those closures.
+caller owns those closures. And `groundInstances`' context keys are an open world, so an option
+misplaced in the context map is dropped without a message (the `groundInstances` entry below; cell
+`test-exception-a-misplaced-sources-option-in-the-context-is-dropped`).
 
 The record carries `trueAtoms` / `withheldAtoms` / `undefinedAtoms` / `falseAtoms`, which partition
 **gen-scope's extended base, `program.atoms ∪ dom(interpretation)`**, in its order: on a growing
@@ -236,7 +238,11 @@ never recovered by firing.
   which answers `{ output; scope; }`; a nested door clause in the output passes the same walk and
   fires under the extended scope. Each admitted rule carries `__mint`, its rule identity; each
   fired declaration carries its firing identity over the rule and the `sources` of its reads (an
-  absent declared coordinate enters as a fixed absence tag).
+  absent declared coordinate enters as a fixed absence tag). Context keys are an open world:
+  `groundInstances` does not inspect them, so an option placed in the context map
+  (`{ thimble = "x"; sources = { … }; }`) is read as a coordinate named `sources`, never as the
+  option, which is ignored, by design. Options go in the first argument:
+  `groundInstances { sources = { … }; } context body`.
 - **`escape`** — RETIRED (den-hoag-lwbb1 unit 3, U3r): an alias of its original arity that refuses
   any argument as the value `policy-body/escape-retired`, naming the gen-rules door. A closure crosses
   that door (`defunctionalize`, `mkApply`) and reaches gen-program as a door clause.

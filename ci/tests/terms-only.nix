@@ -560,6 +560,30 @@ in
         true
       ];
     };
+    # ENUMERATED EXCEPTION, ADR-0025 item 1 (den-hoag-evolg): context keys are an open world, so the
+    # `sources` OPTION placed in the context map is a coordinate named `sources`, which D narrows
+    # away like any other extra key. The firing equals the option-omitted one and differs from the
+    # correct call. A change that refuses or reads the misplaced key reds this cell by design.
+    test-exception-a-misplaced-sources-option-in-the-context-is-dropped = {
+      expr =
+        let
+          s = {
+            thimble = src "1";
+          };
+          misplaced = fire tuckBody {
+            thimble = "x";
+            sources = s;
+          } { };
+        in
+        [
+          (misplaced == fire tuckBody { thimble = "x"; } { })
+          (misplaced != fire tuckBody { thimble = "x"; } s)
+        ];
+      expected = [
+        true
+        true
+      ];
+    };
     # C1: under D an absent coordinate is a two-valued fact, so the firing of a negated safeguard
     # mints — over the fixed absence tag — and still keys on the sources of what is present.
     test-firing-identity-safeguard = {

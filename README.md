@@ -285,8 +285,12 @@ the empty codomain) has no expression: **a term is read, not fired**. A malforme
 at construction as a **tagged value** naming the violated slot, the author as the blamed party,
 and the remedy. `groundInstances` resolves an admitted body at a context and returns the fired
 declarations as data; a door clause resolves through the door the framework passes in, which is
-the only place a closure is applied. Each rule and each firing carries an identity minted through
-gen-identity, the firing's over the sources of what it read, never the values.
+the only place a closure is applied. Context keys are an open world: `groundInstances` does not
+inspect them, so an option placed in the context map (`{ thimble = "x"; sources = { … }; }`) is
+read as a coordinate named `sources`, never as the option, which is ignored, by design. Options go
+in the first argument: `groundInstances { sources = { … }; } context body`. Each rule and each
+firing carries an identity minted through gen-identity,
+the firing's over the sources of what it read, never the values.
 
 The per-firing codomain check is published as `codomainBreaches contract declarations`, so the
 gen-rules door validates a closure's output against the same row table at **every firing**; a
