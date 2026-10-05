@@ -247,7 +247,7 @@ absences are the negatives that relation withholds), and on a model solved from 
 declarations. One membership's answer stays readable through `resolve`.
 
 A declaration may instead carry **`promote`**, a relation kind. Its head, when included, then
-denotes a **node**: a reified relation over its relata (ADR-0016), so its `relata` are a labelled
+denotes a **node**: a reified relation over its relata, so its `relata` are a labelled
 tuple, an attrset label → identifier. Edge or node is declared on the rule, never read off the
 relata count, and a declaration carrying both `label` and `promote` is refused. Two more fields:
 
