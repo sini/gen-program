@@ -11,6 +11,7 @@
 {
   genProgram,
   T,
+  algebra,
   ...
 }:
 let
@@ -545,6 +546,17 @@ in
         true
         true
       ];
+    };
+    # The rule mint's DECISION site answers off the minted arm (den-hoag-dg8d1): a condition term with
+    # no identity (built by an instance with no minting authority) makes the rule unmintable by name,
+    # read through gen-algebra's `identityOf`, an answer and not an abort.
+    test-rule-over-a-term-with-no-identity-answers-unmintable = {
+      expr =
+        let
+          t0 = (algebra.term null).term;
+        in
+        algebra.identityOf (builtins.head (bodyOf D [ (tuck // { when = t0.has "thimble"; }) ]).clauses);
+      expected.unmintable = "a term of this rule carries no identity";
     };
     test-firing-identity-by-source = {
       expr =
