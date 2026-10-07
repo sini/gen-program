@@ -30,6 +30,7 @@
     # The one term algebra a rule body is written in, and the one minting authority it is applied to
     # (den-hoag-lwbb1 unit 3). Both are dependency-free leaves, so there is nothing to `follows`.
     gen-algebra.url = "github:sini/gen-algebra";
+    gen-scope.inputs.gen-algebra.follows = "gen-algebra";
     gen-identity.url = "github:sini/gen-identity";
   };
 

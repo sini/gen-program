@@ -19,6 +19,7 @@
     gen-scope.url = "github:sini/gen-scope";
     gen-scope.inputs.gen-prelude.follows = "gen-prelude";
     gen-scope.inputs.gen-graph.inputs.gen-prelude.follows = "gen-prelude";
+    gen-scope.inputs.gen-algebra.follows = "gen-algebra";
 
     # The one term algebra (den-hoag-lwbb1 unit 1) and the minting authority it is applied to,
     # reached THROUGH gen-scope's pin for the prelude's reason above: two mints in one acceptance
