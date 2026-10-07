@@ -80,7 +80,10 @@
 let
   # The one term algebra (gen-algebra), applied to the one minting authority (gen-identity).
   T = algebra.term identity.hashIdentity;
-  rules = import ./rules.nix { inherit prelude scope; };
+  rules = import ./rules.nix {
+    inherit prelude scope;
+    inherit (T) isRefusal;
+  };
   # The ONE recorded budget, wired here. The coherence module takes it as a parameter so a
   # derivation run can reach the construction past the figure — but this is the only wiring the
   # published surface has, so a consumer can read the budget and cannot select one.

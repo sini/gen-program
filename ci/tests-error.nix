@@ -347,6 +347,22 @@ in
         ] "adjudication"
       );
     };
+    # A `when` shaped like an Either-left is recognised as the algebra's refusal only by gen-algebra's
+    # `isRefusal` (den-hoag-s1ua7): a `left` that is not a set, or whose code is not a string, is not a
+    # literal and refuses by the door's name, where the interpolation aborted past `tryEval`; a real
+    # refusal's code is still named.
+    test-declaration-when-left-not-a-set = {
+      expr = (genProgram.declaration { when.left = 1; } [ ] "h").pos;
+      expectedError.msg = exactly "gen-program.declaration: `when` is not in the literal tier: set is not a literal, a conjunction or `always`";
+    };
+    test-declaration-when-left-int-code = {
+      expr = (genProgram.declaration { when.left.code = 105; } [ ] "h").pos;
+      expectedError.msg = exactly "gen-program.declaration: `when` is not in the literal tier: set is not a literal, a conjunction or `always`";
+    };
+    test-declaration-when-refusal-names-its-code = {
+      expr = (genProgram.declaration { when.left.code = "x"; } [ ] "h").pos;
+      expectedError.msg = exactly "gen-program.declaration: `when` is not in the literal tier: the term algebra refused it (x)";
+    };
     test-declaration-unknown-option-message = {
       expr = genProgram.declaration { zzqran7f = 1; };
       expectedError.msg = exactly (

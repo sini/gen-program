@@ -73,7 +73,11 @@
 # refuses by the identical path because nothing earlier minted it either. ★ It is about RELATA —
 # identifiers — and never about ATOMS; collapsing the two universes would make an identifier
 # derivable.
-{ prelude, scope }:
+{
+  prelude,
+  scope,
+  isRefusal,
+}:
 let
   quoteAll = names: prelude.concatMapStringsSep ", " (n: "'${n}'") names;
 
@@ -111,7 +115,9 @@ let
       why =
         if builtins.isFunction t then
           "a function `when` stays unlowerable (fuci G1); a closure crosses the gen-rules door"
-        else if t ? left then
+        # A refusal is recognised only by gen-algebra's own predicate, exact to `refuse`'s string code
+        # (den-hoag-s1ua7); any other `left`-shaped value is not a literal, and says so below.
+        else if isRefusal t then
           "the term algebra refused it (${t.left.code})"
         else if f == "Any" then
           "`any` is a disjunction, and a rule body is a conjunction: write one declaration per disjunct over the one head"
