@@ -48,6 +48,8 @@
 {
   prelude,
   T,
+  identityOf,
+  isExact,
   hashIdentity,
   checkOperand,
 }:
@@ -194,7 +196,17 @@ let
   # ── IDENTITY (ADR-0034) ──
   # A rule mints over its two terms' digests through the one authority, in the tagged sum
   # gen-algebra's `identityOf` reads; a term with no identity makes the rule unmintable by name.
-  digest = t: if isAttrs t then (t.__mint or { }).minted or null else null;
+  # The digest is read through `identityOf` and selected by `isExact`, never off `__mint` raw: a value
+  # off the minted arm (unmintable, unmigrated, or a mark beside sealed components) has no digest here.
+  digest =
+    t:
+    if isAttrs t then
+      let
+        i = identityOf t;
+      in
+      if isExact i then i.minted else null
+    else
+      null;
   ruleMint =
     c:
     let

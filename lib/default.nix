@@ -92,6 +92,7 @@ let
   # term instance, and the mint the rule and firing identities go through (ADR-0034's one authority).
   bodyAlgebra = import ./policy-body.nix {
     inherit prelude T;
+    inherit (algebra) identityOf isExact;
     inherit (identity) hashIdentity;
     inherit (stableModel) checkOperand;
   };
