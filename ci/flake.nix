@@ -9,11 +9,16 @@
     nixpkgs.url = "https://channels.nixos.org/nixos-unstable/nixexprs.tar.xz";
 
     # THE SUBSTRATE. The library takes it injected, so the library itself declares no dependency
-    # on it — but the ACCEPTANCE RUN must supply one, and gen-scope is it. The prelude is reached
-    # THROUGH that pin rather than declared beside it: this library compares values that cross the
-    # boundary between the two, and two prelude instances would make an equality cell a question
-    # about which copy answered.
+    # on it — but the ACCEPTANCE RUN must supply one, and gen-scope is it. The prelude is declared
+    # here and gen-scope (with its gen-graph) FOLLOWS it, so there is one prelude instance: this
+    # library compares values that cross the boundary between the two, and two prelude instances
+    # would make an equality cell a question about which copy answered. It is declared rather than
+    # read through gen-scope's pin because the refusal cells compose their expected text through
+    # this instance's `refusals` (den-hoag-7jltk), and that is the copy every door here throws from.
+    gen-prelude.url = "github:sini/gen-prelude";
     gen-scope.url = "github:sini/gen-scope";
+    gen-scope.inputs.gen-prelude.follows = "gen-prelude";
+    gen-scope.inputs.gen-graph.inputs.gen-prelude.follows = "gen-prelude";
 
     # The one term algebra (den-hoag-lwbb1 unit 1) and the minting authority it is applied to,
     # reached THROUGH gen-scope's pin for the prelude's reason above: two mints in one acceptance
@@ -25,6 +30,7 @@
   outputs =
     inputs@{
       gen-harness,
+      gen-prelude,
       gen-scope,
       gen-algebra,
       gen-identity,
@@ -32,7 +38,7 @@
     }:
     let
       scope = gen-scope.lib;
-      prelude = gen-scope.inputs.gen-prelude.lib;
+      prelude = gen-prelude.lib;
       algebra = gen-algebra.lib;
       identity = gen-identity.lib;
       genProgram = import ../lib {

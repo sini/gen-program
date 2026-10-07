@@ -38,6 +38,9 @@ let
   # The message, pinned to the byte. `escapeRegex` is the prelude's own and its metacharacter set
   # is byte-identical to nixpkgs', so what is anchored below is the text as written above it.
   exactly = msg: "^" + prelude.escapeRegex msg + "$";
+  # gen-prelude's refusal text, composed with this library's own literal door, field and accepted
+  # set (den-hoag-7jltk): every assertion kept, none of gen-prelude's wording copied.
+  inherit (prelude) refusals;
 
   build =
     { declarations, frozen }:
@@ -284,14 +287,22 @@ in
     # structural and they carry no field check, so no golden.
     test-body-missing-required-field-message = {
       expr = genProgram.body { name = "x"; };
-      expectedError.msg = exactly "gen-program.body: required field 'clauses' is missing (required: 'name', 'clauses', 'declared') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-program.body" [ "name" "clauses" "declared" ] "clauses"
+      );
     };
     test-adjudicate-missing-required-field-message = {
       expr = genProgram.adjudicate {
         program = genProgram.program [ ] [ ];
         model = null;
       };
-      expectedError.msg = exactly "gen-program.adjudicate: required field 'interpretation' is missing (required: 'program', 'model', 'interpretation') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-program.adjudicate" [
+          "program"
+          "model"
+          "interpretation"
+        ] "interpretation"
+      );
     };
     # den-hoag-ea3j4 landing gate Q4: `prior` is REQUIRED (arm (ii)) and was a native formal, so a
     # call without it aborted uncatchably. The door names it.
@@ -301,7 +312,9 @@ in
         interpretation = [ ];
         complete = true;
       };
-      expectedError.msg = exactly "gen-program.model: required field 'prior' is missing (required: 'program', 'interpretation', 'complete', 'prior') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-program.model" [ "program" "interpretation" "complete" "prior" ] "prior"
+      );
     };
     # The same gate's second abort: `mkModel` without `program` (ea3j4 P3).
     test-mkModel-missing-program-message = {
@@ -310,7 +323,14 @@ in
         adjudication = null;
         complete = true;
       };
-      expectedError.msg = exactly "gen-program.mkModel: required field 'program' is missing (required: 'solved', 'program', 'adjudication', 'complete') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-program.mkModel" [
+          "solved"
+          "program"
+          "adjudication"
+          "complete"
+        ] "program"
+      );
     };
     test-mkModel-missing-adjudication-message = {
       expr = genProgram.mkModel {
@@ -318,11 +338,20 @@ in
         program = null;
         complete = true;
       };
-      expectedError.msg = exactly "gen-program.mkModel: required field 'adjudication' is missing (required: 'solved', 'program', 'adjudication', 'complete') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-program.mkModel" [
+          "solved"
+          "program"
+          "adjudication"
+          "complete"
+        ] "adjudication"
+      );
     };
     test-declaration-unknown-option-message = {
       expr = genProgram.declaration { zzqran7f = 1; };
-      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'pos', 'neg', 'label', 'promote', 'when') (in prelude.checkOptions)";
+      expectedError.msg = exactly (
+        refusals.unknownOption "gen-program.declaration" [ "pos" "neg" "label" "promote" "when" ] "zzqran7f"
+      );
     };
     # A declaration AS DATA — an entry of `program`'s list — is normalised by the same door's
     # record core: an unknown field and a missing `head` are refused by the door's name.
@@ -337,15 +366,29 @@ in
               zzqran7f = 1;
             }
           ];
-      expectedError.msg = exactly "gen-program.declaration: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'head', 'relata', 'pos', 'neg', 'label', 'promote', 'when') (in prelude.checkOptions)";
+      expectedError.msg = exactly (
+        refusals.unknownOption "gen-program.declaration" [
+          "head"
+          "relata"
+          "pos"
+          "neg"
+          "label"
+          "promote"
+          "when"
+        ] "zzqran7f"
+      );
     };
     test-declaration-record-missing-head-message = {
       expr = genProgram.program [ ] [ { relata = [ ]; } ];
-      expectedError.msg = exactly "gen-program.declaration: required field 'head' is missing (required: 'head', 'relata') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-program.declaration" [ "head" "relata" ] "head"
+      );
     };
     test-groundInstances-unknown-option-message = {
       expr = genProgram.groundInstances { zzqran7f = 1; };
-      expectedError.msg = exactly "gen-program.groundInstances: 'zzqran7f' is not an option of this door; the options are closed (accepted: 'door', 'sources') (in prelude.checkOptions)";
+      expectedError.msg = exactly (
+        refusals.unknownOption "gen-program.groundInstances" [ "door" "sources" ] "zzqran7f"
+      );
     };
 
     # den-hoag-ea3j4 — the three refusals the multi-pass protocol names.
@@ -623,11 +666,23 @@ in
 
     test-rule-edges-refuses-an-empty-model-operand = {
       expr = (genProgram.ruleEdges { } opLabelled).reached;
-      expectedError.msg = exactly "gen-program.ruleEdges: the `model` operand (a gen-program result record): required field 'complete' is missing (required: 'complete', 'resolve', 'rules') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-program.ruleEdges: the `model` operand (a gen-program result record)" [
+          "complete"
+          "resolve"
+          "rules"
+        ] "complete"
+      );
     };
     test-rule-edges-refuses-a-non-attrset-model-operand = {
       expr = (genProgram.ruleEdges 5 opLabelled).reached;
-      expectedError.msg = exactly "gen-program.ruleEdges: the `model` operand (a gen-program result record): the argument must be an attrset, not a int (required: 'complete', 'resolve', 'rules') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.recordNotASet "gen-program.ruleEdges: the `model` operand (a gen-program result record)" [
+          "complete"
+          "resolve"
+          "rules"
+        ] 1
+      );
     };
     test-rule-edges-refuses-a-model-whose-rules-is-not-a-set = {
       expr = (genProgram.ruleEdges (opModel // { rules = [ ]; }) opLabelled).reached;
@@ -635,7 +690,12 @@ in
     };
     test-adjudicate-refuses-an-empty-model-operand = {
       expr = (genProgram.adjudicate (opAdj // { model = { }; })).outcome;
-      expectedError.msg = exactly "gen-program.adjudicate: the `model` operand (a gen-scope solved record): required field 'trueAtoms' is missing (required: 'trueAtoms', 'undefinedAtoms') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-program.adjudicate: the `model` operand (a gen-scope solved record)" [
+          "trueAtoms"
+          "undefinedAtoms"
+        ] "trueAtoms"
+      );
     };
     test-adjudicate-refuses-a-model-whose-undefined-atoms-is-not-a-list = {
       expr =
@@ -651,7 +711,12 @@ in
     };
     test-adjudicate-refuses-an-empty-program-operand = {
       expr = (genProgram.adjudicate (opAdj // { program = { }; })).outcome;
-      expectedError.msg = exactly "gen-program.adjudicate: the `program` operand (a gen-scope program value, as `program` returns): required field 'atoms' is missing (required: 'atoms', 'bodyArity', 'dependency', 'rules', 'signs', 'unaryBodies') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField
+          "gen-program.adjudicate: the `program` operand (a gen-scope program value, as `program` returns)"
+          [ "atoms" "bodyArity" "dependency" "rules" "signs" "unaryBodies" ]
+          "atoms"
+      );
     };
     test-adjudicate-refuses-a-non-list-interpretation-operand = {
       expr = (genProgram.adjudicate (opAdj // { interpretation = null; })).outcome;
@@ -659,16 +724,41 @@ in
     };
     test-mk-model-refuses-an-empty-solved-operand = {
       expr = (genProgram.mkModel (opMk // { solved = { }; })).condensationDepth;
-      expectedError.msg = exactly "gen-program.mkModel: the `solved` operand (a gen-scope solved record): required field 'condensationDepth' is missing (required: 'condensationDepth', 'converged', 'falseAtoms', 'provenance', 'trueAtoms', 'undefinedAtoms', 'verdict') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-program.mkModel: the `solved` operand (a gen-scope solved record)" [
+          "condensationDepth"
+          "converged"
+          "falseAtoms"
+          "provenance"
+          "trueAtoms"
+          "undefinedAtoms"
+          "verdict"
+        ] "condensationDepth"
+      );
     };
     test-mk-model-refuses-a-solved-without-a-verdict = {
       expr =
         (genProgram.mkModel (opMk // { solved = removeAttrs opSolved [ "verdict" ]; })).condensationDepth;
-      expectedError.msg = exactly "gen-program.mkModel: the `solved` operand (a gen-scope solved record): required field 'verdict' is missing (required: 'condensationDepth', 'converged', 'falseAtoms', 'provenance', 'trueAtoms', 'undefinedAtoms', 'verdict') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField "gen-program.mkModel: the `solved` operand (a gen-scope solved record)" [
+          "condensationDepth"
+          "converged"
+          "falseAtoms"
+          "provenance"
+          "trueAtoms"
+          "undefinedAtoms"
+          "verdict"
+        ] "verdict"
+      );
     };
     test-mk-model-refuses-an-empty-program-operand = {
       expr = (genProgram.mkModel (opMk // { program = { }; })).condensationDepth;
-      expectedError.msg = exactly "gen-program.mkModel: the `program` operand (a gen-scope program value, as `program` returns): required field 'atoms' is missing (required: 'atoms', 'bodyArity', 'dependency', 'rules', 'signs', 'unaryBodies') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField
+          "gen-program.mkModel: the `program` operand (a gen-scope program value, as `program` returns)"
+          [ "atoms" "bodyArity" "dependency" "rules" "signs" "unaryBodies" ]
+          "atoms"
+      );
     };
     test-mk-model-refuses-a-non-set-adjudication-operand = {
       expr = (genProgram.mkModel (opMk // { adjudication = null; })).condensationDepth;
@@ -680,7 +770,12 @@ in
     };
     test-model-refuses-an-empty-program-operand = {
       expr = (genProgram.model (opModelArgs // { program = { }; })).complete;
-      expectedError.msg = exactly "gen-program.model: the `program` operand (a gen-scope program value, as `program` returns): required field 'atoms' is missing (required: 'atoms', 'bodyArity', 'dependency', 'rules', 'signs', 'unaryBodies') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField
+          "gen-program.model: the `program` operand (a gen-scope program value, as `program` returns)"
+          [ "atoms" "bodyArity" "dependency" "rules" "signs" "unaryBodies" ]
+          "atoms"
+      );
     };
     test-model-refuses-a-non-list-interpretation-operand = {
       expr = (genProgram.model (opModelArgs // { interpretation = "s"; })).complete;
@@ -692,7 +787,12 @@ in
     };
     test-codomain-breaches-refuses-an-empty-contract-operand = {
       expr = genProgram.codomainBreaches { } [ ];
-      expectedError.msg = exactly "gen-program.codomainBreaches: the `contract` operand (a codomain `{ emits; binds; suppresses; }`): required field 'binds' is missing (required: 'binds', 'emits', 'suppresses') (in prelude.checkRequired)";
+      expectedError.msg = exactly (
+        refusals.missingField
+          "gen-program.codomainBreaches: the `contract` operand (a codomain `{ emits; binds; suppresses; }`)"
+          [ "binds" "emits" "suppresses" ]
+          "binds"
+      );
     };
     test-codomain-breaches-refuses-a-binds-that-is-not-a-list-or-null = {
       expr = genProgram.codomainBreaches {
