@@ -963,7 +963,7 @@ in
           control = "admitted";
         };
       };
-    # The one input this unit moves from admitted to refused: a normal-form record carrying
+    # The one input gen-program moves from admitted to refused: a normal-form record carrying
     # `opaque = false`, the shape every built body had while built bodies carried that field. It is
     # an extra key beside normal-form clauses now, refused as any other is.
     test-admit-refuses-a-normal-form-record-carrying-opaque-false = {
