@@ -297,7 +297,8 @@ gen-rules door validates a closure's output against the same row table at **ever
 breach is named by field and delta. `admit` is the registration door: hand-rolled records fail the
 same walk the formers run, and a bare lambda is refused with the signpost to the gen-rules door.
 The declared escape is retired: `escape` and `fireEscape` stay as aliases that refuse
-`policy-body/escape-retired`, naming the door, and `admit` refuses an escape record the same way.
+`policy-body/escape-retired`, naming the door. `admit` and `deriveCodomain` refuse any record that
+is not the normal form `policy-body/skeleton-malformed`.
 
 A declaration can also write its body as a condition term: `declaration { when = all [ (has "a") (not (has "b")) ]; } relata head` is `pos = [ "a" ]; neg = [ "b" ];`, solved by the same
 well-founded engine.

@@ -230,8 +230,8 @@ never recovered by firing.
 - **`deriveCodomain`** — body → `{ emits; binds; suppresses }`. Its signature takes **no
   context**, which is its own by-construction proof that no derived fact depends on the firing
   context. On a door clause it reads the declared contract, so every policy has a codomain at
-  registration (ADR-0008 §3's precondition); a `null` stays `null`. A retired escape record handed
-  to it is refused `policy-body/escape-retired`.
+  registration (ADR-0008 §3's precondition); a `null` stays `null`. A value that is not the normal
+  form handed to it is refused `policy-body/skeleton-malformed`.
 - **`groundInstances`** — `groundInstances { door ? null; sources ? { }; } context body` → the list of fired
   declarations, data only, or a refusal. It resolves an admitted body at `context` under the body's
   own `declared`, and a door clause's `ref r` through `door { id; context; sources; captured; }`,
@@ -252,17 +252,12 @@ never recovered by firing.
   → `declarations` → the list of breaches `{ field; delta; }` (`field` is `emits`, `binds`, `suppresses`
   or `shape`), `[ ]` when the contract holds. It is published so the gen-rules door, which applies it
   at every firing, reads this one row table rather than a copy.
-- **`admit`** — the registration door: re-runs the walk on hand-rolled records, refuses an escape
-  record (`opaque` or `__isPolicy`) `policy-body/escape-retired`, and refuses a bare lambda with the
-  signpost to the gen-rules door.
+- **`admit`** — the registration door: re-runs the walk on hand-rolled records, refuses a record
+  that is not the normal form `{ name; clauses; declared; }` `policy-body/skeleton-malformed`, and
+  refuses a bare lambda with the signpost to the gen-rules door.
 
 **`__` keys crossing the boundary** (R12 stated contracts; the census that reads these lines takes the
 first line of each):
-
-- `__isPolicy` — writer none (retired with `escape`), readers `admit` and `deriveCodomain` (`lib/policy-body.nix`), which refuse a record carrying it `policy-body/escape-retired`:
-  marked the retired escape record `{ refused; __isPolicy; opaque; name; fn; … }`. It is read only so
-  a stale record is refused by name rather than taken for something else; gen-aspects stopped reading
-  it with its own closure retirement (stage 2b).
 
 ### The boundary, and what retired with it
 

@@ -480,7 +480,6 @@ let
         else
           {
             refused = false;
-            opaque = false;
             inherit name declared;
             clauses = walked;
           }
@@ -509,8 +508,8 @@ let
 
   # ── THE REGISTRATION DOOR ──
   # The substrate re-runs the walk here when a policy is registered: hand-rolled records pass or
-  # fail exactly as former-built ones do, a retired escape record (`opaque` or `__isPolicy`) is
-  # refused by name, and a bare v1 lambda is refused with the signpost to the door.
+  # fail exactly as former-built ones do, a record that is not the normal form is refused
+  # `policy-body/skeleton-malformed`, and a bare v1 lambda is refused with the signpost to the door.
   admit =
     v:
     if isFunction v then
@@ -520,8 +519,6 @@ let
       refuse "policy-body/skeleton-malformed" v "a policy body is a record; ${doorPointer}"
     else if isRefusal v then
       v
-    else if (v.opaque or false) == true || (v.__isPolicy or false) == true then
-      escapeRetired "escape"
     else if v ? clauses then
       let
         extra = filter (
@@ -531,7 +528,6 @@ let
             "clauses"
             "declared"
             "refused"
-            "opaque"
           ]
         ) (attrNames v);
       in
@@ -558,14 +554,16 @@ let
   # signature has no context parameter. ForEach contributes its skeletons exactly as Emit does:
   # the folds are invariant under multiplicity — `over` is never read (ADR-0022). A door clause
   # contributes its DECLARED contract; a `null` (the over-approximation) is never collapsed into a
-  # finite set, so a body's `binds`/`suppresses` is `null` if any clause declares it. A retired
-  # escape record handed here directly is refused by name, as `admit` refuses it.
+  # finite set, so a body's `binds`/`suppresses` is `null` if any clause declares it. A value that
+  # is not the normal form handed here directly is refused by name, as `admit` refuses it.
   deriveCodomain =
     b:
     if isRefusal b then
       b
-    else if (b.opaque or false) == true || (b.__isPolicy or false) == true then
-      escapeRetired "escape"
+    else if !(isAttrs b && b ? clauses) then
+      refuse "policy-body/skeleton-malformed" (
+        if isAttrs b then attrNames b else builtins.typeOf b
+      ) "a policy body is `{ name; clauses; declared; }` in the normal form; ${doorPointer}"
     else
       let
         skeletons = concatMap (

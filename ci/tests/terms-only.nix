@@ -274,7 +274,6 @@ in
         let
           r = gp.groundInstances { } { } {
             refused = false;
-            opaque = false;
             name = "hand-rolled";
             clauses = [ (builtins.head tuckBody.clauses) ];
           };
@@ -893,20 +892,27 @@ in
         door = "admitted";
       };
     };
-    # `admit` refuses an escape record by name whichever marker it carries, and `deriveCodomain` does
-    # the same when one is handed to it directly — never the old declared-contract read.
-    test-admit-escape-record-refused = {
-      expr =
-        let
-          rec0 = {
-            name = "e";
-            fn = _: [ ];
-            emits = [ ];
-            binds = [ ];
-            suppresses = [ ];
-          };
-        in
-        {
+    # A record that is not the normal form is refused `policy-body/skeleton-malformed` by `admit`
+    # and by `deriveCodomain` handed one directly, whatever keys it carries: no key is recognised
+    # as a marker. `escape` (a C9 alias) still refuses `escape-retired`; the normal form is
+    # admitted; and a built body carries exactly the normal form's fields.
+    test-admit-refuses-a-record-not-in-the-normal-form =
+      let
+        rec0 = {
+          name = "e";
+          fn = _: [ ];
+          emits = [ ];
+          binds = [ ];
+          suppresses = [ ];
+        };
+        nf = {
+          name = "nf";
+          clauses = [ ];
+          declared = null;
+        };
+      in
+      {
+        expr = {
           both = code (
             gp.admit (
               rec0
@@ -925,6 +931,7 @@ in
               name = "e";
             }
           );
+          nfOpaqueTrue = code (gp.admit (nf // { opaque = true; }));
           deriveCodomain = code (
             gp.deriveCodomain (
               rec0
@@ -935,23 +942,40 @@ in
             )
           );
           deriveCodomainIsPolicy = code (gp.deriveCodomain (rec0 // { __isPolicy = true; }));
-          control = code (
-            gp.admit {
-              name = "nf";
-              clauses = [ ];
-              declared = null;
-            }
-          );
+          deriveCodomainUnmarked = code (gp.deriveCodomain rec0);
+          deriveCodomainNotARecord = code (gp.deriveCodomain [ ]);
+          builtCarriesOpaque = (gp.admit nf) ? opaque;
+          escapeControl = code (gp.escape rec0);
+          control = code (gp.admit nf);
         };
-      expected = {
-        both = "policy-body/escape-retired";
-        opaqueOnly = "policy-body/escape-retired";
-        isPolicyOnly = "policy-body/escape-retired";
-        missingField = "policy-body/escape-retired";
-        deriveCodomain = "policy-body/escape-retired";
-        deriveCodomainIsPolicy = "policy-body/escape-retired";
-        control = "admitted";
+        expected = {
+          both = "policy-body/skeleton-malformed";
+          opaqueOnly = "policy-body/skeleton-malformed";
+          isPolicyOnly = "policy-body/skeleton-malformed";
+          missingField = "policy-body/skeleton-malformed";
+          nfOpaqueTrue = "policy-body/skeleton-malformed";
+          deriveCodomain = "policy-body/skeleton-malformed";
+          deriveCodomainIsPolicy = "policy-body/skeleton-malformed";
+          deriveCodomainUnmarked = "policy-body/skeleton-malformed";
+          deriveCodomainNotARecord = "policy-body/skeleton-malformed";
+          builtCarriesOpaque = false;
+          escapeControl = "policy-body/escape-retired";
+          control = "admitted";
+        };
       };
+    # The one input this unit moves from admitted to refused: a normal-form record carrying
+    # `opaque = false`, the shape every built body had while built bodies carried that field. It is
+    # an extra key beside normal-form clauses now, refused as any other is.
+    test-admit-refuses-a-normal-form-record-carrying-opaque-false = {
+      expr = code (
+        gp.admit {
+          name = "nf";
+          clauses = [ ];
+          declared = null;
+          opaque = false;
+        }
+      );
+      expected = "policy-body/skeleton-malformed";
     };
   };
 }

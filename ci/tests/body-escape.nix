@@ -10,8 +10,8 @@
 # contract, clean in the same run.
 #
 # ★ THE RETIREMENT IS ASSERTED AS A CONSTRUCTION: the retired constructor mints no escape record,
-# `admit` refuses one by name rather than checking its contract, and a bare lambda is refused with
-# the signpost to the door — no silent entry, and no silent deletion.
+# `admit` refuses a record that is not the normal form rather than checking its contract, and a bare
+# lambda is refused with the signpost to the door — no silent entry, and no silent deletion.
 {
   genProgram,
   prelude,
@@ -152,9 +152,9 @@ in
         escape = false;
       };
     };
-    # A hand-rolled escape record is refused by name before any contract check: complete, missing
-    # a field, or carrying an out-of-row one, it is retired, not malformed.
-    test-a-hand-rolled-escape-record-is-refused-by-name-whatever-its-contract = {
+    # A hand-rolled escape-era record is refused before any contract check: complete, missing a
+    # field, or carrying an out-of-row one, it is not the normal form.
+    test-a-hand-rolled-escape-era-record-is-refused-whatever-its-contract = {
       expr =
         map
           (
@@ -188,9 +188,9 @@ in
             }
           ];
       expected = [
-        "policy-body/escape-retired"
-        "policy-body/escape-retired"
-        "policy-body/escape-retired"
+        "policy-body/skeleton-malformed"
+        "policy-body/skeleton-malformed"
+        "policy-body/skeleton-malformed"
       ];
     };
 
