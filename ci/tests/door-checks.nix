@@ -7,7 +7,8 @@
 #     promote?; when?; } relata head` and `groundInstances { door?; sources?; } context body`;
 #   · a KEYED RECORD — open (R5), every field required, kept as one record because its fields are
 #     two or more configuration operands with no natural order (the keyed-record ruling,
-#     2026-09-28): `model`, `mkModel`, `adjudicate`, `body`.
+#     2026-09-28): `model`, `mkModel`, `adjudicate`, `body`, and `instanceDeclarations`' namer pair
+#     `{ fact; abnormal; }`, configuration first and the applications last.
 # `program frozen declarations`, `unresolvedRelata frozen declarations` and `ruleEdges model
 # declarations` are positional (rule 4): their arity is structural and they carry no row. No record
 # step sits behind an options step here, so no door carries `optionsStep` (G10 has no row).
@@ -125,6 +126,22 @@ let
         name = "x";
         clauses = [ ];
         declared = null;
+      };
+    };
+    instanceDeclarations = {
+      required = [
+        "fact"
+        "abnormal"
+      ];
+      good = {
+        fact = _: {
+          head = "h";
+          relata = [ ];
+        };
+        abnormal = _: {
+          head = "a";
+          relata = [ ];
+        };
       };
     };
   };

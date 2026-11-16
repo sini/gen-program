@@ -170,6 +170,7 @@ in
       expected = [
         "lib/budget.nix"
         "lib/default.nix"
+        "lib/instance-declarations.nix"
         "lib/model.nix"
         "lib/policy-body.nix"
         "lib/rule-edges.nix"
@@ -190,6 +191,7 @@ in
       expr = liveReads;
       expected = [
         "lib/default.nix"
+        "lib/instance-declarations.nix"
         "lib/model.nix"
         "lib/policy-body.nix"
         "lib/rule-edges.nix"

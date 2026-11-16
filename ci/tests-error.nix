@@ -32,6 +32,7 @@
   genProgram,
   prelude,
   scope,
+  T,
   ...
 }:
 let
@@ -184,9 +185,117 @@ let
     complete = true;
     prior = null;
   };
+  # ── THE BRIDGE (`instanceDeclarations`) ──
+  # A message that names a minted identity is pinned to the byte everywhere but the digest, which
+  # is matched by its shape: `<tag>:` and 64 hex digits.
+  shaped =
+    tag: parts:
+    "^" + builtins.concatStringsSep "${tag}:[0-9a-f]{64}" (map prelude.escapeRegex parts) + "$";
+  idx = import ./tests/_fixtures/instance-declarations.nix { inherit prelude genProgram T; };
+  bridged = names: apps: builtins.deepSeq (idx.B names apps).declarations true;
+  bridgeWho = "gen-program.instanceDeclarations";
 in
 {
   flake.testsError = {
+    # ── THE BRIDGE'S REFUSALS (`instanceDeclarations`), each by name and with its provenance ──
+    test-instance-declarations-refuses-a-repeated-application = {
+      expr = bridged idx.local [
+        (idx.at "bolt:a" idx.pleat)
+        (idx.at "bolt:a" idx.pleat)
+      ];
+      expectedError.msg = exactly "${bridgeWho}: 'pleat' is applied twice at 'bolt:a'; an application is identified by its policy and its context identifier, and two presentations of one are refused because nothing shows them to be one without comparing context values";
+    };
+    test-instance-declarations-refuses-two-bodies-under-one-name = {
+      expr = bridged idx.local [
+        (idx.at "bolt:a" idx.pleat)
+        (idx.at "bolt:b" idx.otherPleat)
+      ];
+      expectedError.msg = shaped "instance-body" [
+        "${bridgeWho}: two different bodies are named 'pleat' ("
+        " and "
+        "); a suppress target names a policy, so the name must identify one body"
+      ];
+    };
+    test-instance-declarations-refuses-a-fact-named-as-an-abnormality = {
+      expr = bridged idx.factAsAb [
+        (idx.at "bolt:a" idx.pleat)
+        (idx.at "bolt:a" idx.hem)
+      ];
+      expectedError.msg = shaped "instance-firing" [
+        "${bridgeWho}: 'ab:hem@bolt:a' is named both as the fact of the 'member' firing "
+        " of 'pleat' at 'bolt:a' and as an abnormality; one atom is one fact"
+      ];
+    };
+    test-instance-declarations-refuses-one-head-naming-two-facts = {
+      expr = bridged idx.ctorBlind [ (idx.at "bolt:a" idx.memberAndDeliver) ];
+      expectedError.msg = shaped "instance-firing" [
+        ''${bridgeWho}: 'f:{"thread":"silk"}@bolt:a' names two different facts: {"ctor":"member","kind":"trim","label":null,"promote":null,"relata":[]} and {"ctor":"deliver","kind":null,"label":null,"promote":null,"relata":[]}, from the firings ''
+        ", "
+        ""
+      ];
+    };
+    test-instance-declarations-refuses-a-door-output-with-no-identity = {
+      expr = bridged idx.local [ (idx.doorApp idx.twoOut) ];
+      expectedError.msg = exactly "${bridgeWho}: a 'member' firing of 'weld' at 'bolt:a' carries no identity (no `__mint`): a door's output is identified by the door's contract, and until it is, the firing is refused rather than keyed by position";
+    };
+    test-instance-declarations-refuses-an-unmintable-firing = {
+      expr = bridged idx.local [ idx.unsourced ];
+      expectedError.msg = exactly "${bridgeWho}: a 'member' firing of 'pleat' at 'bolt:a' has no identity (a read of this firing has no source identity, or the rule has none); give every read coordinate a source";
+    };
+    test-instance-declarations-refuses-a-sixth-constructor = {
+      expr = bridged idx.local [
+        (idx.doorApp [
+          {
+            ctor = "weld";
+            target = "x";
+          }
+        ])
+      ];
+      expectedError.msg = exactly "${bridgeWho}: a firing of 'weld' at 'bolt:a' carries the constructor 'weld', which is not one of member deliver edge suppress realize; it is refused, never dropped";
+    };
+    test-instance-declarations-refuses-a-non-string-head = {
+      expr = bridged idx.setHead [ (idx.at "bolt:a" idx.pleat) ];
+      expectedError.msg = shaped "instance-firing" [
+        "${bridgeWho}: a namer returned a set head for the 'member' firing "
+        "; an atom is a string the caller names"
+      ];
+    };
+    test-instance-declarations-refuses-an-application-missing-its-guard = {
+      expr = bridged idx.local [ (removeAttrs (idx.at "bolt:a" idx.pleat) [ "when" ]) ];
+      expectedError.msg = exactly (
+        refusals.missingField bridgeWho [ "body" "context" "at" "when" ] "when"
+      );
+    };
+    test-instance-declarations-refuses-a-missing-namer = {
+      expr = bridged { fact = idx.factByContent; } [ (idx.at "bolt:a" idx.pleat) ];
+      expectedError.msg = exactly (refusals.missingField bridgeWho [ "fact" "abnormal" ] "abnormal");
+    };
+    # The namers' results are closed: a `when` the fact namer returns would be overwritten by the
+    # bridge's guard, and a `label` the abnormal namer returns would be dropped.
+    test-instance-declarations-refuses-a-guard-from-the-fact-namer = {
+      expr = bridged idx.factWithWhen [ (idx.at "bolt:a" idx.pleat) ];
+      expectedError.msg = exactly (
+        refusals.unknownOption "${bridgeWho}: the `fact` namer's result" [
+          "head"
+          "relata"
+          "label"
+          "promote"
+        ] "when"
+      );
+    };
+    test-instance-declarations-refuses-a-label-from-the-abnormal-namer = {
+      expr = bridged idx.abWithLabel [
+        (idx.at "bolt:a" idx.pleat)
+        (idx.at "bolt:a" idx.hem)
+      ];
+      expectedError.msg = exactly (
+        refusals.unknownOption "${bridgeWho}: the `abnormal` namer's result" [
+          "head"
+          "relata"
+        ] "label"
+      );
+    };
+
     # ── THE IDENTIFIER DOORS (den-hoag-bkdkg) ──
     # A record where a name goes — the node VALUE in place of its identifier — used to be admitted by
     # `declaration` and abort past `tryEval` in `program`/`unresolvedRelata`. It is now refused at the

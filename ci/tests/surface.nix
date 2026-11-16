@@ -42,6 +42,7 @@ let
     "flags"
     "forEach"
     "groundInstances"
+    "instanceDeclarations"
     "mkModel"
     "model"
     "program"

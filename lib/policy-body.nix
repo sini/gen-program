@@ -207,19 +207,31 @@ let
       if isExact i then i.minted else null
     else
       null;
+  # A skeleton's rule also mints its constructor and, for `member`, its kind (R9: "the rule
+  # identity plus its firing atoms"). Both are registration data the body term does not carry —
+  # `bodyTermOf` gives a `member` and a `deliver` the one `term.attrs payload` — so without them two
+  # different records of one application share one mint. A door clause has neither field.
   ruleMint =
     c:
     let
       d = {
         condition = digest c.condition;
         body = digest c.body;
+        ctor = c.ctor or null;
+        kind = c.kind or null;
       };
+      fields = [
+        "condition"
+        "body"
+      ]
+      ++ (if c ? ctor then [ "ctor" ] else [ ])
+      ++ (if c ? kind then [ "kind" ] else [ ]);
     in
     if d.condition == null || d.body == null then
       { unmintable = "a term of this rule carries no identity"; }
     else
       {
-        minted = hashIdentity "rule" [ "condition" "body" ] (l: d.${l});
+        minted = hashIdentity "rule" fields (l: d.${l});
       };
   # The iteration mints over `over` and the emitted rules' digests.
   iterationMint =
@@ -334,7 +346,12 @@ let
         else if refs != [ ] then
           refPosition "the body of a `${ctor}` skeleton" refs
         else
-          s // { __mint = ruleMint clause; };
+          s
+          // {
+            __mint = ruleMint (
+              clause // { inherit ctor; } // (if ctor == "member" then { inherit (s) kind; } else { })
+            );
+          };
 
   # The door clause: a first-order condition and the body `ref r`, with the codomain contract the
   # framework declared when it registered the closure. `binds`/`suppresses` are a finite name list,
