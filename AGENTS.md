@@ -238,7 +238,7 @@ never recovered by firing.
   own `declared`, and a door clause's `ref r` through `door { id; context; sources; captured; }`,
   which answers `{ output; scope; }`; a nested door clause in the output passes the same walk and
   fires under the extended scope. Each admitted rule carries `__mint`, its rule identity over its
-  condition and body terms and, for a skeleton, its constructor and (for `member`) its kind, so two
+  condition and body terms and, for a skeleton, its constructor (the relation `rule-<ctor>`) and (for `member`) its kind, so two
   records of one application never share an identity; each fired declaration carries its firing
   identity over the rule and the `sources` of its reads (an absent declared coordinate enters as a
   fixed absence tag). Context keys are an open world:

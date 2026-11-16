@@ -210,28 +210,28 @@ let
   # A skeleton's rule also mints its constructor and, for `member`, its kind (R9: "the rule
   # identity plus its firing atoms"). Both are registration data the body term does not carry —
   # `bodyTermOf` gives a `member` and a `deliver` the one `term.attrs payload` — so without them two
-  # different records of one application share one mint. A door clause has neither field.
+  # different records of one application share one mint. The constructor is a member of the closed
+  # enum, so it names the relation (`rule-member`, `rule-deliver`, …) rather than costing a label;
+  # the kind is the caller's string and is a label. A door clause has neither, and mints as `rule`.
   ruleMint =
     c:
     let
       d = {
         condition = digest c.condition;
         body = digest c.body;
-        ctor = c.ctor or null;
         kind = c.kind or null;
       };
       fields = [
         "condition"
         "body"
       ]
-      ++ (if c ? ctor then [ "ctor" ] else [ ])
       ++ (if c ? kind then [ "kind" ] else [ ]);
     in
     if d.condition == null || d.body == null then
       { unmintable = "a term of this rule carries no identity"; }
     else
       {
-        minted = hashIdentity "rule" fields (l: d.${l});
+        minted = hashIdentity (if c ? ctor then "rule-${c.ctor}" else "rule") fields (l: d.${l});
       };
   # The iteration mints over `over` and the emitted rules' digests.
   iterationMint =
