@@ -282,11 +282,14 @@ let
       );
 in
 {
+  # A keyed record (den-hoag-7gp66 P2): two configuration operands with no natural order, every field
+  # required, and open (R5), as `body` and `model` are.
   instanceDeclarations = prelude.door {
     name = who;
     required = [
       "fact"
       "abnormal"
     ];
+    open = true;
   } ruleBridge;
 }

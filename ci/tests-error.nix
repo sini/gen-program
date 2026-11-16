@@ -229,7 +229,7 @@ in
     test-instance-declarations-refuses-one-head-naming-two-facts = {
       expr = bridged idx.ctorBlind [ (idx.at "bolt:a" idx.memberAndDeliver) ];
       expectedError.msg = shaped "instance-firing" [
-        ''${bridgeWho}: 'f:{"thread":"silk"}@bolt:a' names two different facts: {"ctor":"member","kind":"trim","label":null,"promote":null,"relata":[]} and {"ctor":"deliver","kind":null,"label":null,"promote":null,"relata":[]}, from the firings ''
+        ''${bridgeWho}: 'f:{"thread":"silk"}@bolt:a' names two different facts: {"ctor":"deliver","kind":null,"label":null,"promote":null,"relata":[]} and {"ctor":"member","kind":"trim","label":null,"promote":null,"relata":[]}, from the firings ''
         ", "
         ""
       ];
