@@ -40,6 +40,7 @@ the `follows` rule is therefore declared once in this repository, in `default.ni
   "flags",
   "forEach",
   "groundInstances",
+  "instanceDeclarations",
   "mkModel",
   "model",
   "program",
@@ -236,13 +237,33 @@ never recovered by firing.
   declarations, data only, or a refusal. It resolves an admitted body at `context` under the body's
   own `declared`, and a door clause's `ref r` through `door { id; context; sources; captured; }`,
   which answers `{ output; scope; }`; a nested door clause in the output passes the same walk and
-  fires under the extended scope. Each admitted rule carries `__mint`, its rule identity; each
-  fired declaration carries its firing identity over the rule and the `sources` of its reads (an
-  absent declared coordinate enters as a fixed absence tag). Context keys are an open world:
+  fires under the extended scope. Each admitted rule carries `__mint`, its rule identity over its
+  condition and body terms and, for a skeleton, its constructor and (for `member`) its kind, so two
+  records of one application never share an identity; each fired declaration carries its firing
+  identity over the rule and the `sources` of its reads (an absent declared coordinate enters as a
+  fixed absence tag). Context keys are an open world:
   `groundInstances` does not inspect them, so an option placed in the context map
   (`{ thimble = "x"; sources = { … }; }`) is read as a coordinate named `sources`, never as the
   option, which is ignored, by design. Options go in the first argument:
   `groundInstances { sources = { … }; } context body`.
+- **`instanceDeclarations`** — `instanceDeclarations { fact; abnormal; } applications` →
+  `{ declarations; firings; }`, or the interpreter's tagged refusal returned unchanged. A door with
+  the required pair `fact` and `abnormal`, configuration first. Each application
+  `{ body; context; at; when; sources ? { }; door ? null; }` (closed; `at` a context identifier
+  string, `when` a literal-tier term) is fired through `groundInstances`, and each firing lowers to
+  a declaration `program` takes: a `member`, `deliver`, `edge` or `realize` firing to the caller's
+  fact `fact view` (`{ head; relata; label?; promote?; }`, closed), a `suppress` firing of target `S`
+  to the abnormality `abnormal { policy = S; at; }` (`{ head; relata; }`, closed), each under
+  `all [ when (not (has (abnormal { policy; at; }).head)) ]`. The bridge writes no atom. `firings`
+  maps each FIRING identity (`instance-firing` over the policy, `at` and the interpreter's firing
+  mint) to its view `{ ctor; payload | target; kind?; policy; at; firing; head; }`; the output is in
+  identity order. Only fired suppression defeats: the declared codomain is never read. Refused by
+  name (`gen-program.instanceDeclarations: …`, catchably): one policy applied twice at one `at`; two
+  different bodies under one name; a head named both as a fact and as an abnormality; one head
+  naming two different facts; a firing with no `__mint` (a door's output) or an unmintable one; a
+  constructor outside `ctorNames`; a non-string head; a namer result carrying a field outside its
+  closed set; a missing field. A `forEach` firing's identity carries its item's index, so it moves
+  with the order of `over` and is not a semantic identity.
 - **`escape`** — RETIRED (den-hoag-lwbb1 unit 3, U3r): an alias of its original arity that refuses
   any argument as the value `policy-body/escape-retired`, naming the gen-rules door. A closure crosses
   that door (`defunctionalize`, `mkApply`) and reaches gen-program as a door clause.
@@ -441,5 +462,5 @@ nix eval --json --impure --file ci/repl.nix --apply 'r: builtins.attrNames r.gen
 Current output (verbatim):
 
 ```json
-["adjudicate","adjudicationOutcomes","admit","body","codomainBreaches","ctorNames","declaration","deriveCodomain","emit","escape","fireEscape","flagNames","flags","forEach","groundInstances","mkModel","model","program","rule","ruleEdges","stableModelBudget","stableModelCriterion","unresolvedRelata"]
+["adjudicate","adjudicationOutcomes","admit","body","codomainBreaches","ctorNames","declaration","deriveCodomain","emit","escape","fireEscape","flagNames","flags","forEach","groundInstances","instanceDeclarations","mkModel","model","program","rule","ruleEdges","stableModelBudget","stableModelCriterion","unresolvedRelata"]
 ```

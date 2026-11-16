@@ -303,6 +303,42 @@ is not the normal form `policy-body/skeleton-malformed`.
 A declaration can also write its body as a condition term: `declaration { when = all [ (has "a") (not (has "b")) ]; } relata head` is `pos = [ "a" ]; neg = [ "b" ];`, solved by the same
 well-founded engine.
 
+### Fired bodies as declarations
+
+`instanceDeclarations { fact; abnormal; } applications` joins the two algebras. Each application
+`{ body; context; at; when; sources ? { }; door ? null; }` is fired through `groundInstances`, and
+each fired record becomes a declaration `program` takes, so suppression among fired policies is
+solved by the same well-founded engine as any other program. The caller names every atom:
+`fact` names the fact of a `member`, `deliver`, `edge` or `realize` firing, and `abnormal { policy; at; }` names the abnormality that defeats `policy`'s firings at `at`. The bridge writes
+only the rule body, McCarthy's pair: every conclusion holds under its application's `when` and
+`not` its own policy's abnormality, and a fired `suppress` concludes its target's abnormality under
+the same defeat, so a suppression can itself be suppressed. A chain resolves, an even cycle is
+undefined and admitted, a self-suppression is undefined and refused, each named rather than
+guessed. Only fired suppression defeats: a suppress clause whose condition is false at the context
+suppresses nothing, whatever the declared codomain says.
+
+```nix
+r = instanceDeclarations {
+  fact = v: { head = "${v.ctor}:${v.policy}@${v.at}"; relata = [ ]; };
+  abnormal = { policy, at }: { head = "ab:${policy}@${at}"; relata = [ ]; };
+} [
+  { body = pleat; context = ctx; at = "bolt:a"; when = has "bolt:a"; sources.spool = "spool:a"; }
+  { body = hem;   context = ctx; at = "bolt:a"; when = has "bolt:a"; sources.spool = "spool:a"; }
+];
+# r.declarations : what `program` takes; r.firings : firing identity -> the fired record and its head
+```
+
+A firing's identity is minted over the interpreter's firing identity, the policy and `at`; a
+fact's identity is the caller's head, and two firings naming one head are two supports of one
+fact. No list position is an identity, with one inherited exception: a `forEach` firing carries
+its item's index, so it moves with the order of `over`. What the bridge does not construct is a
+delivered occurrence: a `deliver` firing lowers to whether it holds, never to where its content
+arrives.
+
+A framework maps its own vocabulary onto the five constructors. As an example a framework might
+declare: resolving a member is `member`, routing a contribution is `deliver`, including is `edge`,
+excluding is `suppress`, and instantiating is `realize`.
+
 ## The budget, and the curve it is derived from
 
 The figure is never a bare number. It is derived from this library's own measured cost curve and

@@ -99,6 +99,12 @@ let
     inherit (identity) hashIdentity;
     inherit (stableModel) checkOperand;
   };
+  bridging = import ./instance-declarations.nix {
+    inherit prelude T;
+    inherit (algebra) identityOf isExact;
+    inherit (identity) hashIdentity;
+    inherit (bodyAlgebra) groundInstances ctorNames;
+  };
   modelling = import ./model.nix { inherit prelude scope stableModel; };
   # The model's edges read declarations through the one door and rules through the model's own
   # canonical-rule key, so neither is derived twice.
@@ -163,6 +169,8 @@ in
     codomainBreaches
     groundInstances
     ;
+
+  inherit (bridging) instanceDeclarations;
 
   # ── THE COHERENCE CRITERION ──
   inherit (stableModel)
