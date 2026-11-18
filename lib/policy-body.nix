@@ -155,6 +155,19 @@ let
   vocabulary = filter (f: f != "ReadFrom") T.knownFormers;
   instanceOf = declared: { inherit vocabulary declared; };
   # Under an iteration the item joins the scope: it is a coordinate the iteration supplies.
+  # Its source's labels, per supply route (a keyed `over` supplies by name, a list by position).
+  itemLabels = {
+    key = [
+      "iteration"
+      "sources"
+      "key"
+    ];
+    index = [
+      "iteration"
+      "sources"
+      "index"
+    ];
+  };
   withItem = declared: if declared == null then null else declared ++ [ "item" ];
 
   # A door-registration identifier is `refId`'s encoding, a one-key JSON record `declared` or
@@ -792,7 +805,7 @@ let
         if it == null || ids == null then
           null
         else
-          hashIdentity "rule-iteration-item" [ "iteration" "sources" route ] (
+          hashIdentity "rule-iteration-item" itemLabels.${route} (
             l:
             {
               iteration = it;
@@ -885,22 +898,22 @@ let
         else
           [ o ];
 
-      fireItem =
-        env: scope: c: route: at: item:
-        let
-          src = itemSource env c route at;
-          env' = envOf (env.context // { inherit item; }) (withItem env.declared) (
-            env.sources // (if src == null then { } else { item = src; })
-          ) scope;
-        in
-        map (fireSkeleton env') c.emit;
-
       fireClause =
         env: scope: c:
         if c ? over then
           let
             ok = res env (overCondition c.over);
             items = res env c.over;
+            # One item at its supply route: `key` (a keyed `over`) or `index` (a list).
+            fireItem =
+              route: at: item:
+              let
+                src = itemSource env c route at;
+                env' = envOf (env.context // { inherit item; }) (withItem env.declared) (
+                  env.sources // (if src == null then { } else { item = src; })
+                ) scope;
+              in
+              map (fireSkeleton env') c.emit;
           in
           if isRefusal ok then
             ok
@@ -909,7 +922,7 @@ let
           else if isRefusal items then
             items
           else if isAttrs items then
-            collect (concatMap (k: fireItem env scope c "key" k items.${k}) (attrNames items))
+            collect (concatMap (k: fireItem "key" k items.${k}) (attrNames items))
           else if !isList items then
             refuse "policy-body/over-not-iterable" (builtins.typeOf items)
               "`over` resolved to a ${builtins.typeOf items}; it iterates a keyed attrset (each item identified by its name) or a list (each item by its position, provenance only)"
@@ -918,9 +931,22 @@ let
           else if builtins.any (s: s.ctor == "deliver") c.emit then
             refuse "policy-body/iterated-delivery-unkeyed" { over = "list"; }
               "a `forEach` that emits `deliver` iterates a list, so each delivery would be identified by its item's position, which is provenance only; key `over` as an attrset, whose names (with `over`'s source) identify each item"
+          # The list path is written out rather than called through `fireItem`: the call allocates an
+          # environment per item, and the list path is every existing iteration's.
           else
             collect (
-              concatLists (genList (i: fireItem env scope c "index" i (builtins.elemAt items i)) (length items))
+              concatLists (
+                genList (
+                  i:
+                  let
+                    src = itemSource env c "index" i;
+                    env' = envOf (env.context // { item = builtins.elemAt items i; }) (withItem env.declared) (
+                      env.sources // (if src == null then { } else { item = src; })
+                    ) scope;
+                  in
+                  map (fireSkeleton env') c.emit
+                ) (length items)
+              )
             )
         else if c ? ctor then
           fireSkeleton env c
