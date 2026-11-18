@@ -904,16 +904,6 @@ let
           let
             ok = res env (overCondition c.over);
             items = res env c.over;
-            # One item at its supply route: `key` (a keyed `over`) or `index` (a list).
-            fireItem =
-              route: at: item:
-              let
-                src = itemSource env c route at;
-                env' = envOf (env.context // { inherit item; }) (withItem env.declared) (
-                  env.sources // (if src == null then { } else { item = src; })
-                ) scope;
-              in
-              map (fireSkeleton env') c.emit;
           in
           if isRefusal ok then
             ok
@@ -922,7 +912,19 @@ let
           else if isRefusal items then
             items
           else if isAttrs items then
-            collect (concatMap (k: fireItem "key" k items.${k}) (attrNames items))
+            # Each item at its supply route: `key`, its name.
+            collect (
+              concatMap (
+                k:
+                let
+                  src = itemSource env c "key" k;
+                  env' = envOf (env.context // { item = items.${k}; }) (withItem env.declared) (
+                    env.sources // (if src == null then { } else { item = src; })
+                  ) scope;
+                in
+                map (fireSkeleton env') c.emit
+              ) (attrNames items)
+            )
           else if !isList items then
             refuse "policy-body/over-not-iterable" (builtins.typeOf items)
               "`over` resolved to a ${builtins.typeOf items}; it iterates a keyed attrset (each item identified by its name) or a list (each item by its position, provenance only)"
@@ -931,8 +933,7 @@ let
           else if builtins.any (s: s.ctor == "deliver") c.emit then
             refuse "policy-body/iterated-delivery-unkeyed" { over = "list"; }
               "a `forEach` that emits `deliver` iterates a list, so each delivery would be identified by its item's position, which is provenance only; key `over` as an attrset, whose names (with `over`'s source) identify each item"
-          # The list path is written out rather than called through `fireItem`: the call allocates an
-          # environment per item, and the list path is every existing iteration's.
+          # Each item at its supply route: `index`, its position.
           else
             collect (
               concatLists (

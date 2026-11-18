@@ -111,10 +111,17 @@ let
           r = groundInstances (
             { sources = a.sources or { }; } // (if a ? door then { inherit (a) door; } else { })
           ) a.context a.body;
+          # The abnormality defeating a firing is its application's (the policy at `at`), so it is
+          # named, and the guard built, once per application rather than once per firing.
+          self = ab a'.body.name a'.at;
+          guard = tm.all [
+            a'.when
+            (tm.not (tm.has self.head))
+          ];
         in
         {
           app = a';
-          inherit r;
+          inherit r self guard;
         }
       ) apps;
       refusals = filter (x: isRefusal x.r) fired;
@@ -156,8 +163,7 @@ let
             id = firingId x.app d;
           in
           {
-            inherit id;
-            inherit (x) app;
+            inherit id x;
             view = (removeAttrs d [ "__mint" ]) // {
               policy = x.app.body.name;
               inherit (x.app) at;
@@ -183,13 +189,6 @@ let
         prelude.checkOptions "${who}: the `fact` namer's result" [ "head" "relata" "label" "promote" ] (
           names.fact view
         );
-      defeat =
-        f:
-        tm.all [
-          f.app.when
-          (tm.not (tm.has (ab f.view.policy f.view.at).head))
-        ];
-
       declOf =
         f:
         if f.view.ctor == "suppress" then
@@ -198,77 +197,87 @@ let
           in
           {
             inherit (a) head relata;
-            when = defeat f;
+            when = f.x.guard;
           }
         else
-          (factOf f.view) // { when = defeat f; };
-      decls = map (id: {
-        inherit id;
-        d = declOf firings.${id};
-      }) ids;
+          (factOf f.view) // { when = f.x.guard; };
+      # One declaration per firing identity, shared by the declarations, the fact checks and the
+      # firings' heads.
+      decls = builtins.mapAttrs (_: declOf) firings;
 
       # ── FACT collisions: one atom is one fact (ADR-0020) ──
       abHeads = builtins.listToAttrs (
         concatMap (
           id:
           let
-            v = firings.${id}.view;
+            f = firings.${id};
+            v = f.view;
           in
-          map
-            (h: {
-              name = h;
-              value = true;
-            })
-            ([ (ab v.policy v.at).head ] ++ (if v.ctor == "suppress" then [ (ab v.target v.at).head ] else [ ]))
+          map (h: {
+            name = h;
+            value = true;
+          }) ([ f.x.self.head ] ++ (if v.ctor == "suppress" then [ (ab v.target v.at).head ] else [ ]))
         ) ids
       );
       shapeOf =
-        x:
+        id:
         let
-          v = firings.${x.id}.view;
+          v = firings.${id}.view;
+          d = decls.${id};
         in
         if v.ctor == "suppress" then
           toJSON {
             ctor = "abnormal";
-            relata = x.d.relata;
+            inherit (d) relata;
           }
         else
           toJSON {
             inherit (v) ctor;
             kind = v.kind or null;
-            relata = x.d.relata;
-            label = x.d.label or null;
-            promote = x.d.promote or null;
+            inherit (d) relata;
+            label = d.label or null;
+            promote = d.promote or null;
           };
-      byHead = builtins.all (
-        g:
-        let
-          x = builtins.head g;
-          h = x.d.head;
-          v = firings.${x.id}.view;
-          shapes = prelude.unique (map shapeOf g);
-          bad = filter (y: firings.${y.id}.view.ctor != "suppress") g;
-        in
-        (
-          isString h
-          || throw "${who}: a namer returned a ${builtins.typeOf h} head for the '${v.ctor}' firing ${x.id}; an atom is a string the caller names"
-        )
-        && (
-          bad == [ ]
-          || !(abHeads ? ${h})
-          || throw "${who}: '${h}' is named both as the fact of the '${
-            firings.${(builtins.head bad).id}.view.ctor
-          }' firing ${(builtins.head bad).id} of '${firings.${(builtins.head bad).id}.view.policy}' at '${
-            firings.${(builtins.head bad).id}.view.at
-          }' and as an abnormality; one atom is one fact"
-        )
-        && (
-          builtins.length shapes == 1
-          || throw "${who}: '${h}' names two different facts: ${builtins.concatStringsSep " and " shapes}, from the firings ${
-            builtins.concatStringsSep ", " (map (y: y.id) g)
-          }"
-        )
-      ) (builtins.attrValues (builtins.groupBy (x: if isString x.d.head then x.d.head else "") decls));
+      byHead =
+        builtins.all
+          (
+            g:
+            let
+              x = builtins.head g;
+              h = decls.${x}.head;
+              v = firings.${x}.view;
+              shapes = prelude.unique (map shapeOf g);
+              bad = filter (y: firings.${y}.view.ctor != "suppress") g;
+            in
+            (
+              isString h
+              || throw "${who}: a namer returned a ${builtins.typeOf h} head for the '${v.ctor}' firing ${x}; an atom is a string the caller names"
+            )
+            && (
+              bad == [ ]
+              || !(abHeads ? ${h})
+              || throw "${who}: '${h}' is named both as the fact of the '${
+                firings.${builtins.head bad}.view.ctor
+              }' firing ${builtins.head bad} of '${firings.${builtins.head bad}.view.policy}' at '${
+                firings.${builtins.head bad}.view.at
+              }' and as an abnormality; one atom is one fact"
+            )
+            && (
+              builtins.length shapes == 1
+              || throw "${who}: '${h}' names two different facts: ${builtins.concatStringsSep " and " shapes}, from the firings ${builtins.concatStringsSep ", " g}"
+            )
+          )
+          (
+            builtins.attrValues (
+              builtins.groupBy (
+                id:
+                let
+                  h = decls.${id}.head;
+                in
+                if isString h then h else ""
+              ) ids
+            )
+          );
     in
     if refusals != [ ] then
       (builtins.head refusals).r
@@ -276,8 +285,8 @@ let
       builtins.seq byApp (
         builtins.seq byName (
           builtins.seq byHead {
-            declarations = map (x: x.d) decls;
-            firings = builtins.mapAttrs (_: f: f.view // { head = (declOf f).head; }) firings;
+            declarations = builtins.attrValues decls;
+            firings = builtins.mapAttrs (id: f: f.view // { head = decls.${id}.head; }) firings;
           }
         )
       );
