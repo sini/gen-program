@@ -15,9 +15,10 @@
 # Three identities stay apart: the FACT is the caller's head (two firings naming one head are two
 # supports of it), the FIRING is minted here over the interpreter's firing mint plus the policy and
 # the context identifier, and the OCCURRENCE (one delivered contribution at one receiver) is not
-# constructed here. No list position is an identity: the output is in firing-identity order. The
-# one inherited exception is a `forEach` item, whose source the interpreter keys by its index, so an
-# iteration firing's identity moves with the order of `over`, and is not a semantic identity.
+# constructed here. No list position is an identity: the output is in firing-identity order. A
+# `forEach` item is identified by the interpreter: under a keyed `over` by its name, a semantic
+# identity; under a list `over` by its index, provenance only, so such a firing's identity moves with
+# the order of `over`, and a delivering list iteration is refused by name before it reaches here.
 #
 # Only fired `suppress` records produce abnormality rules; a declared codomain is never read.
 {

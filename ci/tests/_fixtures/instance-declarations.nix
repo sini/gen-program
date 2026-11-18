@@ -365,6 +365,41 @@ rec {
         factByPolicy v;
   };
 
+  # G14 · an iteration over `bolts`: `reelOf ctor` emits one `ctor` per item, its payload the item.
+  # A keyed `bolts` identifies each item by its name; a list `bolts` by its position.
+  reelOf =
+    ctor:
+    gp.body {
+      name = "reel-${ctor}";
+      declared = [ "bolts" ];
+      clauses = [
+        (gp.forEach {
+          over = readCtx "bolts" [ ];
+          emit = [
+            (
+              {
+                inherit ctor;
+                when = has "bolts";
+                payload.thread = readCtx "item" [ ];
+              }
+              // (if ctor == "member" then { kind = "reel"; } else { })
+            )
+          ];
+        })
+      ];
+    };
+  reelAt = ctor: bolts: {
+    body = reelOf ctor;
+    context = { inherit bolts; };
+    sources.bolts = "bolts:a";
+    at = "bolt:a";
+    when = has "bolt:a";
+  };
+  # The firing identity of the item whose thread is `thread`.
+  idOfThread =
+    r: thread:
+    builtins.filter (id: r.firings.${id}.payload.thread == thread) (builtins.attrNames r.firings);
+
   perms =
     xs:
     if xs == [ ] then

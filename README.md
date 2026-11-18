@@ -269,7 +269,7 @@ mint publishes the node and its edges together.
 
 The authoring surface for policy bodies, and the interpreter that resolves one. A normal-form
 policy body is a list of clauses: a single skeleton (`emit`), an iteration over a computed list
-(`forEach { over, emit }`, the item joining the scope), or a **door clause** whose body is a
+(`forEach { over, emit }`, the item joining the scope; `over` is a keyed attrset or a list), or a **door clause** whose body is a
 reference to a closure the framework registered. Four slots are registration data — the
 constructor (closed enum `member` · `deliver` · `edge` · `suppress` · `realize`, published as
 `ctorNames`), the emitted kind, the payload attrset's **spine**, and the suppress target — and the
@@ -330,8 +330,9 @@ r = instanceDeclarations {
 
 A firing's identity is minted over the interpreter's firing identity, the policy and `at`; a
 fact's identity is the caller's head, and two firings naming one head are two supports of one
-fact. No list position is an identity, with one inherited exception: a `forEach` firing carries
-its item's index, so it moves with the order of `over`. What the bridge does not construct is a
+fact. No list position is an identity. A `forEach` over a keyed attrset identifies each item by
+its name; over a list, a firing carries its item's index as provenance only, so it moves with the
+order of `over`, and a list iteration that emits `deliver` is refused by name. What the bridge does not construct is a
 delivered occurrence: a `deliver` firing lowers to whether it holds, never to where its content
 arrives.
 

@@ -217,7 +217,10 @@ never recovered by firing.
   coordinate only where a positive atom of its condition covers it — and a core refusal keeps its
   name as `policy-body/<code>`.
 - **`emit`** / **`forEach`** — the two structural formers (a single emission skeleton; an
-  iteration `{ over, emit }` whose items join the scope as `item`). Each runs the structural walk at
+  iteration `{ over, emit }` whose items join the scope as `item`). `over` resolves to a keyed
+  attrset, whose names (with `over`'s source) identify the items, or to a list, whose positions are
+  provenance only; a list iteration that emits `deliver` is refused
+  `policy-body/iterated-delivery-unkeyed`, and any other value `policy-body/over-not-iterable`. Each runs the structural walk at
   call time: constructor in the closed enum, field presence exactly per the constructor row, payload
   keys forced at construction, suppress target literal. An out-of-row field is refused, never
   ignored. `over` has no guard field: its condition is `has` over its safety reads (`readCtx`,
@@ -262,8 +265,9 @@ never recovered by firing.
   different bodies under one name; a head named both as a fact and as an abnormality; one head
   naming two different facts; a firing with no `__mint` (a door's output) or an unmintable one; a
   constructor outside `ctorNames`; a non-string head; a namer result carrying a field outside its
-  closed set; a missing field. A `forEach` firing's identity carries its item's index, so it moves
-  with the order of `over` and is not a semantic identity.
+  closed set; a missing field. A `forEach` firing's identity carries its item's name under a keyed
+  `over`; under a list it carries the index, moves with the order of `over`, and is not a semantic
+  identity.
 - **`escape`** — RETIRED (den-hoag-lwbb1 unit 3, U3r): an alias of its original arity that refuses
   any argument as the value `policy-body/escape-retired`, naming the gen-rules door. A closure crosses
   that door (`defunctionalize`, `mkApply`) and reaches gen-program as a door clause.

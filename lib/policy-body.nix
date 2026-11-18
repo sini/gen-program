@@ -438,7 +438,9 @@ let
         refuse "policy-body/skeleton-malformed" c
           "`forEach` needs `emit`, a list of emission skeletons, each of which fires once per item of `over`"
       else if isFunction c.over then
-        refuse "policy-body/term-function" [ "over" ] "`over` is a list-valued term; ${doorPointer}"
+        refuse "policy-body/term-function" [
+          "over"
+        ] "`over` is a term valued as a keyed attrset or a list; ${doorPointer}"
       else if isCoreRefusal checked then
         fromCore checked
       else if refs != [ ] then
@@ -778,9 +780,11 @@ let
           };
 
       # An iteration item's source is the iteration's own: its rule identity, the sources of
-      # `over`'s reads, and the item's position (spec §4 OQ-H). No supplier provides `item`.
+      # `over`'s reads, and the item's supply route within `over` (0cmbt §3 a′), never its value. A
+      # keyed `over` supplies the item by its attribute name, a semantic identity; a list supplies it
+      # by position, provenance only (OQ-H; the w9vlp OQ-3 ruling). No supplier provides `item`.
       itemSource =
-        env: c: i:
+        env: c: route: at:
         let
           ids = readIds env (readCtxHeads c.over);
           it = digest c;
@@ -788,12 +792,12 @@ let
         if it == null || ids == null then
           null
         else
-          hashIdentity "rule-iteration-item" [ "iteration" "sources" "index" ] (
+          hashIdentity "rule-iteration-item" [ "iteration" "sources" route ] (
             l:
             {
               iteration = it;
               sources = ids;
-              index = i;
+              ${route} = at;
             }
             .${l}
           );
@@ -881,6 +885,16 @@ let
         else
           [ o ];
 
+      fireItem =
+        env: scope: c: route: at: item:
+        let
+          src = itemSource env c route at;
+          env' = envOf (env.context // { inherit item; }) (withItem env.declared) (
+            env.sources // (if src == null then { } else { item = src; })
+          ) scope;
+        in
+        map (fireSkeleton env') c.emit;
+
       fireClause =
         env: scope: c:
         if c ? over then
@@ -894,22 +908,19 @@ let
             [ ]
           else if isRefusal items then
             items
+          else if isAttrs items then
+            collect (concatMap (k: fireItem env scope c "key" k items.${k}) (attrNames items))
           else if !isList items then
-            refuse "policy-body/over-not-list" (builtins.typeOf items) "`over` resolved to a non-list"
+            refuse "policy-body/over-not-iterable" (builtins.typeOf items)
+              "`over` resolved to a ${builtins.typeOf items}; it iterates a keyed attrset (each item identified by its name) or a list (each item by its position, provenance only)"
+          # A delivery's occurrence needs a semantic identity, and a list position is not one: refused,
+          # never delivered under a positional identity (the w9vlp OQ-3 ruling).
+          else if builtins.any (s: s.ctor == "deliver") c.emit then
+            refuse "policy-body/iterated-delivery-unkeyed" { over = "list"; }
+              "a `forEach` that emits `deliver` iterates a list, so each delivery would be identified by its item's position, which is provenance only; key `over` as an attrset, whose names (with `over`'s source) identify each item"
           else
             collect (
-              concatLists (
-                genList (
-                  i:
-                  let
-                    src = itemSource env c i;
-                    env' = envOf (env.context // { item = builtins.elemAt items i; }) (withItem env.declared) (
-                      env.sources // (if src == null then { } else { item = src; })
-                    ) scope;
-                  in
-                  map (fireSkeleton env') c.emit
-                ) (length items)
-              )
+              concatLists (genList (i: fireItem env scope c "index" i (builtins.elemAt items i)) (length items))
             )
         else if c ? ctor then
           fireSkeleton env c

@@ -404,6 +404,141 @@ in
       };
     };
 
+    # ── G14 · AN ITERATION ITEM'S IDENTITY: its key and `over`'s source, never its value or position ──
+    # A keyed `over` is a set, so reordering the pairs it is built from cannot reach it; the arm that
+    # can go red is an insertion: adding `b` must not move `c`. The list twin is the control, its
+    # position provenance only, so the same insertion moves its item.
+    test-g14-keyed-items-keep-their-identity-under-permutation =
+      let
+        keyed = xs: B local [ (fx.reelAt "deliver" (builtins.listToAttrs xs)) ];
+        listed = xs: B local [ (fx.reelAt "member" xs) ];
+        a = {
+          name = "a";
+          value = "silk";
+        };
+        b = {
+          name = "b";
+          value = "linen";
+        };
+        c = {
+          name = "c";
+          value = "wool";
+        };
+        idm = r: builtins.toJSON (builtins.mapAttrs (_: f: f.head) r.firings);
+      in
+      {
+        expr = {
+          permuted = fx.distinct (
+            map (o: idm (keyed o)) (
+              fx.perms [
+                a
+                b
+                c
+              ]
+            )
+          );
+          inserted =
+            fx.idOfThread (keyed [
+              a
+              c
+            ]) "wool" == fx.idOfThread (keyed [
+              a
+              b
+              c
+            ]) "wool";
+          listInserted =
+            fx.idOfThread (listed [
+              "silk"
+              "wool"
+            ]) "wool" == fx.idOfThread (listed [
+              "silk"
+              "linen"
+              "wool"
+            ]) "wool";
+        };
+        expected = {
+          permuted = 1;
+          inserted = true;
+          listInserted = false;
+        };
+      };
+    # Equal payloads under distinct keys are two firings: two supports of the one fact their content
+    # names (§6-C T2), never collapsed by comparing payloads.
+    test-g14-equal-payloads-under-distinct-keys-are-two-firings = {
+      expr =
+        let
+          r = B local [
+            (fx.reelAt "deliver" {
+              a = "silk";
+              b = "silk";
+            })
+          ];
+        in
+        {
+          firings = builtins.length (builtins.attrNames r.firings);
+          declarations = builtins.length r.declarations;
+          heads = fx.distinct (map (d: d.head) r.declarations);
+        };
+      expected = {
+        firings = 2;
+        declarations = 2;
+        heads = 1;
+      };
+    };
+    # An item is identified without being read: a payload that throws one level down, and a function.
+    test-g14-keyed-items-are-not-forced = {
+      expr =
+        let
+          r =
+            B
+              {
+                fact = fx.factByPolicy;
+                abnormal = fx.abLocal;
+              }
+              [
+                (fx.reelAt "deliver" {
+                  a.inner = throw "instance-declarations G14: a keyed item was forced";
+                  f = x: x;
+                })
+              ];
+        in
+        {
+          firings = builtins.length (builtins.attrNames r.firings);
+          holds = fx.read (fx.solve r.declarations) "deliver:reel-deliver@bolt:a";
+        };
+      expected = {
+        firings = 2;
+        holds = "T";
+      };
+    };
+    # A delivering iteration over a LIST is refused by name: its deliveries would carry a positional
+    # identity. Keyed, it delivers; a non-delivering list iteration still fires, by position.
+    test-g14-a-delivering-list-iteration-is-refused = {
+      expr = {
+        list =
+          (B local [
+            (fx.reelAt "deliver" [
+              "silk"
+              "wool"
+            ])
+          ]).code or null;
+        keyed = (B local [ (fx.reelAt "deliver" { a = "silk"; }) ]) ? declarations;
+        listMember =
+          builtins.length
+            (B local [
+              (fx.reelAt "member" [
+                "silk"
+                "wool"
+              ])
+            ]).declarations;
+      };
+      expected = {
+        list = "policy-body/iterated-delivery-unkeyed";
+        keyed = true;
+        listMember = 2;
+      };
+    };
+
     # The refusals, as booleans (their messages are on the error plane).
     test-every-collision-is-refused = {
       expr = map refuses [
